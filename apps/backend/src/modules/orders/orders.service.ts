@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { OrdersRepository } from "./orders.repository";
+import { Injectable } from '@nestjs/common';
+import { OrdersRepository } from './orders.repository';
 
 @Injectable()
 export class OrdersService {
@@ -7,6 +7,6 @@ export class OrdersService {
 
   getStatus() {
     void this.ordersRepository;
-    return { module: "orders", ready: false };
+    return { module: 'orders', ready: false };
   }
 }

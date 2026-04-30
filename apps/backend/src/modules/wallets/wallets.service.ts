@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { WalletsRepository } from "./wallets.repository";
+import { Injectable } from '@nestjs/common';
+import { WalletsRepository } from './wallets.repository';
 
 @Injectable()
 export class WalletsService {
@@ -7,6 +7,6 @@ export class WalletsService {
 
   getStatus() {
     void this.walletsRepository;
-    return { module: "wallets", ready: false };
+    return { module: 'wallets', ready: false };
   }
 }

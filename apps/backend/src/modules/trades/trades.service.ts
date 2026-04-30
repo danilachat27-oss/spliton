@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { TradesRepository } from "./trades.repository";
+import { Injectable } from '@nestjs/common';
+import { TradesRepository } from './trades.repository';
 
 @Injectable()
 export class TradesService {
@@ -7,6 +7,6 @@ export class TradesService {
 
   getStatus() {
     void this.tradesRepository;
-    return { module: "trades", ready: false };
+    return { module: 'trades', ready: false };
   }
 }

@@ -1,4 +1,4 @@
-import { UserStatus } from "@prisma/client";
+import { UserStatus } from '@prisma/client';
 
 export type SafeUserResponse = {
   id: string;

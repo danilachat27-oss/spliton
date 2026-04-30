@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { UserRoleCode, UserStatus } from "@prisma/client";
-import { PrismaService } from "../../prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { UserRoleCode, UserStatus } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class AuthRepository {
@@ -60,7 +60,7 @@ export class AuthRepository {
         where: { code: UserRoleCode.INVESTOR },
       });
 
-      if (!investorRole) throw new Error("Role INVESTOR is missing");
+      if (!investorRole) throw new Error('Role INVESTOR is missing');
 
       await tx.userRole.create({
         data: {

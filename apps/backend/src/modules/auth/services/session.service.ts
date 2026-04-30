@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { Prisma, UserSession } from "@prisma/client";
-import * as bcrypt from "bcrypt";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { Prisma, UserSession } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 type SessionMeta = {
   ip?: string | null;
@@ -25,12 +25,16 @@ export class SessionService {
         lastActiveAt: new Date(),
         ip: params.meta?.ip ?? null,
         userAgent: params.meta?.userAgent ?? null,
-        device: params.meta?.device ?? params.meta?.userAgent ?? "unknown",
+        device: params.meta?.device ?? params.meta?.userAgent ?? 'unknown',
       },
     });
   }
 
-  async setRefreshToken(sessionId: string, refreshToken: string, expiresAt: Date): Promise<void> {
+  async setRefreshToken(
+    sessionId: string,
+    refreshToken: string,
+    expiresAt: Date,
+  ): Promise<void> {
     const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
     await this.prisma.userSession.update({
       where: { id: sessionId },
@@ -47,7 +51,10 @@ export class SessionService {
     });
   }
 
-  async verifySessionRefreshToken(session: UserSession, refreshToken: string): Promise<boolean> {
+  async verifySessionRefreshToken(
+    session: UserSession,
+    refreshToken: string,
+  ): Promise<boolean> {
     if (!session.refreshTokenHash) return false;
     return bcrypt.compare(refreshToken, session.refreshTokenHash);
   }
@@ -69,12 +76,18 @@ export class SessionService {
     });
   }
 
-  async revokeAllUserSessions(params: { userId: string; reason: string; excludeSessionId?: string }): Promise<number> {
+  async revokeAllUserSessions(params: {
+    userId: string;
+    reason: string;
+    excludeSessionId?: string;
+  }): Promise<number> {
     const result = await this.prisma.userSession.updateMany({
       where: {
         userId: params.userId,
         revokedAt: null,
-        ...(params.excludeSessionId ? { id: { not: params.excludeSessionId } } : {}),
+        ...(params.excludeSessionId
+          ? { id: { not: params.excludeSessionId } }
+          : {}),
       },
       data: {
         revokedAt: new Date(),
@@ -101,8 +114,12 @@ export class SessionService {
           expiresAt: params.expiresAt,
           lastActiveAt: new Date(),
           ip: params.meta?.ip ?? params.currentSession.ip ?? null,
-          userAgent: params.meta?.userAgent ?? params.currentSession.userAgent ?? null,
-          device: params.meta?.device ?? params.meta?.userAgent ?? params.currentSession.device,
+          userAgent:
+            params.meta?.userAgent ?? params.currentSession.userAgent ?? null,
+          device:
+            params.meta?.device ??
+            params.meta?.userAgent ??
+            params.currentSession.device,
         },
       });
 
@@ -110,7 +127,7 @@ export class SessionService {
         where: { id: params.currentSession.id },
         data: {
           revokedAt: new Date(),
-          revokedReason: "ROTATED",
+          revokedReason: 'ROTATED',
           replacedBySessionId: newSession.id,
         },
       });
@@ -129,7 +146,9 @@ export class SessionService {
   }
 
   isSessionExpired(session: UserSession): boolean {
-    return Boolean(session.expiresAt && session.expiresAt.getTime() <= Date.now());
+    return Boolean(
+      session.expiresAt && session.expiresAt.getTime() <= Date.now(),
+    );
   }
 
   isSessionRevoked(session: UserSession): boolean {

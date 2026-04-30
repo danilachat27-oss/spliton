@@ -1,14 +1,19 @@
-import { ConflictException, Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
-import { UserStatus } from "@prisma/client";
-import * as bcrypt from "bcrypt";
-import { randomUUID } from "crypto";
-import { AuthRepository } from "./auth.repository";
-import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from "./dto";
-import { AuthAuditService } from "./services/auth-audit.service";
-import { SessionService } from "./services/session.service";
-import { TokenService } from "./services/token.service";
-import { AuthResponse, SafeUserResponse } from "./types/auth-response.type";
-import { AuthUser } from "./types/auth-user.type";
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
+import { AuthRepository } from './auth.repository';
+import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from './dto';
+import { AuthAuditService } from './services/auth-audit.service';
+import { SessionService } from './services/session.service';
+import { TokenService } from './services/token.service';
+import { AuthResponse, SafeUserResponse } from './types/auth-response.type';
+import { AuthUser } from './types/auth-user.type';
 
 type RequestMeta = {
   ip?: string | null;
@@ -29,7 +34,7 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const existingUser = await this.authRepository.findUserByEmail(email);
     if (existingUser) {
-      throw new ConflictException("User with this email already exists");
+      throw new ConflictException('User with this email already exists');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -43,7 +48,7 @@ export class AuthService {
         status: UserStatus.ACTIVE,
       });
     } catch {
-      throw new InternalServerErrorException("Unable to create user");
+      throw new InternalServerErrorException('Unable to create user');
     }
 
     const safeUser = this.toSafeUser(user);
@@ -53,7 +58,7 @@ export class AuthService {
     });
 
     await this.authAuditService.logEvent({
-      event: "REGISTER",
+      event: 'REGISTER',
       actorUserId: safeUser.id,
       entityId: safeUser.id,
       ip: meta?.ip,
@@ -74,24 +79,27 @@ export class AuthService {
     // Avoid leaking whether email exists or password was wrong.
     if (!user?.passwordHash) {
       await this.authAuditService.logEvent({
-        event: "LOGIN_FAILED",
+        event: 'LOGIN_FAILED',
         ip: meta?.ip,
         userAgent: meta?.userAgent,
-        safeMeta: { email, reason: "INVALID_CREDENTIALS" },
+        safeMeta: { email, reason: 'INVALID_CREDENTIALS' },
       });
-      throw new UnauthorizedException("Invalid credentials");
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
+    const passwordMatches = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
     if (!passwordMatches) {
       await this.authAuditService.logEvent({
-        event: "LOGIN_FAILED",
+        event: 'LOGIN_FAILED',
         actorUserId: user.id,
         ip: meta?.ip,
         userAgent: meta?.userAgent,
-        safeMeta: { userId: user.id, email, reason: "INVALID_CREDENTIALS" },
+        safeMeta: { userId: user.id, email, reason: 'INVALID_CREDENTIALS' },
       });
-      throw new UnauthorizedException("Invalid credentials");
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     this.assertCanLogin(user.status);
@@ -103,7 +111,7 @@ export class AuthService {
     });
 
     await this.authAuditService.logEvent({
-      event: "LOGIN_SUCCESS",
+      event: 'LOGIN_SUCCESS',
       actorUserId: safeUser.id,
       entityId: safeUser.id,
       ip: meta?.ip,
@@ -117,70 +125,95 @@ export class AuthService {
     };
   }
 
-  async refresh(dto: RefreshTokenDto, meta?: RequestMeta): Promise<AuthResponse> {
-    const payload = await this.tokenService.verifyRefreshToken(dto.refreshToken);
-    const session = await this.sessionService.findSessionById(payload.sessionId);
+  async refresh(
+    dto: RefreshTokenDto,
+    meta?: RequestMeta,
+  ): Promise<AuthResponse> {
+    const payload = await this.tokenService.verifyRefreshToken(
+      dto.refreshToken,
+    );
+    const session = await this.sessionService.findSessionById(
+      payload.sessionId,
+    );
 
     if (!session || session.userId !== payload.sub) {
       await this.authAuditService.logEvent({
-        event: "REFRESH_FAILED",
-        actorUserId: payload.sub,
-        ip: meta?.ip,
-        userAgent: meta?.userAgent,
-        safeMeta: { userId: payload.sub, sessionId: payload.sessionId, reason: "SESSION_NOT_FOUND" },
-      });
-      throw new UnauthorizedException("Invalid refresh token");
-    }
-
-    if (this.sessionService.isSessionExpired(session) || this.sessionService.isSessionRevoked(session)) {
-      const isRotationReuse = session.revokedReason === "ROTATED";
-      if (isRotationReuse) {
-        await this.sessionService.revokeAllUserSessions({
-          userId: payload.sub,
-          reason: "REFRESH_REUSE_DETECTED",
-        });
-      }
-
-      await this.authAuditService.logEvent({
-        event: isRotationReuse ? "REFRESH_REUSE_DETECTED" : "REFRESH_FAILED",
+        event: 'REFRESH_FAILED',
         actorUserId: payload.sub,
         ip: meta?.ip,
         userAgent: meta?.userAgent,
         safeMeta: {
           userId: payload.sub,
           sessionId: payload.sessionId,
-          reason: isRotationReuse ? "ROTATED_TOKEN_REUSE" : "SESSION_INACTIVE",
+          reason: 'SESSION_NOT_FOUND',
         },
       });
-      throw new UnauthorizedException("Invalid refresh token");
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const refreshMatches = await this.sessionService.verifySessionRefreshToken(session, dto.refreshToken);
-    if (!refreshMatches) {
-      await this.sessionService.revokeAllUserSessions({
-        userId: payload.sub,
-        reason: "REFRESH_REUSE_DETECTED",
-      });
+    if (
+      this.sessionService.isSessionExpired(session) ||
+      this.sessionService.isSessionRevoked(session)
+    ) {
+      const isRotationReuse = session.revokedReason === 'ROTATED';
+      if (isRotationReuse) {
+        await this.sessionService.revokeAllUserSessions({
+          userId: payload.sub,
+          reason: 'REFRESH_REUSE_DETECTED',
+        });
+      }
+
       await this.authAuditService.logEvent({
-        event: "REFRESH_REUSE_DETECTED",
+        event: isRotationReuse ? 'REFRESH_REUSE_DETECTED' : 'REFRESH_FAILED',
         actorUserId: payload.sub,
         ip: meta?.ip,
         userAgent: meta?.userAgent,
-        safeMeta: { userId: payload.sub, sessionId: payload.sessionId, reason: "HASH_MISMATCH" },
+        safeMeta: {
+          userId: payload.sub,
+          sessionId: payload.sessionId,
+          reason: isRotationReuse ? 'ROTATED_TOKEN_REUSE' : 'SESSION_INACTIVE',
+        },
       });
-      throw new UnauthorizedException("Invalid refresh token");
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const refreshMatches = await this.sessionService.verifySessionRefreshToken(
+      session,
+      dto.refreshToken,
+    );
+    if (!refreshMatches) {
+      await this.sessionService.revokeAllUserSessions({
+        userId: payload.sub,
+        reason: 'REFRESH_REUSE_DETECTED',
+      });
+      await this.authAuditService.logEvent({
+        event: 'REFRESH_REUSE_DETECTED',
+        actorUserId: payload.sub,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: {
+          userId: payload.sub,
+          sessionId: payload.sessionId,
+          reason: 'HASH_MISMATCH',
+        },
+      });
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     const user = await this.authRepository.findUserById(payload.sub);
     if (!user) {
       await this.authAuditService.logEvent({
-        event: "REFRESH_FAILED",
+        event: 'REFRESH_FAILED',
         actorUserId: payload.sub,
         ip: meta?.ip,
         userAgent: meta?.userAgent,
-        safeMeta: { userId: payload.sub, sessionId: payload.sessionId, reason: "USER_NOT_FOUND" },
+        safeMeta: {
+          userId: payload.sub,
+          sessionId: payload.sessionId,
+          reason: 'USER_NOT_FOUND',
+        },
       });
-      throw new UnauthorizedException("Invalid refresh token");
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     this.assertCanLogin(user.status);
@@ -202,7 +235,7 @@ export class AuthService {
     });
 
     await this.authAuditService.logEvent({
-      event: "REFRESH_SUCCESS",
+      event: 'REFRESH_SUCCESS',
       actorUserId: safeUser.id,
       ip: meta?.ip,
       userAgent: meta?.userAgent,
@@ -214,16 +247,24 @@ export class AuthService {
 
   async logout(dto: LogoutDto, meta?: RequestMeta) {
     try {
-      const payload = await this.tokenService.verifyRefreshToken(dto.refreshToken);
-      const session = await this.sessionService.findSessionById(payload.sessionId);
+      const payload = await this.tokenService.verifyRefreshToken(
+        dto.refreshToken,
+      );
+      const session = await this.sessionService.findSessionById(
+        payload.sessionId,
+      );
 
-      if (session && session.userId === payload.sub && !this.sessionService.isSessionRevoked(session)) {
+      if (
+        session &&
+        session.userId === payload.sub &&
+        !this.sessionService.isSessionRevoked(session)
+      ) {
         await this.sessionService.revokeSession({
           sessionId: session.id,
-          reason: "LOGOUT",
+          reason: 'LOGOUT',
         });
         await this.authAuditService.logEvent({
-          event: "LOGOUT",
+          event: 'LOGOUT',
           actorUserId: payload.sub,
           ip: meta?.ip,
           userAgent: meta?.userAgent,
@@ -240,10 +281,10 @@ export class AuthService {
   async logoutAll(currentUser: AuthUser, meta?: RequestMeta) {
     await this.sessionService.revokeAllUserSessions({
       userId: currentUser.id,
-      reason: "LOGOUT_ALL",
+      reason: 'LOGOUT_ALL',
     });
     await this.authAuditService.logEvent({
-      event: "LOGOUT_ALL",
+      event: 'LOGOUT_ALL',
       actorUserId: currentUser.id,
       ip: meta?.ip,
       userAgent: meta?.userAgent,
@@ -254,12 +295,19 @@ export class AuthService {
   }
 
   private assertCanLogin(status: UserStatus) {
-    if (status === UserStatus.BANNED || status === UserStatus.SUSPENDED || status === UserStatus.DELETED) {
-      throw new UnauthorizedException("Invalid credentials");
+    if (
+      status === UserStatus.BANNED ||
+      status === UserStatus.SUSPENDED ||
+      status === UserStatus.DELETED
+    ) {
+      throw new UnauthorizedException('Invalid credentials');
     }
   }
 
-  private async issueSessionAndTokens(params: { user: SafeUserResponse; meta?: RequestMeta }) {
+  private async issueSessionAndTokens(params: {
+    user: SafeUserResponse;
+    meta?: RequestMeta;
+  }) {
     const session = await this.sessionService.createSession({
       userId: params.user.id,
       meta: params.meta,

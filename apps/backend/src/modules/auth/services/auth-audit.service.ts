@@ -1,16 +1,16 @@
-import { Injectable } from "@nestjs/common";
-import { ActorRole, Prisma } from "@prisma/client";
-import { PrismaService } from "../../../prisma/prisma.service";
+import { Injectable } from '@nestjs/common';
+import { ActorRole, Prisma } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 export type AuthAuditEvent =
-  | "REGISTER"
-  | "LOGIN_SUCCESS"
-  | "LOGIN_FAILED"
-  | "REFRESH_SUCCESS"
-  | "REFRESH_FAILED"
-  | "REFRESH_REUSE_DETECTED"
-  | "LOGOUT"
-  | "LOGOUT_ALL";
+  | 'REGISTER'
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILED'
+  | 'REFRESH_SUCCESS'
+  | 'REFRESH_FAILED'
+  | 'REFRESH_REUSE_DETECTED'
+  | 'LOGOUT'
+  | 'LOGOUT_ALL';
 
 @Injectable()
 export class AuthAuditService {
@@ -28,7 +28,7 @@ export class AuthAuditService {
       data: {
         actorUserId: params.actorUserId ?? null,
         actorRole: params.actorUserId ? ActorRole.USER : ActorRole.SYSTEM,
-        entityType: "auth",
+        entityType: 'auth',
         entityId: params.entityId ?? params.actorUserId ?? null,
         action: params.event,
         afterJsonb: params.safeMeta,

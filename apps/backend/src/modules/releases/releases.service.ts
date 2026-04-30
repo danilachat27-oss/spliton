@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { ReleasesRepository } from "./releases.repository";
+import { Injectable } from '@nestjs/common';
+import { ReleasesRepository } from './releases.repository';
 
 @Injectable()
 export class ReleasesService {

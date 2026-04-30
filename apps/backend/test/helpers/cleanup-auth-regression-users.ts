@@ -1,8 +1,8 @@
-import { PrismaClient } from "@prisma/client";
-import { resolveE2eDatabaseUrl } from "./e2e-database-url";
+import { PrismaClient } from '@prisma/client';
+import { resolveE2eDatabaseUrl } from './e2e-database-url';
 
-const EMAIL_PREFIX = "test-auth-regression-";
-const EMAIL_SUFFIX = "@example.com";
+const EMAIL_PREFIX = 'test-auth-regression-';
+const EMAIL_SUFFIX = '@example.com';
 
 /**
  * Deletes users created by auth regression e2e (email prefix + example.com domain only).

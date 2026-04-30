@@ -1,5 +1,5 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { UsersRepository } from "./users.repository";
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
@@ -8,7 +8,7 @@ export class UsersService {
   async getMe(userId: string) {
     const user = await this.usersRepository.findUserWithProfileAndRoles(userId);
     if (!user) {
-      throw new UnauthorizedException("User not found");
+      throw new UnauthorizedException('User not found');
     }
 
     return {

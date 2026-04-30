@@ -1,4 +1,4 @@
-process.env.NODE_ENV = "test";
+process.env.NODE_ENV = 'test';
 
 /**
  * Prisma reads `DATABASE_URL` from the environment. For e2e, optionally point at an

@@ -1,4 +1,4 @@
-export type TokenPayloadType = "access" | "refresh";
+export type TokenPayloadType = 'access' | 'refresh';
 
 export type TokenPayload = {
   sub: string;

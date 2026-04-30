@@ -1,11 +1,11 @@
-import { Controller, Get } from "@nestjs/common";
-import { TradesService } from "./trades.service";
+import { Controller, Get } from '@nestjs/common';
+import { TradesService } from './trades.service';
 
-@Controller("trades")
+@Controller('trades')
 export class TradesController {
   constructor(private readonly tradesService: TradesService) {}
 
-  @Get("status")
+  @Get('status')
   getStatus() {
     return this.tradesService.getStatus();
   }

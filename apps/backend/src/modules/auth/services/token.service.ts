@@ -1,8 +1,12 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { JwtService } from "@nestjs/jwt";
-import { AuthTokens } from "../types/auth-response.type";
-import { TokenPayload } from "../types/token-payload.type";
+import {
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { AuthTokens } from '../types/auth-response.type';
+import { TokenPayload } from '../types/token-payload.type';
 
 @Injectable()
 export class TokenService {
@@ -22,7 +26,7 @@ export class TokenService {
       email: params.email,
       roles: params.roles,
       sessionId: params.sessionId,
-      type: "access",
+      type: 'access',
     };
 
     const refreshPayload: TokenPayload = {
@@ -30,19 +34,21 @@ export class TokenService {
       email: params.email,
       roles: params.roles,
       sessionId: params.sessionId,
-      type: "refresh",
+      type: 'refresh',
     };
 
-    const refreshSecret = this.configService.get<string>("JWT_REFRESH_SECRET");
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!refreshSecret) {
-      throw new InternalServerErrorException("Refresh secret is not configured");
+      throw new InternalServerErrorException(
+        'Refresh secret is not configured',
+      );
     }
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessPayload, { expiresIn: "15m" }),
+      this.jwtService.signAsync(accessPayload, { expiresIn: '15m' }),
       this.jwtService.signAsync(refreshPayload, {
         secret: refreshSecret,
-        expiresIn: "7d",
+        expiresIn: '7d',
       }),
     ]);
 
@@ -50,9 +56,11 @@ export class TokenService {
   }
 
   async verifyRefreshToken(refreshToken: string): Promise<TokenPayload> {
-    const refreshSecret = this.configService.get<string>("JWT_REFRESH_SECRET");
+    const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
     if (!refreshSecret) {
-      throw new InternalServerErrorException("Refresh secret is not configured");
+      throw new InternalServerErrorException(
+        'Refresh secret is not configured',
+      );
     }
 
     let payload: TokenPayload;
@@ -61,11 +69,11 @@ export class TokenService {
         secret: refreshSecret,
       });
     } catch {
-      throw new UnauthorizedException("Invalid refresh token");
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (payload.type !== "refresh") {
-      throw new UnauthorizedException("Invalid refresh token");
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     return payload;
