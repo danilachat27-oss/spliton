@@ -1,27 +1,23 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import * as Joi from "joi";
-import { AuthModule } from "./auth/auth.module";
-import { HealthModule } from "./health/health.module";
-import { OrdersModule } from "./orders/orders.module";
+import appConfig from "./config/app.config";
+import { envValidationSchema } from "./config/env.validation";
+import { AuthModule } from "./modules/auth/auth.module";
+import { HealthModule } from "./modules/health/health.module";
+import { OrdersModule } from "./modules/orders/orders.module";
+import { ReleasesModule } from "./modules/releases/releases.module";
+import { TradesModule } from "./modules/trades/trades.module";
+import { UsersModule } from "./modules/users/users.module";
+import { WalletsModule } from "./modules/wallets/wallets.module";
 import { PrismaModule } from "./prisma/prisma.module";
-import { ReleasesModule } from "./releases/releases.module";
-import { TradesModule } from "./trades/trades.module";
-import { UsersModule } from "./users/users.module";
-import { WalletsModule } from "./wallets/wallets.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ["../../.env", ".env"],
-      validationSchema: Joi.object({
-        DATABASE_URL: Joi.string().required(),
-        DIRECT_URL: Joi.string().required(),
-        JWT_SECRET: Joi.string().required(),
-        JWT_REFRESH_SECRET: Joi.string().required(),
-        PORT: Joi.number().port().default(4000),
-      }),
+      load: [appConfig],
+      validationSchema: envValidationSchema,
     }),
     PrismaModule,
     HealthModule,
