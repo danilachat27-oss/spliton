@@ -1,0 +1,957 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+  BANNED
+  DELETED
+
+  @@map("user_status")
+}
+
+enum UserRoleCode {
+  INVESTOR
+  ARTIST
+  ADMIN
+  SUPPORT
+
+  @@map("user_role_code")
+}
+
+enum ReleaseStatus {
+  DRAFT
+  REVIEW
+  ACTIVE
+  PAUSED
+  SOLD_OUT
+  ARCHIVED
+
+  @@map("release_status")
+}
+
+enum PayoutFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+
+  @@map("payout_frequency")
+}
+
+enum ShareLotType {
+  PRIMARY
+  SECONDARY_POOL
+  TREASURY
+
+  @@map("share_lot_type")
+}
+
+enum ArtistReleaseRole {
+  MAIN
+  FEATURED
+  PRODUCER
+  LABEL
+
+  @@map("artist_release_role")
+}
+
+enum OwnershipEventType {
+  PRIMARY_BUY
+  SECONDARY_BUY
+  SECONDARY_SELL
+  LOCK_FOR_SELL
+  UNLOCK_AFTER_CANCEL
+  PAYOUT_SNAPSHOT
+  ADMIN_ADJUSTMENT
+
+  @@map("ownership_event_type")
+}
+
+enum ListingStatus {
+  ACTIVE
+  PAUSED
+  SOLD_OUT
+  CANCELLED
+  EXPIRED
+
+  @@map("listing_status")
+}
+
+enum OrderSide {
+  BUY
+  SELL
+
+  @@map("order_side")
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+
+  @@map("order_type")
+}
+
+enum TimeInForce {
+  GTC
+  IOC
+  FOK
+  DAY
+
+  @@map("time_in_force")
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  REJECTED
+  EXPIRED
+
+  @@map("order_status")
+}
+
+enum TradeSettlementStatus {
+  PENDING
+  SETTLED
+  FAILED
+  REVERSED
+
+  @@map("trade_settlement_status")
+}
+
+enum PriceBucket {
+  M1
+  M5
+  M15
+  H1
+  H4
+  D1
+
+  @@map("price_bucket")
+}
+
+enum WalletStatus {
+  ACTIVE
+  BLOCKED
+  ARCHIVED
+
+  @@map("wallet_status")
+}
+
+enum WalletTxType {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE_LOCK
+  TRADE_SETTLEMENT
+  PAYOUT
+  FEE
+  REFUND
+  ADMIN_ADJUSTMENT
+
+  @@map("wallet_tx_type")
+}
+
+enum WalletTxDirection {
+  IN
+  OUT
+
+  @@map("wallet_tx_direction")
+}
+
+enum WalletTxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+
+  @@map("wallet_tx_status")
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+
+  @@map("withdrawal_status")
+}
+
+enum DepositStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+
+  @@map("deposit_status")
+}
+
+enum EarningPeriodStatus {
+  OPEN
+  CALCULATED
+  DISTRIBUTED
+  CANCELLED
+
+  @@map("earning_period_status")
+}
+
+enum PayoutStatus {
+  PENDING
+  ACCRUED
+  PAID
+  FAILED
+  CANCELLED
+
+  @@map("payout_status")
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+
+  @@map("kyc_status")
+}
+
+enum KycDocumentStatus {
+  UPLOADED
+  APPROVED
+  REJECTED
+
+  @@map("kyc_document_status")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+
+  @@map("notification_status")
+}
+
+enum ActorRole {
+  SYSTEM
+  USER
+  ADMIN
+  SUPPORT
+
+  @@map("actor_role")
+}
+
+model User {
+  id               String            @id @default(uuid()) @db.Uuid
+  email            String            @unique
+  passwordHash     String?           @map("password_hash")
+  authProvider     String            @default("email") @map("auth_provider")
+  status           UserStatus        @default(PENDING)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  deletedAt        DateTime?         @map("deleted_at")
+  profile          UserProfile?
+  userRoles        UserRole[]
+  positions        UserPosition[]
+  wallets          Wallet[]
+  orders           Order[]
+  marketListings   MarketListing[]
+  payouts          Payout[]
+  kycVerifications KycVerification[]
+  sessions         UserSession[]
+  notifications    Notification[]
+  riskFlags        RiskFlag[]
+  adminActions     AdminAction[]
+  auditLogs        AuditLog[]
+  tradesBought     Trade[]           @relation("trade_buyer")
+  tradesSold       Trade[]           @relation("trade_seller")
+  ownershipLedger  OwnershipLedger[]
+
+  @@index([createdAt], map: "users_created_at_idx")
+  @@map("users")
+}
+
+model UserProfile {
+  userId      String   @id @map("user_id") @db.Uuid
+  displayName String?  @map("display_name")
+  firstName   String?  @map("first_name")
+  lastName    String?  @map("last_name")
+  countryCode String?  @map("country_code")
+  timezone    String?  @map("timezone")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Role {
+  id        String       @id @default(uuid()) @db.Uuid
+  code      UserRoleCode @unique
+  name      String
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId], map: "user_roles_user_id_role_id_key")
+  @@index([roleId], map: "user_roles_role_id_idx")
+  @@map("user_roles")
+}
+
+model Artist {
+  id             String          @id @default(uuid()) @db.Uuid
+  slug           String          @unique
+  name           String
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  releaseArtists ReleaseArtist[]
+
+  @@map("artists")
+}
+
+model Label {
+  id        String    @id @default(uuid()) @db.Uuid
+  slug      String    @unique
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  releases  Release[]
+
+  @@map("labels")
+}
+
+model Release {
+  id                    String                     @id @default(uuid()) @db.Uuid
+  slug                  String                     @unique
+  symbol                String                     @unique
+  title                 String
+  segment               String?
+  status                ReleaseStatus              @default(DRAFT)
+  payoutFrequency       PayoutFrequency            @map("payout_frequency")
+  totalUnits            Decimal                    @map("total_units") @db.Decimal(20, 8)
+  unitsAvailablePrimary Decimal                    @map("units_available_primary") @db.Decimal(20, 8)
+  primaryUnitPrice      Decimal                    @map("primary_unit_price") @db.Decimal(20, 8)
+  labelId               String?                    @map("label_id") @db.Uuid
+  createdAt             DateTime                   @default(now()) @map("created_at")
+  updatedAt             DateTime                   @updatedAt @map("updated_at")
+  deletedAt             DateTime?                  @map("deleted_at")
+  label                 Label?                     @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  releaseArtists        ReleaseArtist[]
+  releaseMetricsDaily   ReleaseMetricsDaily[]
+  releaseShareLots      ReleaseShareLot[]
+  releaseDocuments      ReleaseDocument[]
+  releaseAnalyticsSnaps ReleaseAnalyticsSnapshot[]
+  marketListings        MarketListing[]
+  orders                Order[]
+  trades                Trade[]
+  priceHistory          PriceHistory[]
+  userPositions         UserPosition[]
+  ownershipLedger       OwnershipLedger[]
+  earningPeriods        EarningPeriod[]
+  earningDistributions  EarningDistribution[]
+  payouts               Payout[]
+  orderBookSnapshots    OrderBookSnapshot[]
+
+  @@index([status, createdAt], map: "releases_status_created_at_idx")
+  @@map("releases")
+}
+
+model ReleaseArtist {
+  id        String            @id @default(uuid()) @db.Uuid
+  releaseId String            @map("release_id") @db.Uuid
+  artistId  String            @map("artist_id") @db.Uuid
+  role      ArtistReleaseRole
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  release   Release           @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  artist    Artist            @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, artistId, role], map: "release_artists_release_id_artist_id_role_key")
+  @@index([artistId], map: "release_artists_artist_id_idx")
+  @@map("release_artists")
+}
+
+model ReleaseMetricsDaily {
+  id                String   @id @default(uuid()) @db.Uuid
+  releaseId         String   @map("release_id") @db.Uuid
+  asOfDate          DateTime @map("as_of_date") @db.Date
+  yieldPct          Decimal? @map("yield_pct") @db.Decimal(10, 6)
+  payoutsTotal      Decimal? @map("payouts_total") @db.Decimal(20, 8)
+  activityScore     Decimal? @map("activity_score") @db.Decimal(10, 4)
+  liquidityScore    Decimal? @map("liquidity_score") @db.Decimal(10, 4)
+  volume24hNotional Decimal? @map("volume_24h_notional") @db.Decimal(20, 8)
+  volume24hUnits    Decimal? @map("volume_24h_units") @db.Decimal(20, 8)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  release           Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, asOfDate], map: "release_metrics_daily_release_id_as_of_date_key")
+  @@index([releaseId, asOfDate], map: "release_metrics_daily_release_id_as_of_date_idx")
+  @@map("release_metrics_daily")
+}
+
+model ReleaseShareLot {
+  id             String       @id @default(uuid()) @db.Uuid
+  releaseId      String       @map("release_id") @db.Uuid
+  lotType        ShareLotType @map("lot_type")
+  unitsTotal     Decimal      @map("units_total") @db.Decimal(20, 8)
+  unitsRemaining Decimal      @map("units_remaining") @db.Decimal(20, 8)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  release        Release      @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, lotType], map: "release_share_lots_release_id_lot_type_idx")
+  @@map("release_share_lots")
+}
+
+model UserPosition {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  releaseId      String   @map("release_id") @db.Uuid
+  unitsTotal     Decimal  @map("units_total") @db.Decimal(20, 8)
+  unitsAvailable Decimal  @map("units_available") @db.Decimal(20, 8)
+  unitsLocked    Decimal  @map("units_locked") @db.Decimal(20, 8)
+  avgEntryPrice  Decimal  @map("avg_entry_price") @db.Decimal(20, 8)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  release        Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, releaseId], map: "user_positions_user_id_release_id_key")
+  @@index([releaseId], map: "user_positions_release_id_idx")
+  @@map("user_positions")
+}
+
+model MarketListing {
+  id             String        @id @default(uuid()) @db.Uuid
+  releaseId      String        @map("release_id") @db.Uuid
+  sellerUserId   String        @map("seller_user_id") @db.Uuid
+  listingType    String        @default("standard") @map("listing_type")
+  pricePerUnit   Decimal       @map("price_per_unit") @db.Decimal(20, 8)
+  unitsTotal     Decimal       @map("units_total") @db.Decimal(20, 8)
+  unitsAvailable Decimal       @map("units_available") @db.Decimal(20, 8)
+  status         ListingStatus
+  expiresAt      DateTime?     @map("expires_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  release        Release       @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  seller         User          @relation(fields: [sellerUserId], references: [id], onDelete: Restrict)
+  orders         Order[]
+
+  @@index([releaseId, status], map: "market_listings_release_id_status_idx")
+  @@index([sellerUserId, status], map: "market_listings_seller_user_id_status_idx")
+  @@map("market_listings")
+}
+
+model Order {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @map("user_id") @db.Uuid
+  releaseId     String         @map("release_id") @db.Uuid
+  listingId     String?        @map("listing_id") @db.Uuid
+  side          OrderSide
+  orderType     OrderType      @map("order_type")
+  timeInForce   TimeInForce    @map("time_in_force")
+  priceLimit    Decimal?       @map("price_limit") @db.Decimal(20, 8)
+  unitsTotal    Decimal        @map("units_total") @db.Decimal(20, 8)
+  unitsFilled   Decimal        @map("units_filled") @db.Decimal(20, 8)
+  status        OrderStatus
+  failureReason String?        @map("failure_reason")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  cancelledAt   DateTime?      @map("cancelled_at")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  release       Release        @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  listing       MarketListing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  fills         OrderFill[]
+  buyTrades     Trade[]        @relation("trade_buy_order")
+  sellTrades    Trade[]        @relation("trade_sell_order")
+
+  @@index([userId, createdAt], map: "orders_user_id_created_at_idx")
+  @@index([releaseId, status, side], map: "orders_release_id_status_side_idx")
+  @@index([status], map: "orders_status_idx")
+  @@index([createdAt], map: "orders_created_at_idx")
+  @@map("orders")
+}
+
+model Trade {
+  id               String                @id @default(uuid()) @db.Uuid
+  releaseId        String                @map("release_id") @db.Uuid
+  buyOrderId       String                @map("buy_order_id") @db.Uuid
+  sellOrderId      String                @map("sell_order_id") @db.Uuid
+  buyerUserId      String                @map("buyer_user_id") @db.Uuid
+  sellerUserId     String                @map("seller_user_id") @db.Uuid
+  price            Decimal               @db.Decimal(20, 8)
+  units            Decimal               @db.Decimal(20, 8)
+  grossAmount      Decimal               @map("gross_amount") @db.Decimal(20, 8)
+  feeTotal         Decimal               @map("fee_total") @db.Decimal(20, 8)
+  settlementStatus TradeSettlementStatus @map("settlement_status")
+  executedAt       DateTime              @map("executed_at")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+  release          Release               @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  buyOrder         Order                 @relation("trade_buy_order", fields: [buyOrderId], references: [id], onDelete: Restrict)
+  sellOrder        Order                 @relation("trade_sell_order", fields: [sellOrderId], references: [id], onDelete: Restrict)
+  buyer            User                  @relation("trade_buyer", fields: [buyerUserId], references: [id], onDelete: Restrict)
+  seller           User                  @relation("trade_seller", fields: [sellerUserId], references: [id], onDelete: Restrict)
+  orderFills       OrderFill[]
+  ownershipLedger  OwnershipLedger[]
+
+  @@index([releaseId, executedAt], map: "trades_release_id_executed_at_idx")
+  @@index([buyOrderId], map: "trades_buy_order_id_idx")
+  @@index([sellOrderId], map: "trades_sell_order_id_idx")
+  @@map("trades")
+}
+
+model OrderFill {
+  id              String            @id @default(uuid()) @db.Uuid
+  orderId         String            @map("order_id") @db.Uuid
+  tradeId         String            @map("trade_id") @db.Uuid
+  side            OrderSide
+  units           Decimal           @db.Decimal(20, 8)
+  price           Decimal           @db.Decimal(20, 8)
+  grossAmount     Decimal           @map("gross_amount") @db.Decimal(20, 8)
+  feeAmount       Decimal           @map("fee_amount") @db.Decimal(20, 8)
+  netAmount       Decimal           @map("net_amount") @db.Decimal(20, 8)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  order           Order             @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  trade           Trade             @relation(fields: [tradeId], references: [id], onDelete: Restrict)
+  ownershipLedger OwnershipLedger[]
+
+  @@unique([tradeId, orderId], map: "order_fills_trade_id_order_id_key")
+  @@index([orderId], map: "order_fills_order_id_idx")
+  @@index([tradeId], map: "order_fills_trade_id_idx")
+  @@map("order_fills")
+}
+
+model PriceHistory {
+  id             String      @id @default(uuid()) @db.Uuid
+  releaseId      String      @map("release_id") @db.Uuid
+  bucket         PriceBucket
+  ts             DateTime
+  openPrice      Decimal     @map("open_price") @db.Decimal(20, 8)
+  highPrice      Decimal     @map("high_price") @db.Decimal(20, 8)
+  lowPrice       Decimal     @map("low_price") @db.Decimal(20, 8)
+  closePrice     Decimal     @map("close_price") @db.Decimal(20, 8)
+  volumeUnits    Decimal     @map("volume_units") @db.Decimal(20, 8)
+  volumeNotional Decimal     @map("volume_notional") @db.Decimal(20, 8)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  release        Release     @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, bucket, ts], map: "price_history_release_id_bucket_ts_key")
+  @@index([releaseId, bucket, ts], map: "price_history_release_id_bucket_ts_idx")
+  @@map("price_history")
+}
+
+model Wallet {
+  id           String              @id @default(uuid()) @db.Uuid
+  userId       String              @map("user_id") @db.Uuid
+  assetCode    String              @map("asset_code")
+  network      String
+  address      String?
+  status       WalletStatus        @default(ACTIVE)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+  user         User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  balance      WalletBalance?
+  transactions WalletTransaction[]
+
+  @@unique([userId, assetCode, network], map: "wallets_user_id_asset_code_network_key")
+  @@index([userId], map: "wallets_user_id_idx")
+  @@map("wallets")
+}
+
+model WalletBalance {
+  walletId  String   @id @map("wallet_id") @db.Uuid
+  available Decimal  @db.Decimal(20, 8)
+  locked    Decimal  @db.Decimal(20, 8)
+  pending   Decimal  @db.Decimal(20, 8)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  wallet    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("wallet_balances")
+}
+
+model WalletTransaction {
+  id              String            @id @default(uuid()) @db.Uuid
+  walletId        String            @map("wallet_id") @db.Uuid
+  txType          WalletTxType      @map("tx_type")
+  direction       WalletTxDirection
+  amount          Decimal           @db.Decimal(20, 8)
+  feeAmount       Decimal           @map("fee_amount") @db.Decimal(20, 8)
+  netAmount       Decimal           @map("net_amount") @db.Decimal(20, 8)
+  currency        String
+  status          WalletTxStatus
+  referenceType   String?           @map("reference_type")
+  referenceId     String?           @map("reference_id") @db.Uuid
+  happenedAt      DateTime          @map("happened_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  settledAt       DateTime?         @map("settled_at")
+  wallet          Wallet            @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  deposit         Deposit?
+  withdrawal      Withdrawal?
+  ownershipLedger OwnershipLedger[]
+  payouts         Payout[]
+  fees            Fee[]
+
+  @@index([walletId, createdAt], map: "wallet_transactions_wallet_id_created_at_idx")
+  @@index([walletId, txType, status], map: "wallet_transactions_wallet_id_tx_type_status_idx")
+  @@map("wallet_transactions")
+}
+
+model Deposit {
+  id                    String            @id @default(uuid()) @db.Uuid
+  walletTxId            String            @unique @map("wallet_tx_id") @db.Uuid
+  blockchainTxid        String?           @unique @map("blockchain_txid")
+  fromAddress           String?           @map("from_address")
+  toAddress             String?           @map("to_address")
+  confirmations         Int               @default(0)
+  requiredConfirmations Int               @default(1) @map("required_confirmations")
+  status                DepositStatus
+  receivedAt            DateTime?         @map("received_at")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  walletTx              WalletTransaction @relation(fields: [walletTxId], references: [id], onDelete: Restrict)
+
+  @@map("deposits")
+}
+
+model Withdrawal {
+  id             String            @id @default(uuid()) @db.Uuid
+  walletTxId     String            @unique @map("wallet_tx_id") @db.Uuid
+  toAddress      String            @map("to_address")
+  blockchainTxid String?           @unique @map("blockchain_txid")
+  status         WithdrawalStatus
+  requestedAt    DateTime          @map("requested_at")
+  processedAt    DateTime?         @map("processed_at")
+  completedAt    DateTime?         @map("completed_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  walletTx       WalletTransaction @relation(fields: [walletTxId], references: [id], onDelete: Restrict)
+
+  @@map("withdrawals")
+}
+
+model Fee {
+  id                  String             @id @default(uuid()) @db.Uuid
+  walletTransactionId String?            @map("wallet_transaction_id") @db.Uuid
+  feeCode             String             @map("fee_code")
+  subjectType         String             @map("subject_type")
+  subjectId           String?            @map("subject_id") @db.Uuid
+  rate                Decimal?           @db.Decimal(10, 6)
+  fixedAmount         Decimal?           @map("fixed_amount") @db.Decimal(20, 8)
+  amountCharged       Decimal            @map("amount_charged") @db.Decimal(20, 8)
+  currency            String
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  walletTransaction   WalletTransaction? @relation(fields: [walletTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([walletTransactionId], map: "fees_wallet_transaction_id_idx")
+  @@index([subjectType, subjectId], map: "fees_subject_type_subject_id_idx")
+  @@map("fees")
+}
+
+model EarningPeriod {
+  id            String                @id @default(uuid()) @db.Uuid
+  releaseId     String                @map("release_id") @db.Uuid
+  periodStart   DateTime              @map("period_start") @db.Date
+  periodEnd     DateTime              @map("period_end") @db.Date
+  status        EarningPeriodStatus
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  release       Release               @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  reports       EarningReport[]
+  distributions EarningDistribution[]
+
+  @@unique([releaseId, periodStart, periodEnd], map: "earning_periods_release_id_period_start_period_end_key")
+  @@index([releaseId, status], map: "earning_periods_release_id_status_idx")
+  @@map("earning_periods")
+}
+
+model EarningReport {
+  id              String        @id @default(uuid()) @db.Uuid
+  earningPeriodId String        @map("earning_period_id") @db.Uuid
+  source          String
+  grossRevenue    Decimal       @map("gross_revenue") @db.Decimal(20, 8)
+  netRevenue      Decimal       @map("net_revenue") @db.Decimal(20, 8)
+  reportHash      String?       @map("report_hash")
+  publishedAt     DateTime?     @map("published_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  earningPeriod   EarningPeriod @relation(fields: [earningPeriodId], references: [id], onDelete: Cascade)
+
+  @@index([earningPeriodId], map: "earning_reports_earning_period_id_idx")
+  @@map("earning_reports")
+}
+
+model EarningDistribution {
+  id                    String        @id @default(uuid()) @db.Uuid
+  earningPeriodId       String        @map("earning_period_id") @db.Uuid
+  releaseId             String        @map("release_id") @db.Uuid
+  totalDistributable    Decimal       @map("total_distributable") @db.Decimal(20, 8)
+  perUnitAmount         Decimal       @map("per_unit_amount") @db.Decimal(20, 8)
+  snapshotEligibleUnits Decimal       @map("snapshot_eligible_units") @db.Decimal(20, 8)
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  earningPeriod         EarningPeriod @relation(fields: [earningPeriodId], references: [id], onDelete: Restrict)
+  release               Release       @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  payouts               Payout[]
+
+  @@index([earningPeriodId], map: "earning_distributions_earning_period_id_idx")
+  @@index([releaseId], map: "earning_distributions_release_id_idx")
+  @@map("earning_distributions")
+}
+
+model Payout {
+  id                    String              @id @default(uuid()) @db.Uuid
+  userId                String              @map("user_id") @db.Uuid
+  releaseId             String              @map("release_id") @db.Uuid
+  earningDistributionId String              @map("earning_distribution_id") @db.Uuid
+  walletTxId            String?             @unique @map("wallet_tx_id") @db.Uuid
+  unitsEligible         Decimal             @map("units_eligible") @db.Decimal(20, 8)
+  amountGross           Decimal             @map("amount_gross") @db.Decimal(20, 8)
+  amountNet             Decimal             @map("amount_net") @db.Decimal(20, 8)
+  status                PayoutStatus
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  release               Release             @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  earningDistribution   EarningDistribution @relation(fields: [earningDistributionId], references: [id], onDelete: Restrict)
+  walletTransaction     WalletTransaction?  @relation(fields: [walletTxId], references: [id], onDelete: SetNull)
+  payoutClaims          PayoutClaim[]
+
+  @@index([userId, status], map: "payouts_user_id_status_idx")
+  @@index([earningDistributionId], map: "payouts_earning_distribution_id_idx")
+  @@map("payouts")
+}
+
+model OwnershipLedger {
+  id                  String             @id @default(uuid()) @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  releaseId           String             @map("release_id") @db.Uuid
+  eventType           OwnershipEventType @map("event_type")
+  unitsDelta          Decimal            @map("units_delta") @db.Decimal(20, 8)
+  pricePerUnit        Decimal?           @map("price_per_unit") @db.Decimal(20, 8)
+  tradeId             String?            @map("trade_id") @db.Uuid
+  orderFillId         String?            @map("order_fill_id") @db.Uuid
+  walletTransactionId String?            @map("wallet_transaction_id") @db.Uuid
+  happenedAt          DateTime           @map("happened_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  user                User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  release             Release            @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  trade               Trade?             @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+  orderFill           OrderFill?         @relation(fields: [orderFillId], references: [id], onDelete: SetNull)
+  walletTransaction   WalletTransaction? @relation(fields: [walletTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, releaseId, happenedAt], map: "ownership_ledger_user_id_release_id_happened_at_idx")
+  @@index([tradeId], map: "ownership_ledger_trade_id_idx")
+  @@index([orderFillId], map: "ownership_ledger_order_fill_id_idx")
+  @@index([walletTransactionId], map: "ownership_ledger_wallet_transaction_id_idx")
+  @@map("ownership_ledger")
+}
+
+model AdminAction {
+  id          String   @id @default(uuid()) @db.Uuid
+  adminUserId String   @map("admin_user_id") @db.Uuid
+  actionType  String   @map("action_type")
+  targetType  String   @map("target_type")
+  targetId    String?  @map("target_id") @db.Uuid
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  adminUser   User     @relation(fields: [adminUserId], references: [id], onDelete: Restrict)
+
+  @@index([adminUserId, createdAt], map: "admin_actions_admin_user_id_created_at_idx")
+  @@index([targetType, targetId], map: "admin_actions_target_type_target_id_idx")
+  @@map("admin_actions")
+}
+
+model AuditLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  actorUserId String?   @map("actor_user_id") @db.Uuid
+  actorRole   ActorRole @map("actor_role")
+  entityType  String    @map("entity_type")
+  entityId    String?   @map("entity_id")
+  action      String
+  beforeJsonb Json?     @map("before_jsonb")
+  afterJsonb  Json?     @map("after_jsonb")
+  ip          String?
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  actorUser   User?     @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt], map: "audit_logs_entity_type_entity_id_created_at_idx")
+  @@index([actorUserId, createdAt], map: "audit_logs_actor_user_id_created_at_idx")
+  @@map("audit_logs")
+}
+
+model KycVerification {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  status       KycStatus     @default(NOT_STARTED)
+  submittedAt  DateTime?     @map("submitted_at")
+  reviewedAt   DateTime?     @map("reviewed_at")
+  reviewedBy   String?       @map("reviewed_by") @db.Uuid
+  rejectReason String?       @map("reject_reason")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents    KycDocument[]
+
+  @@index([userId, status], map: "kyc_verifications_user_id_status_idx")
+  @@map("kyc_verifications")
+}
+
+model KycDocument {
+  id                String            @id @default(uuid()) @db.Uuid
+  kycVerificationId String            @map("kyc_verification_id") @db.Uuid
+  docType           String            @map("doc_type")
+  fileUrl           String            @map("file_url")
+  status            KycDocumentStatus @default(UPLOADED)
+  uploadedAt        DateTime          @map("uploaded_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  kycVerification   KycVerification   @relation(fields: [kycVerificationId], references: [id], onDelete: Cascade)
+
+  @@index([kycVerificationId], map: "kyc_documents_kyc_verification_id_idx")
+  @@map("kyc_documents")
+}
+
+model Notification {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @map("user_id") @db.Uuid
+  type         String
+  channel      String
+  payloadJsonb Json?              @map("payload_jsonb")
+  status       NotificationStatus @default(PENDING)
+  sentAt       DateTime?          @map("sent_at")
+  readAt       DateTime?          @map("read_at")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt], map: "notifications_user_id_status_created_at_idx")
+  @@map("notifications")
+}
+
+model UserSession {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  device       String
+  ip           String?
+  userAgent    String?   @map("user_agent")
+  lastActiveAt DateTime  @map("last_active_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastActiveAt], map: "user_sessions_user_id_last_active_at_idx")
+  @@map("user_sessions")
+}
+
+model ReleaseDocument {
+  id         String   @id @default(uuid()) @db.Uuid
+  releaseId  String   @map("release_id") @db.Uuid
+  docType    String   @map("doc_type")
+  url        String
+  uploadedBy String?  @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  release    Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, docType], map: "release_documents_release_id_doc_type_idx")
+  @@map("release_documents")
+}
+
+model ReleaseAnalyticsSnapshot {
+  id             String   @id @default(uuid()) @db.Uuid
+  releaseId      String   @map("release_id") @db.Uuid
+  asOfTs         DateTime @map("as_of_ts")
+  periodCode     String   @map("period_code")
+  yieldPct       Decimal? @map("yield_pct") @db.Decimal(10, 6)
+  payoutsTotal   Decimal? @map("payouts_total") @db.Decimal(20, 8)
+  volumeNotional Decimal? @map("volume_notional") @db.Decimal(20, 8)
+  volumeUnits    Decimal? @map("volume_units") @db.Decimal(20, 8)
+  liquidityScore Decimal? @map("liquidity_score") @db.Decimal(10, 4)
+  activityScore  Decimal? @map("activity_score") @db.Decimal(10, 4)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  release        Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, periodCode, asOfTs], map: "release_analytics_snapshots_release_id_period_code_as_of_ts_idx")
+  @@map("release_analytics_snapshots")
+}
+
+model OrderBookSnapshot {
+  id            String   @id @default(uuid()) @db.Uuid
+  releaseId     String   @map("release_id") @db.Uuid
+  capturedAt    DateTime @map("captured_at")
+  topBidPrice   Decimal? @map("top_bid_price") @db.Decimal(20, 8)
+  topAskPrice   Decimal? @map("top_ask_price") @db.Decimal(20, 8)
+  spreadAmount  Decimal? @map("spread_amount") @db.Decimal(20, 8)
+  bidDepthUnits Decimal? @map("bid_depth_units") @db.Decimal(20, 8)
+  askDepthUnits Decimal? @map("ask_depth_units") @db.Decimal(20, 8)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  release       Release  @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId, capturedAt], map: "order_book_snapshots_release_id_captured_at_idx")
+  @@map("order_book_snapshots")
+}
+
+model PayoutClaim {
+  id             String   @id @default(uuid()) @db.Uuid
+  payoutId       String   @map("payout_id") @db.Uuid
+  claimantUserId String   @map("claimant_user_id") @db.Uuid
+  status         String
+  note           String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  payout         Payout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+
+  @@index([claimantUserId, status], map: "payout_claims_claimant_user_id_status_idx")
+  @@map("payout_claims")
+}
+
+model RiskFlag {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  flagCode  String   @map("flag_code")
+  severity  String
+  isActive  Boolean  @default(true) @map("is_active")
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive, createdAt], map: "risk_flags_user_id_is_active_created_at_idx")
+  @@map("risk_flags")
+}
