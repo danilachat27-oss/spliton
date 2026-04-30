@@ -8,5 +8,8 @@
   "setupFiles": ["<rootDir>/jest-e2e.setup.ts"],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "transformIgnorePatterns": [
+    "[/\\\\]node_modules[/\\\\](?!(@scure|@otplib|otplib|@noble)[/\\\\])"
+  ]
 }

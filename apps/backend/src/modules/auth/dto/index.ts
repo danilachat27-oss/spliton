@@ -2,3 +2,7 @@ export { LoginDto } from './login.dto';
 export { LogoutDto } from './logout.dto';
 export { RefreshTokenDto } from './refresh-token.dto';
 export { RegisterDto } from './register.dto';
+export { TwoFactorDisableDto } from './two-factor-disable.dto';
+export { TwoFactorRegenerateRecoveryCodesDto } from './two-factor-regenerate-recovery-codes.dto';
+export { TwoFactorVerifyDto } from './two-factor-verify.dto';
+export { TwoFactorVerifySetupDto } from './two-factor-verify-setup.dto';

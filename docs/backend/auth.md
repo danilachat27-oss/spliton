@@ -5,11 +5,12 @@
 Implemented auth endpoints:
 
 - `POST /auth/register`
-- `POST /auth/login`
+- `POST /auth/login` (если у пользователя включён TOTP 2FA — см. раздел «Two-factor (TOTP)» ниже)
 - `POST /auth/refresh`
 - `POST /auth/logout` (current session by refresh token)
 - `POST /auth/logout-all` (all user sessions, JWT protected)
 - `GET /users/me` (JWT protected)
+- Two-factor: `POST /auth/2fa/setup`, `verify-setup`, `verify`, `disable`, `recovery-codes/regenerate` — см. [2fa-plan.md](./2fa-plan.md) §11
 
 ## Token Model
 
@@ -52,9 +53,12 @@ Before production launch, next step is email verification and switching register
 1. Normalize email.
 2. Validate credentials with generic error (`Invalid credentials`).
 3. Reject blocked statuses (`SUSPENDED`, `BANNED`, `DELETED`).
-4. Create a new session and token pair.
-5. Store refresh hash in session.
-6. Write `LOGIN_SUCCESS` or `LOGIN_FAILED` audit event.
+4. If TOTP 2FA **включена** для пользователя: создать `two_factor_challenges` (без `user_session` и без токенов), вернуть `{ requires2fa, challengeId, availableMethods }`, аудит `TWO_FACTOR_CHALLENGE_CREATED` (без `LOGIN_SUCCESS`).
+5. Иначе: создать новую сессию и пару токенов, сохранить refresh hash, записать `LOGIN_SUCCESS` или `LOGIN_FAILED`.
+
+## Two-factor (TOTP + backup codes)
+
+Требуется `TWO_FACTOR_ENCRYPTION_KEY` (base64 → 32 байта) для операций setup/verify. Backup codes показываются **plaintext только один раз** в ответах `verify-setup` и `recovery-codes/regenerate`. Подробности и список endpoints: [2fa-plan.md](./2fa-plan.md) §11.
 
 ## Refresh Rotation
 

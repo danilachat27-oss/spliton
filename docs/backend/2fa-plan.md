@@ -274,3 +274,25 @@ JWT → `setup` (pending + encrypted secret) → пользователь ска
 5. Где хранить **`TWO_FACTOR_ENCRYPTION_KEY`** (env / KMS) и политика **ротации**.  
 6. Единая политика: **`LOGIN_SUCCESS`** только после полной аутентификации или отдельное событие для «password ok, 2FA pending».  
 7. Обновление **`.env.example`** (без реальных секретов) — отдельным коммитом после реализации.
+
+---
+
+## 11. Реализовано в backend (TOTP + backup codes)
+
+**Endpoints** (NestJS, `entityType: auth` в audit):
+
+| Метод | Путь | Auth | Назначение |
+|--------|------|------|------------|
+| `POST` | `/auth/2fa/setup` | JWT | Старт настройки TOTP (`PENDING`, secret только encrypted в БД); при уже `ENABLED` — **409**. |
+| `POST` | `/auth/2fa/verify-setup` | JWT | Подтверждение TOTP, включение метода, выдача **plaintext backup codes один раз**. |
+| `POST` | `/auth/2fa/verify` | нет | Завершение логина по `challengeId` + `method` (`totp` \| `backup_code`). |
+| `POST` | `/auth/2fa/disable` | JWT | Пароль + второй фактор; методы и backup codes сбрасываются. |
+| `POST` | `/auth/2fa/recovery-codes/regenerate` | JWT | Только TOTP-код; новая пачка backup codes, старые удаляются. |
+
+**Изменённый login:** при включённом TOTP после верного пароля ответ `{ requires2fa, challengeId, availableMethods }` без `user` и без токенов; `LOGIN_SUCCESS` пишется только после успешного `/auth/2fa/verify`.
+
+**Env:** `TWO_FACTOR_ENCRYPTION_KEY` — в `.env.example` пустое значение; в Joi **optional** на старте приложения. Для setup/verify при отсутствии или невалидном ключе (не base64 на 32 байта) — ошибка сервера (см. `TwoFactorEncryptionService`). Локально ключ: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` (не коммитить вывод).
+
+**Хранение:** TOTP secret — AES-256-GCM (ciphertext + iv + tag в `two_factor_methods`); backup codes — только bcrypt-хеши в `two_factor_backup_codes`.
+
+**Не входит в реализацию:** SMS/Twilio, WebAuthn/passkeys, QR на backend (только `otpauthUrl`).

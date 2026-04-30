@@ -13,6 +13,9 @@ import { UsersModule } from './modules/users/users.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
 import { PrismaModule } from './prisma/prisma.module';
 
+/** Jest sets JEST_WORKER_ID; skip rate limits so e2e can exercise auth without 429. */
+const throttleDisabled = Boolean(process.env.JEST_WORKER_ID);
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,12 +24,16 @@ import { PrismaModule } from './prisma/prisma.module';
       load: [appConfig],
       validationSchema: envValidationSchema,
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60_000,
-        limit: 120,
-      },
-    ]),
+    ...(throttleDisabled
+      ? []
+      : [
+          ThrottlerModule.forRoot([
+            {
+              ttl: 60_000,
+              limit: 120,
+            },
+          ]),
+        ]),
     PrismaModule,
     HealthModule,
     AuthModule,
@@ -36,11 +43,13 @@ import { PrismaModule } from './prisma/prisma.module';
     OrdersModule,
     TradesModule,
   ],
-  providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
+  providers: throttleDisabled
+    ? []
+    : [
+        {
+          provide: APP_GUARD,
+          useClass: ThrottlerGuard,
+        },
+      ],
 })
 export class AppModule {}

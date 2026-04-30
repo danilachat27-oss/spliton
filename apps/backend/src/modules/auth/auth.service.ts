@@ -8,12 +8,27 @@ import { UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { AuthRepository } from './auth.repository';
-import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from './dto';
+import {
+  LoginDto,
+  LogoutDto,
+  RefreshTokenDto,
+  RegisterDto,
+  TwoFactorDisableDto,
+  TwoFactorRegenerateRecoveryCodesDto,
+  TwoFactorVerifyDto,
+  TwoFactorVerifySetupDto,
+} from './dto';
 import { AuthAuditService } from './services/auth-audit.service';
 import { SessionService } from './services/session.service';
 import { TokenService } from './services/token.service';
+import { TwoFactorService } from './services/two-factor.service';
+import type { AuthLoginResult } from './types/auth-login-result.type';
 import { AuthResponse, SafeUserResponse } from './types/auth-response.type';
 import { AuthUser } from './types/auth-user.type';
+import {
+  assertUserCanLogin,
+  prismaUserToSafeUser,
+} from './utils/safe-user.mapper';
 
 type RequestMeta = {
   ip?: string | null;
@@ -28,6 +43,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly sessionService: SessionService,
     private readonly authAuditService: AuthAuditService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
 
   async register(dto: RegisterDto, meta?: RequestMeta): Promise<AuthResponse> {
@@ -51,7 +67,7 @@ export class AuthService {
       throw new InternalServerErrorException('Unable to create user');
     }
 
-    const safeUser = this.toSafeUser(user);
+    const safeUser = prismaUserToSafeUser(user);
     const tokens = await this.issueSessionAndTokens({
       user: safeUser,
       meta,
@@ -72,7 +88,7 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto, meta?: RequestMeta): Promise<AuthResponse> {
+  async login(dto: LoginDto, meta?: RequestMeta): Promise<AuthLoginResult> {
     const email = dto.email.trim().toLowerCase();
     const user = await this.authRepository.findUserByEmail(email);
 
@@ -102,9 +118,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    this.assertCanLogin(user.status);
+    assertUserCanLogin(user.status);
 
-    const safeUser = this.toSafeUser(user);
+    const has2fa = await this.twoFactorService.isTotpEnabledForUser(user.id);
+    if (has2fa) {
+      const challengeId = await this.twoFactorService.createLoginChallenge(
+        user.id,
+        meta,
+      );
+      return {
+        requires2fa: true,
+        challengeId,
+        availableMethods: ['totp', 'backup_code'],
+      };
+    }
+
+    const safeUser = prismaUserToSafeUser(user);
     const tokens = await this.issueSessionAndTokens({
       user: safeUser,
       meta,
@@ -123,6 +152,58 @@ export class AuthService {
       user: safeUser,
       tokens,
     };
+  }
+
+  async twoFactorSetup(user: AuthUser, meta?: RequestMeta) {
+    return this.twoFactorService.setup(user.id, user.email, meta);
+  }
+
+  async twoFactorVerifySetup(
+    user: AuthUser,
+    dto: TwoFactorVerifySetupDto,
+    meta?: RequestMeta,
+  ) {
+    return this.twoFactorService.verifySetup(user.id, dto.code, meta);
+  }
+
+  async twoFactorVerify(dto: TwoFactorVerifyDto, meta?: RequestMeta) {
+    return this.twoFactorService.verifyChallengeAndLogin({
+      challengeId: dto.challengeId,
+      code: dto.code,
+      method: dto.method,
+      meta,
+    });
+  }
+
+  async twoFactorDisable(
+    user: AuthUser,
+    dto: TwoFactorDisableDto,
+    meta?: RequestMeta,
+  ) {
+    const full = await this.authRepository.findUserById(user.id);
+    if (!full?.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    return this.twoFactorService.disable(
+      user.id,
+      dto.password,
+      dto.code,
+      dto.method,
+      full.passwordHash,
+      meta,
+    );
+  }
+
+  async twoFactorRegenerateRecoveryCodes(
+    user: AuthUser,
+    dto: TwoFactorRegenerateRecoveryCodesDto,
+    meta?: RequestMeta,
+  ) {
+    return this.twoFactorService.regenerateRecoveryCodes(
+      user.id,
+      dto.code,
+      meta,
+    );
   }
 
   async refresh(
@@ -216,8 +297,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    this.assertCanLogin(user.status);
-    const safeUser = this.toSafeUser(user);
+    assertUserCanLogin(user.status);
+    const safeUser = prismaUserToSafeUser(user);
     const newSessionId = randomUUID();
     const finalTokens = await this.tokenService.generateTokenPair({
       userId: safeUser.id,
@@ -294,16 +375,6 @@ export class AuthService {
     return { success: true };
   }
 
-  private assertCanLogin(status: UserStatus) {
-    if (
-      status === UserStatus.BANNED ||
-      status === UserStatus.SUSPENDED ||
-      status === UserStatus.DELETED
-    ) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-  }
-
   private async issueSessionAndTokens(params: {
     user: SafeUserResponse;
     meta?: RequestMeta;
@@ -324,23 +395,5 @@ export class AuthService {
       this.tokenService.getRefreshExpiryDate(),
     );
     return tokens;
-  }
-
-  private toSafeUser(user: {
-    id: string;
-    email: string;
-    status: UserStatus;
-    createdAt: Date;
-    profile: { displayName: string | null } | null;
-    userRoles: Array<{ role: { code: string } }>;
-  }): SafeUserResponse {
-    return {
-      id: user.id,
-      email: user.email,
-      status: user.status,
-      createdAt: user.createdAt,
-      profile: user.profile ? { displayName: user.profile.displayName } : null,
-      roles: user.userRoles.map((row) => row.role.code),
-    };
   }
 }
