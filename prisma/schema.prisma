@@ -862,18 +862,27 @@ model Notification {
 }
 
 model UserSession {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  device       String
-  ip           String?
-  userAgent    String?   @map("user_agent")
-  lastActiveAt DateTime  @map("last_active_at")
-  revokedAt    DateTime? @map("revoked_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @map("user_id") @db.Uuid
+  device              String
+  ip                  String?
+  userAgent           String?       @map("user_agent")
+  refreshTokenHash    String?       @map("refresh_token_hash")
+  expiresAt           DateTime?     @map("expires_at")
+  lastActiveAt        DateTime      @map("last_active_at")
+  revokedAt           DateTime?     @map("revoked_at")
+  revokedReason       String?       @map("revoked_reason")
+  replacedBySessionId String?       @map("replaced_by_session_id") @db.Uuid
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBySession   UserSession?  @relation("session_replacement", fields: [replacedBySessionId], references: [id], onDelete: SetNull)
+  replacedSessions    UserSession[] @relation("session_replacement")
 
   @@index([userId, lastActiveAt], map: "user_sessions_user_id_last_active_at_idx")
+  @@index([userId, revokedAt], map: "user_sessions_user_id_revoked_at_idx")
+  @@index([expiresAt], map: "user_sessions_expires_at_idx")
+  @@index([replacedBySessionId], map: "user_sessions_replaced_by_session_id_idx")
   @@map("user_sessions")
 }
 
