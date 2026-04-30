@@ -250,34 +250,111 @@ enum ActorRole {
   @@map("actor_role")
 }
 
+enum TwoFactorMethodType {
+  TOTP
+
+  @@map("two_factor_method_type")
+}
+
+enum TwoFactorMethodStatus {
+  PENDING
+  ENABLED
+  DISABLED
+
+  @@map("two_factor_method_status")
+}
+
+enum TwoFactorChallengeStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  EXPIRED
+
+  @@map("two_factor_challenge_status")
+}
+
 model User {
-  id               String            @id @default(uuid()) @db.Uuid
-  email            String            @unique
-  passwordHash     String?           @map("password_hash")
-  authProvider     String            @default("email") @map("auth_provider")
-  status           UserStatus        @default(PENDING)
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-  deletedAt        DateTime?         @map("deleted_at")
-  profile          UserProfile?
-  userRoles        UserRole[]
-  positions        UserPosition[]
-  wallets          Wallet[]
-  orders           Order[]
-  marketListings   MarketListing[]
-  payouts          Payout[]
-  kycVerifications KycVerification[]
-  sessions         UserSession[]
-  notifications    Notification[]
-  riskFlags        RiskFlag[]
-  adminActions     AdminAction[]
-  auditLogs        AuditLog[]
-  tradesBought     Trade[]           @relation("trade_buyer")
-  tradesSold       Trade[]           @relation("trade_seller")
-  ownershipLedger  OwnershipLedger[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  email                String                @unique
+  passwordHash         String?               @map("password_hash")
+  authProvider         String                @default("email") @map("auth_provider")
+  status               UserStatus            @default(PENDING)
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  deletedAt            DateTime?             @map("deleted_at")
+  profile              UserProfile?
+  userRoles            UserRole[]
+  positions            UserPosition[]
+  wallets              Wallet[]
+  orders               Order[]
+  marketListings       MarketListing[]
+  payouts              Payout[]
+  kycVerifications     KycVerification[]
+  sessions             UserSession[]
+  notifications        Notification[]
+  riskFlags            RiskFlag[]
+  adminActions         AdminAction[]
+  auditLogs            AuditLog[]
+  tradesBought         Trade[]               @relation("trade_buyer")
+  tradesSold           Trade[]               @relation("trade_seller")
+  ownershipLedger      OwnershipLedger[]
+  twoFactorMethods     TwoFactorMethod[]
+  twoFactorBackupCodes TwoFactorBackupCode[]
+  twoFactorChallenges  TwoFactorChallenge[]
 
   @@index([createdAt], map: "users_created_at_idx")
   @@map("users")
+}
+
+model TwoFactorMethod {
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  methodType           TwoFactorMethodType   @map("method_type")
+  status               TwoFactorMethodStatus
+  secretCiphertext     String                @map("secret_ciphertext")
+  secretIv             String                @map("secret_iv")
+  secretTag            String                @map("secret_tag")
+  encryptionKeyVersion Int                   @default(1) @map("encryption_key_version")
+  confirmedAt          DateTime?             @map("confirmed_at")
+  lastUsedAt           DateTime?             @map("last_used_at")
+  disabledAt           DateTime?             @map("disabled_at")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, methodType], map: "two_factor_methods_user_id_method_type_key")
+  @@index([userId, status], map: "two_factor_methods_user_id_status_idx")
+  @@map("two_factor_methods")
+}
+
+model TwoFactorBackupCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt], map: "two_factor_backup_codes_user_id_used_at_idx")
+  @@map("two_factor_backup_codes")
+}
+
+model TwoFactorChallenge {
+  id            String                   @id @default(uuid()) @db.Uuid
+  userId        String                   @map("user_id") @db.Uuid
+  status        TwoFactorChallengeStatus @default(PENDING)
+  attemptsCount Int                      @default(0) @map("attempts_count")
+  expiresAt     DateTime                 @map("expires_at")
+  consumedAt    DateTime?                @map("consumed_at")
+  ip            String?
+  userAgent     String?                  @map("user_agent")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, expiresAt], map: "two_factor_challenges_user_id_status_expires_at_idx")
+  @@index([expiresAt], map: "two_factor_challenges_expires_at_idx")
+  @@map("two_factor_challenges")
 }
 
 model UserProfile {
