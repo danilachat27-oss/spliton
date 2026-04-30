@@ -4,7 +4,10 @@
   "scripts": {
     "backend:dev": "npm --prefix apps/backend run start:dev",
     "backend:build": "npm --prefix apps/backend run build",
-    "backend:start": "npm --prefix apps/backend run start"
+    "backend:start": "npm --prefix apps/backend run start",
+    "backend:test": "npm --prefix apps/backend run test",
+    "backend:test:e2e": "npm --prefix apps/backend run test:e2e",
+    "backend:lint": "npm --prefix apps/backend run lint:ci"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,0 +1,73 @@
+name: Backend CI
+
+on:
+  push:
+    paths:
+      - "apps/backend/**"
+      - "prisma/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "apps/backend/**"
+      - "prisma/**"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build-lint-unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint (no fix)
+        run: npm run lint:ci
+
+      - name: Unit tests
+        run: npm run test
+
+  e2e:
+    needs: build-lint-unit
+    if: |
+      secrets.BACKEND_E2E_DATABASE_URL != '' &&
+      secrets.BACKEND_E2E_DIRECT_URL != '' &&
+      secrets.BACKEND_E2E_JWT_SECRET != '' &&
+      secrets.BACKEND_E2E_JWT_REFRESH_SECRET != ''
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: ${{ secrets.BACKEND_E2E_DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
+      JWT_SECRET: ${{ secrets.BACKEND_E2E_JWT_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.BACKEND_E2E_JWT_REFRESH_SECRET }}
+      TEST_DATABASE_URL: ${{ secrets.BACKEND_E2E_TEST_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+
+      - run: npm ci
+
+      - name: E2E tests
+        run: npm run test:e2e
