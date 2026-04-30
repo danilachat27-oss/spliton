@@ -1,43 +1,31 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { JwtService } from "@nestjs/jwt";
+import { ConflictException, Injectable, InternalServerErrorException, UnauthorizedException } from "@nestjs/common";
 import { UserStatus } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import { AuthRepository } from "./auth.repository";
-import { LoginDto, RefreshTokenDto, RegisterDto } from "./dto";
+import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from "./dto";
+import { AuthAuditService } from "./services/auth-audit.service";
+import { SessionService } from "./services/session.service";
+import { TokenService } from "./services/token.service";
+import { AuthResponse, SafeUserResponse } from "./types/auth-response.type";
 import { AuthUser } from "./types/auth-user.type";
 
-type SafeUserResponse = {
-  id: string;
-  email: string;
-  status: UserStatus;
-  profile: {
-    displayName: string | null;
-  } | null;
-  roles: string[];
-  createdAt: Date;
-};
-
-type AuthTokens = {
-  accessToken: string;
-  refreshToken: string;
+type RequestMeta = {
+  ip?: string | null;
+  userAgent?: string | null;
+  device?: string | null;
 };
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
+    private readonly tokenService: TokenService,
+    private readonly sessionService: SessionService,
+    private readonly authAuditService: AuthAuditService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto, meta?: RequestMeta): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const existingUser = await this.authRepository.findUserByEmail(email);
     if (existingUser) {
@@ -59,7 +47,19 @@ export class AuthService {
     }
 
     const safeUser = this.toSafeUser(user);
-    const tokens = await this.generateTokens(safeUser);
+    const tokens = await this.issueSessionAndTokens({
+      user: safeUser,
+      meta,
+    });
+
+    await this.authAuditService.logEvent({
+      event: "REGISTER",
+      actorUserId: safeUser.id,
+      entityId: safeUser.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+      safeMeta: { userId: safeUser.id, email: safeUser.email },
+    });
 
     return {
       user: safeUser,
@@ -67,24 +67,49 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, meta?: RequestMeta): Promise<AuthResponse> {
     const email = dto.email.trim().toLowerCase();
     const user = await this.authRepository.findUserByEmail(email);
 
     // Avoid leaking whether email exists or password was wrong.
     if (!user?.passwordHash) {
+      await this.authAuditService.logEvent({
+        event: "LOGIN_FAILED",
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: { email, reason: "INVALID_CREDENTIALS" },
+      });
       throw new UnauthorizedException("Invalid credentials");
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
+      await this.authAuditService.logEvent({
+        event: "LOGIN_FAILED",
+        actorUserId: user.id,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: { userId: user.id, email, reason: "INVALID_CREDENTIALS" },
+      });
       throw new UnauthorizedException("Invalid credentials");
     }
 
     this.assertCanLogin(user.status);
 
     const safeUser = this.toSafeUser(user);
-    const tokens = await this.generateTokens(safeUser);
+    const tokens = await this.issueSessionAndTokens({
+      user: safeUser,
+      meta,
+    });
+
+    await this.authAuditService.logEvent({
+      event: "LOGIN_SUCCESS",
+      actorUserId: safeUser.id,
+      entityId: safeUser.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+      safeMeta: { userId: safeUser.id, email: safeUser.email },
+    });
 
     return {
       user: safeUser,
@@ -92,64 +117,165 @@ export class AuthService {
     };
   }
 
-  async refresh(dto: RefreshTokenDto) {
-    const refreshSecret = this.configService.get<string>("JWT_REFRESH_SECRET");
-    if (!refreshSecret) {
-      throw new InternalServerErrorException("Refresh secret is not configured");
+  async refresh(dto: RefreshTokenDto, meta?: RequestMeta): Promise<AuthResponse> {
+    const payload = await this.tokenService.verifyRefreshToken(dto.refreshToken);
+    const session = await this.sessionService.findSessionById(payload.sessionId);
+
+    if (!session || session.userId !== payload.sub) {
+      await this.authAuditService.logEvent({
+        event: "REFRESH_FAILED",
+        actorUserId: payload.sub,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: { userId: payload.sub, sessionId: payload.sessionId, reason: "SESSION_NOT_FOUND" },
+      });
+      throw new UnauthorizedException("Invalid refresh token");
     }
 
-    let payload: AuthUser;
-    try {
-      payload = await this.jwtService.verifyAsync<AuthUser>(dto.refreshToken, {
-        secret: refreshSecret,
+    if (this.sessionService.isSessionExpired(session) || this.sessionService.isSessionRevoked(session)) {
+      const isRotationReuse = session.revokedReason === "ROTATED";
+      if (isRotationReuse) {
+        await this.sessionService.revokeAllUserSessions({
+          userId: payload.sub,
+          reason: "REFRESH_REUSE_DETECTED",
+        });
+      }
+
+      await this.authAuditService.logEvent({
+        event: isRotationReuse ? "REFRESH_REUSE_DETECTED" : "REFRESH_FAILED",
+        actorUserId: payload.sub,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: {
+          userId: payload.sub,
+          sessionId: payload.sessionId,
+          reason: isRotationReuse ? "ROTATED_TOKEN_REUSE" : "SESSION_INACTIVE",
+        },
       });
-    } catch {
+      throw new UnauthorizedException("Invalid refresh token");
+    }
+
+    const refreshMatches = await this.sessionService.verifySessionRefreshToken(session, dto.refreshToken);
+    if (!refreshMatches) {
+      await this.sessionService.revokeAllUserSessions({
+        userId: payload.sub,
+        reason: "REFRESH_REUSE_DETECTED",
+      });
+      await this.authAuditService.logEvent({
+        event: "REFRESH_REUSE_DETECTED",
+        actorUserId: payload.sub,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: { userId: payload.sub, sessionId: payload.sessionId, reason: "HASH_MISMATCH" },
+      });
       throw new UnauthorizedException("Invalid refresh token");
     }
 
     const user = await this.authRepository.findUserById(payload.sub);
     if (!user) {
+      await this.authAuditService.logEvent({
+        event: "REFRESH_FAILED",
+        actorUserId: payload.sub,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: { userId: payload.sub, sessionId: payload.sessionId, reason: "USER_NOT_FOUND" },
+      });
       throw new UnauthorizedException("Invalid refresh token");
     }
 
     this.assertCanLogin(user.status);
     const safeUser = this.toSafeUser(user);
-    const tokens = await this.generateTokens(safeUser);
+    const newSessionId = randomUUID();
+    const finalTokens = await this.tokenService.generateTokenPair({
+      userId: safeUser.id,
+      email: safeUser.email,
+      roles: safeUser.roles,
+      sessionId: newSessionId,
+    });
 
-    return {
-      user: safeUser,
-      tokens,
-    };
+    const newSession = await this.sessionService.rotateSession({
+      currentSession: session,
+      newSessionId,
+      refreshToken: finalTokens.refreshToken,
+      expiresAt: this.tokenService.getRefreshExpiryDate(),
+      meta,
+    });
+
+    await this.authAuditService.logEvent({
+      event: "REFRESH_SUCCESS",
+      actorUserId: safeUser.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+      safeMeta: { userId: safeUser.id, sessionId: newSession.id },
+    });
+
+    return { user: safeUser, tokens: finalTokens };
   }
 
-  logout() {
+  async logout(dto: LogoutDto, meta?: RequestMeta) {
+    try {
+      const payload = await this.tokenService.verifyRefreshToken(dto.refreshToken);
+      const session = await this.sessionService.findSessionById(payload.sessionId);
+
+      if (session && session.userId === payload.sub && !this.sessionService.isSessionRevoked(session)) {
+        await this.sessionService.revokeSession({
+          sessionId: session.id,
+          reason: "LOGOUT",
+        });
+        await this.authAuditService.logEvent({
+          event: "LOGOUT",
+          actorUserId: payload.sub,
+          ip: meta?.ip,
+          userAgent: meta?.userAgent,
+          safeMeta: { userId: payload.sub, sessionId: session.id },
+        });
+      }
+    } catch {
+      // Keep logout idempotent and non-disclosing for invalid/expired/revoked tokens.
+    }
+
+    return { success: true };
+  }
+
+  async logoutAll(currentUser: AuthUser, meta?: RequestMeta) {
+    await this.sessionService.revokeAllUserSessions({
+      userId: currentUser.id,
+      reason: "LOGOUT_ALL",
+    });
+    await this.authAuditService.logEvent({
+      event: "LOGOUT_ALL",
+      actorUserId: currentUser.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+      safeMeta: { userId: currentUser.id, sessionId: currentUser.sessionId },
+    });
+
     return { success: true };
   }
 
   private assertCanLogin(status: UserStatus) {
     if (status === UserStatus.BANNED || status === UserStatus.SUSPENDED || status === UserStatus.DELETED) {
-      throw new ForbiddenException("User is not allowed to login");
+      throw new UnauthorizedException("Invalid credentials");
     }
   }
 
-  private async generateTokens(user: SafeUserResponse): Promise<AuthTokens> {
-    const payload: AuthUser = {
-      sub: user.id,
-      email: user.email,
-      roles: user.roles,
-    };
-
-    const refreshSecret = this.configService.get<string>("JWT_REFRESH_SECRET");
-    if (!refreshSecret) {
-      throw new InternalServerErrorException("Refresh secret is not configured");
-    }
-
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: "15m" }),
-      this.jwtService.signAsync(payload, { secret: refreshSecret, expiresIn: "7d" }),
-    ]);
-
-    return { accessToken, refreshToken };
+  private async issueSessionAndTokens(params: { user: SafeUserResponse; meta?: RequestMeta }) {
+    const session = await this.sessionService.createSession({
+      userId: params.user.id,
+      meta: params.meta,
+    });
+    const tokens = await this.tokenService.generateTokenPair({
+      userId: params.user.id,
+      email: params.user.email,
+      roles: params.user.roles,
+      sessionId: session.id,
+    });
+    await this.sessionService.setRefreshToken(
+      session.id,
+      tokens.refreshToken,
+      this.tokenService.getRefreshExpiryDate(),
+    );
+    return tokens;
   }
 
   private toSafeUser(user: {

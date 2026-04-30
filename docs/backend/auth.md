@@ -1,65 +1,139 @@
-# Spliton Auth Foundation (MVP)
+# Spliton Production Auth
 
 ## Scope
 
-Implemented backend auth endpoints:
+Implemented auth endpoints:
 
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/refresh`
-- `POST /auth/logout`
-- `GET /users/me` (protected with JWT access token)
-
-This is a secure MVP foundation only. It does not implement advanced session management yet.
+- `POST /auth/logout` (current session by refresh token)
+- `POST /auth/logout-all` (all user sessions, JWT protected)
+- `GET /users/me` (JWT protected)
 
 ## Token Model
 
 - **Access token**
-  - JWT signed with `JWT_SECRET`
-  - payload: `sub`, `email`, `roles`
+  - signed with `JWT_SECRET`
+  - payload: `sub`, `email`, `roles`, `sessionId`, `type: "access"`
   - TTL: `15m`
 - **Refresh token**
-  - JWT signed with `JWT_REFRESH_SECRET`
-  - payload: `sub`, `email`, `roles`
+  - signed with `JWT_REFRESH_SECRET`
+  - payload: `sub`, `email`, `roles`, `sessionId`, `type: "refresh"`
   - TTL: `7d`
 
-## Flows
+## Session Model (`user_sessions`)
 
-### Register
+- Each login/register creates a DB session.
+- DB stores only `refresh_token_hash` (`bcrypt`), never raw refresh token.
+- Session lifecycle fields:
+  - `expires_at`
+  - `last_active_at`
+  - `revoked_at`
+  - `revoked_reason`
+  - `replaced_by_session_id`
+  - `ip`, `user_agent`, `device`
+
+## Register Flow
 
 1. Normalize email (`trim + lowercase`).
-2. Check duplicate email.
-3. Hash password via `bcrypt`.
-4. Create user (`ACTIVE`), profile, and default `INVESTOR` role.
-5. Return safe user object + tokens.
+2. Reject duplicate email.
+3. Hash password (`bcrypt`).
+4. Create `user` + `user_profile` + default `INVESTOR` role.
+5. Create a session and issue token pair.
+6. Persist refresh hash and expiration in that session.
+7. Write `REGISTER` audit event.
 
-### Login
+Current status is `ACTIVE` for compatibility with current frontend flow.
+Before production launch, next step is email verification and switching register flow to `PENDING`.
+
+## Login Flow
 
 1. Normalize email.
-2. Load user by email.
-3. Compare password hash.
-4. Block login for `BANNED`, `SUSPENDED`, `DELETED`.
-5. Return safe user object + tokens.
+2. Validate credentials with generic error (`Invalid credentials`).
+3. Reject blocked statuses (`SUSPENDED`, `BANNED`, `DELETED`).
+4. Create a new session and token pair.
+5. Store refresh hash in session.
+6. Write `LOGIN_SUCCESS` or `LOGIN_FAILED` audit event.
 
-Security note: login uses generic unauthorized message to avoid leaking whether email exists.
+## Refresh Rotation
 
-### Refresh
+Refresh token is one-time use:
 
-1. Verify refresh token with refresh secret.
-2. Load user by `sub`.
-3. Validate user status.
-4. Return new access + refresh token pair.
+1. Verify JWT signature + token type (`refresh`).
+2. Validate referenced session is active and unexpired.
+3. Compare incoming refresh token with `refresh_token_hash`.
+4. Create new session, revoke old session with:
+   - `revoked_reason = "ROTATED"`
+   - `replaced_by_session_id = <new_session_id>`
+5. Return new access + refresh pair for new session.
+6. Write `REFRESH_SUCCESS`.
 
-### Logout (stateless MVP)
+Why one-time refresh token:
 
-- Returns `{ success: true }`.
-- Client must remove local tokens.
-- Refresh token rotation/session table is planned for later.
+- Limits replay window.
+- Gives deterministic chain of session replacements.
+- Enables robust reuse detection and forced global revocation.
 
-## What is intentionally not implemented
+## Reuse Detection
 
-- No auth UI integration.
-- No Redis/session storage.
-- No refresh token persistence/rotation/revocation DB table.
-- No OAuth/social login.
-- No wallet/payment/blockchain behavior.
+If refresh token hash mismatch is detected, system treats it as potential token reuse:
+
+- revoke all active user sessions;
+- write `REFRESH_REUSE_DETECTED`;
+- return `401`.
+
+If a rotated (already revoked) token is reused, it is also treated as suspicious and logged.
+
+## Logout
+
+- `POST /auth/logout`
+  - accepts `refreshToken`
+  - revokes only that session with `revoked_reason = "LOGOUT"`
+  - idempotent response: `{ success: true }`
+  - writes `LOGOUT` when session is found and active
+
+- `POST /auth/logout-all`
+  - requires valid access token
+  - revokes all active sessions of current user with `revoked_reason = "LOGOUT_ALL"`
+  - writes `LOGOUT_ALL`
+
+## Access Token Validation (`JwtStrategy`)
+
+For protected endpoints (`users/me` etc.) strategy validates:
+
+- token type is `access`;
+- user exists and is not blocked;
+- session exists, not revoked, not expired.
+
+This gives immediate logout effect for protected routes even if access token TTL has not elapsed.
+
+## Audit Events
+
+Auth audit events:
+
+- `REGISTER`
+- `LOGIN_SUCCESS`
+- `LOGIN_FAILED`
+- `REFRESH_SUCCESS`
+- `REFRESH_FAILED`
+- `REFRESH_REUSE_DETECTED`
+- `LOGOUT`
+- `LOGOUT_ALL`
+
+Safe metadata only (no secrets/tokens/passwords):
+
+- `userId`
+- `email`
+- `sessionId`
+- `reason`
+- `ip`
+- `userAgent`
+
+## Rate Limiting and Security Headers
+
+- `helmet` is enabled globally.
+- Global throttling is enabled with `@nestjs/throttler`.
+- Auth endpoints use stricter endpoint-level limits for `register`, `login`, `refresh`.
+
+For multi-instance production, throttling must be backed by Redis store (not implemented in current single-instance setup).

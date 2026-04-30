@@ -1,5 +1,6 @@
 export type AuthUser = {
-  sub: string;
+  id: string;
   email: string;
   roles: string[];
+  sessionId: string;
 };
