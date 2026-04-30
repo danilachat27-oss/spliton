@@ -1,8 +1,12 @@
 {
   "name": "revshare-platform",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "devDependencies": {
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "tsx": "^4.21.0"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"
