@@ -6,4 +6,12 @@ export type Requires2faResponse = {
   availableMethods: ['totp', 'backup_code'];
 };
 
-export type AuthLoginResult = AuthResponse | Requires2faResponse;
+export type EmailNotVerifiedResponse = {
+  code: 'EMAIL_NOT_VERIFIED';
+  message: 'Email verification required';
+};
+
+export type AuthLoginResult =
+  | AuthResponse
+  | Requires2faResponse
+  | EmailNotVerifiedResponse;

@@ -6,6 +6,8 @@ Implemented auth endpoints:
 
 - `POST /auth/register`
 - `POST /auth/login` (если у пользователя включён TOTP 2FA — см. раздел «Two-factor (TOTP)» ниже)
+- `POST /auth/email/verify`
+- `POST /auth/email/resend`
 - `POST /auth/refresh`
 - `POST /auth/logout` (current session by refresh token)
 - `POST /auth/logout-all` (all user sessions, JWT protected)
@@ -25,7 +27,7 @@ Implemented auth endpoints:
 
 ## Session Model (`user_sessions`)
 
-- Each login/register creates a DB session.
+- Each login (and register in old flow) creates a DB session.
 - DB stores only `refresh_token_hash` (`bcrypt`), never raw refresh token.
 - Session lifecycle fields:
   - `expires_at`
@@ -40,21 +42,29 @@ Implemented auth endpoints:
 1. Normalize email (`trim + lowercase`).
 2. Reject duplicate email.
 3. Hash password (`bcrypt`).
-4. Create `user` + `user_profile` + default `INVESTOR` role.
-5. Create a session and issue token pair.
-6. Persist refresh hash and expiration in that session.
-7. Write `REGISTER` audit event.
-
-Current status is `ACTIVE` for compatibility with current frontend flow.
-Before production launch, next step is email verification and switching register flow to `PENDING`.
+4. Create `user` + `user_profile` + default `INVESTOR` role with status `PENDING_EMAIL_VERIFICATION`.
+5. Create email verification token (store only hash) and queue verification email through `EmailService`.
+6. Do **not** create session and do **not** issue access/refresh tokens.
+7. Return `{ requiresEmailVerification: true }`.
+8. Write `REGISTER` + `EMAIL_VERIFICATION_SENT` audit events.
 
 ## Login Flow
 
 1. Normalize email.
 2. Validate credentials with generic error (`Invalid credentials`).
 3. Reject blocked statuses (`SUSPENDED`, `BANNED`, `DELETED`).
-4. If TOTP 2FA **включена** для пользователя: создать `two_factor_challenges` (без `user_session` и без токенов), вернуть `{ requires2fa, challengeId, availableMethods }`, аудит `TWO_FACTOR_CHALLENGE_CREATED` (без `LOGIN_SUCCESS`).
-5. Иначе: создать новую сессию и пару токенов, сохранить refresh hash, записать `LOGIN_SUCCESS` или `LOGIN_FAILED`.
+4. If user status is `PENDING_EMAIL_VERIFICATION`: return `403` with code `EMAIL_NOT_VERIFIED`; no session/tokens.
+5. If TOTP 2FA **включена**: создать `two_factor_challenges` (без `user_session` и без токенов), вернуть `{ requires2fa, challengeId, availableMethods }`, аудит `TWO_FACTOR_CHALLENGE_CREATED` (без `LOGIN_SUCCESS`).
+6. Иначе: создать новую сессию и пару токенов, сохранить refresh hash, записать `LOGIN_SUCCESS` или `LOGIN_FAILED`.
+
+## Email Verification
+
+- Token generation: high-entropy random token (32 bytes), stored as SHA-256 hash only.
+- Token TTL: `24h` (`EMAIL_VERIFICATION_TOKEN_TTL_HOURS`).
+- Verify endpoint (`POST /auth/email/verify`) activates user (`ACTIVE` + `email_verified_at`) and returns `{ verified: true }`.
+- Verify does **not** auto-login.
+- Resend endpoint (`POST /auth/email/resend`) is anti-enumeration and always returns `{ success: true }`.
+- Dev-only provider abstraction is used now; production provider integration (Postmark/Resend/SES) is deferred.
 
 ## Two-factor (TOTP + backup codes)
 

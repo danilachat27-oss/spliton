@@ -1,5 +1,23 @@
 # Email Verification Architecture + Migration Plan
 
+## Implementation Status
+
+- DB layer is applied:
+  - `UserStatus.PENDING_EMAIL_VERIFICATION`
+  - `users.email_verified_at`
+  - `email_verification_tokens`
+- Backend flow implemented:
+  - `POST /auth/register` returns `{ requiresEmailVerification: true }` (no tokens)
+  - `POST /auth/email/verify`
+  - `POST /auth/email/resend`
+  - `POST /auth/login` returns `403 EMAIL_NOT_VERIFIED` for unverified users
+- Verification token rules:
+  - high-entropy token, DB stores SHA-256 hash only
+  - TTL 24h
+  - single-active-token policy with revoke on register/resend
+- No auto-login after verification.
+- Existing `ACTIVE` users stay compatible (legacy accounts with `email_verified_at = null` are not broken).
+
 ## Current State (as-is)
 
 - `UserStatus` enum: `ACTIVE`, `PENDING`, `SUSPENDED`, `BANNED`, `DELETED`.

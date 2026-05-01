@@ -1,8 +1,7 @@
-import { INestApplication } from '@nestjs/common';
 import { generateSync } from 'otplib';
 import request from 'supertest';
 import { cleanupTwoFactorRegressionUsers } from './helpers/cleanup-two-factor-regression-users';
-import { createE2eApp } from './helpers/create-e2e-app';
+import { createE2eApp, E2eApp } from './helpers/create-e2e-app';
 
 function twoFaEmail(): string {
   return `test-2fa-regression-${Date.now()}@example.com`;
@@ -21,9 +20,46 @@ function totpCode(secret: string): string {
   return generateSync({ secret, period: 30 });
 }
 
+function requireToken(token: string | null): string {
+  expect(token).toEqual(expect.any(String));
+  return token as string;
+}
+
+async function registerVerifyAndLogin(params: {
+  app: E2eApp;
+  email: string;
+  password: string;
+}): Promise<{ accessToken: string }> {
+  await request(params.app.getHttpServer())
+    .post('/auth/register')
+    .send({
+      email: params.email,
+      password: params.password,
+      displayName: '2FA',
+    })
+    .expect(201)
+    .expect(({ body }) => {
+      expect(body).toEqual({ requiresEmailVerification: true });
+    });
+
+  const verifyToken = requireToken(
+    params.app.fakeEmailService.getLatestToken(params.email),
+  );
+  await request(params.app.getHttpServer())
+    .post('/auth/email/verify')
+    .send({ token: verifyToken })
+    .expect(201);
+
+  const login = await request(params.app.getHttpServer())
+    .post('/auth/login')
+    .send({ email: params.email, password: params.password })
+    .expect(201);
+  return { accessToken: login.body.tokens.accessToken as string };
+}
+
 describe('Two-factor auth (e2e)', () => {
   /** Set in `beforeEach`; closed in `afterEach`. */
-  let app: INestApplication | undefined;
+  let app: E2eApp | undefined;
 
   /** Fresh Nest app per test: long single-app runs were intermittently tripping register (500) after heavy 2FA flows. */
   beforeEach(async () => {
@@ -48,12 +84,11 @@ describe('Two-factor auth (e2e)', () => {
   it('B: setup + verify-setup (wrong then valid TOTP, backup codes once)', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -96,12 +131,11 @@ describe('Two-factor auth (e2e)', () => {
   it('C: login with 2FA enabled returns challenge, no tokens', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -133,12 +167,11 @@ describe('Two-factor auth (e2e)', () => {
   it('D: verify challenge with TOTP issues tokens; /users/me works', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -179,12 +212,11 @@ describe('Two-factor auth (e2e)', () => {
   it('E: invalid codes increment attempts; after limit challenge no longer succeeds', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -223,12 +255,11 @@ describe('Two-factor auth (e2e)', () => {
   it('F: backup code succeeds once; reuse with new challenge -> 401', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -269,12 +300,13 @@ describe('Two-factor auth (e2e)', () => {
   it('G: disable 2FA — wrong password 401; password + TOTP success; login issues tokens', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    let accessToken = reg.body.tokens.accessToken as string;
+    let accessToken = (
+      await registerVerifyAndLogin({
+        app: app!,
+        email,
+        password,
+      })
+    ).accessToken;
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -323,12 +355,11 @@ describe('Two-factor auth (e2e)', () => {
   it('H: regenerate backup codes invalidates old unused codes', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')
@@ -368,12 +399,11 @@ describe('Two-factor auth (e2e)', () => {
   it('setup when TOTP already enabled -> 409', async () => {
     const email = twoFaEmail();
     const password = 'TestPwd12!';
-
-    const reg = await request(app!.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password, displayName: '2FA' })
-      .expect(201);
-    const accessToken = reg.body.tokens.accessToken as string;
+    const { accessToken } = await registerVerifyAndLogin({
+      app: app!,
+      email,
+      password,
+    });
 
     const setup = await request(app!.getHttpServer())
       .post('/auth/2fa/setup')

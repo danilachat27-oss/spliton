@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -13,18 +14,26 @@ import {
   LogoutDto,
   RefreshTokenDto,
   RegisterDto,
+  ResendEmailVerificationDto,
   TwoFactorDisableDto,
   TwoFactorRegenerateRecoveryCodesDto,
   TwoFactorVerifyDto,
   TwoFactorVerifySetupDto,
+  VerifyEmailDto,
 } from './dto';
 import { AuthAuditService } from './services/auth-audit.service';
+import { EmailVerificationService } from './services/email-verification.service';
 import { SessionService } from './services/session.service';
 import { TokenService } from './services/token.service';
 import { TwoFactorService } from './services/two-factor.service';
 import type { AuthLoginResult } from './types/auth-login-result.type';
 import { AuthResponse, SafeUserResponse } from './types/auth-response.type';
 import { AuthUser } from './types/auth-user.type';
+import type {
+  EmailResendResponse,
+  EmailVerifyResponse,
+  RegisterEmailVerificationResponse,
+} from './types/email-verification.types';
 import {
   assertUserCanLogin,
   prismaUserToSafeUser,
@@ -44,9 +53,13 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly authAuditService: AuthAuditService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
-  async register(dto: RegisterDto, meta?: RequestMeta): Promise<AuthResponse> {
+  async register(
+    dto: RegisterDto,
+    meta?: RequestMeta,
+  ): Promise<RegisterEmailVerificationResponse> {
     const email = dto.email.trim().toLowerCase();
     const existingUser = await this.authRepository.findUserByEmail(email);
     if (existingUser) {
@@ -61,31 +74,27 @@ export class AuthService {
         email,
         passwordHash,
         displayName: dto.displayName,
-        status: UserStatus.ACTIVE,
+        status: UserStatus.PENDING_EMAIL_VERIFICATION,
       });
     } catch {
       throw new InternalServerErrorException('Unable to create user');
     }
 
-    const safeUser = prismaUserToSafeUser(user);
-    const tokens = await this.issueSessionAndTokens({
-      user: safeUser,
+    await this.authAuditService.logEvent({
+      event: 'REGISTER',
+      actorUserId: user.id,
+      entityId: user.id,
+      ip: meta?.ip,
+      userAgent: meta?.userAgent,
+      safeMeta: { userId: user.id, email: user.email },
+    });
+    await this.emailVerificationService.issueForNewUser({
+      userId: user.id,
+      email: user.email,
       meta,
     });
 
-    await this.authAuditService.logEvent({
-      event: 'REGISTER',
-      actorUserId: safeUser.id,
-      entityId: safeUser.id,
-      ip: meta?.ip,
-      userAgent: meta?.userAgent,
-      safeMeta: { userId: safeUser.id, email: safeUser.email },
-    });
-
-    return {
-      user: safeUser,
-      tokens,
-    };
+    return { requiresEmailVerification: true };
   }
 
   async login(dto: LoginDto, meta?: RequestMeta): Promise<AuthLoginResult> {
@@ -118,6 +127,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.status === UserStatus.PENDING_EMAIL_VERIFICATION) {
+      await this.authAuditService.logEvent({
+        event: 'EMAIL_VERIFICATION_REQUIRED',
+        actorUserId: user.id,
+        entityId: user.id,
+        ip: meta?.ip,
+        userAgent: meta?.userAgent,
+        safeMeta: { userId: user.id, email },
+      });
+      throw new ForbiddenException({
+        message: {
+          code: 'EMAIL_NOT_VERIFIED',
+          message: 'Email verification required',
+        },
+      });
+    }
     assertUserCanLogin(user.status);
 
     const has2fa = await this.twoFactorService.isTotpEnabledForUser(user.id);
@@ -204,6 +229,20 @@ export class AuthService {
       dto.code,
       meta,
     );
+  }
+
+  async verifyEmail(
+    dto: VerifyEmailDto,
+    meta?: RequestMeta,
+  ): Promise<EmailVerifyResponse> {
+    return this.emailVerificationService.verifyToken(dto.token, meta);
+  }
+
+  async resendEmailVerification(
+    dto: ResendEmailVerificationDto,
+    meta?: RequestMeta,
+  ): Promise<EmailResendResponse> {
+    return this.emailVerificationService.resend(dto.email, meta);
   }
 
   async refresh(

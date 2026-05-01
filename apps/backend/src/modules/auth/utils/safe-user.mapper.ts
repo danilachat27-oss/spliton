@@ -26,6 +26,7 @@ export function prismaUserToSafeUser(
 
 export function assertUserCanLogin(status: UserStatus): void {
   if (
+    status === UserStatus.PENDING_EMAIL_VERIFICATION ||
     status === UserStatus.BANNED ||
     status === UserStatus.SUSPENDED ||
     status === UserStatus.DELETED

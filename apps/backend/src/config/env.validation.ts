@@ -12,6 +12,8 @@ export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
+  APP_PUBLIC_URL: Joi.string().uri().default('http://localhost:3000'),
+  EMAIL_VERIFICATION_TOKEN_TTL_HOURS: Joi.number().integer().min(1).default(24),
   /** Base64 of 32 bytes (AES-256-GCM). Optional at boot; required when using 2FA setup/verify. */
   TWO_FACTOR_ENCRYPTION_KEY: Joi.string().optional().allow(''),
 });

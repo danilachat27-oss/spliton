@@ -38,6 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     if (
+      user.status === UserStatus.PENDING_EMAIL_VERIFICATION ||
       user.status === UserStatus.BANNED ||
       user.status === UserStatus.SUSPENDED ||
       user.status === UserStatus.DELETED
