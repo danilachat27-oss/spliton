@@ -12,6 +12,18 @@ export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
+  EMAIL_PROVIDER: Joi.string().valid('dev', 'postmark').default('dev'),
+  EMAIL_FROM: Joi.when('EMAIL_PROVIDER', {
+    is: 'postmark',
+    then: Joi.string().email().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
+  POSTMARK_SERVER_TOKEN: Joi.when('EMAIL_PROVIDER', {
+    is: 'postmark',
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
+  POSTMARK_MESSAGE_STREAM: Joi.string().optional().allow(''),
   APP_PUBLIC_URL: Joi.string().uri().default('http://localhost:3000'),
   EMAIL_VERIFICATION_TOKEN_TTL_HOURS: Joi.number().integer().min(1).default(24),
   /** Base64 of 32 bytes (AES-256-GCM). Optional at boot; required when using 2FA setup/verify. */

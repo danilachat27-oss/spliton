@@ -17,6 +17,31 @@
   - single-active-token policy with revoke on register/resend
 - No auto-login after verification.
 - Existing `ACTIVE` users stay compatible (legacy accounts with `email_verified_at = null` are not broken).
+- Provider adapter status:
+  - implemented: `PostmarkEmailService`
+  - default/local: `EMAIL_PROVIDER=dev` (`DevEmailService`)
+  - e2e: `FakeEmailService` override, no real email sending
+
+## Email Provider Configuration
+
+- `EMAIL_PROVIDER=dev|postmark` (default: `dev`)
+- `EMAIL_FROM` required for `postmark`
+- `POSTMARK_SERVER_TOKEN` required for `postmark`
+- `POSTMARK_MESSAGE_STREAM` optional
+- `APP_PUBLIC_URL` must be configured for valid verification links in non-local environments
+
+Postmark checklist for production:
+- configure verified sender/domain in Postmark
+- set `EMAIL_PROVIDER=postmark`
+- store `POSTMARK_SERVER_TOKEN` in hosting secrets
+- set `EMAIL_FROM` and `APP_PUBLIC_URL`
+- validate register/resend/verify flow in staging
+- monitor failed sends and bounce metrics
+
+Security notes:
+- do not commit provider secrets
+- do not log plaintext verification token or full verification URL
+- keep fake email transport in tests to avoid real outbound emails
 
 ## Current State (as-is)
 

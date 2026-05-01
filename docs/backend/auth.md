@@ -64,7 +64,11 @@ Implemented auth endpoints:
 - Verify endpoint (`POST /auth/email/verify`) activates user (`ACTIVE` + `email_verified_at`) and returns `{ verified: true }`.
 - Verify does **not** auto-login.
 - Resend endpoint (`POST /auth/email/resend`) is anti-enumeration and always returns `{ success: true }`.
-- Dev-only provider abstraction is used now; production provider integration (Postmark/Resend/SES) is deferred.
+- Provider selection:
+  - `EMAIL_PROVIDER=dev` -> `DevEmailService` (default, no real send)
+  - `EMAIL_PROVIDER=postmark` -> `PostmarkEmailService`
+- Postmark env: `POSTMARK_SERVER_TOKEN`, `EMAIL_FROM`, optional `POSTMARK_MESSAGE_STREAM`.
+- E2E always overrides to fake email service, so real emails are never sent in tests.
 
 ## Two-factor (TOTP + backup codes)
 
