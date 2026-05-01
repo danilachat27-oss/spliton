@@ -33,6 +33,9 @@ export type RegisterPasswordStepProps = {
   };
   clearError: (key: "password" | "confirmPassword" | "terms") => void;
   isSubmitting: boolean;
+  duplicateEmailConflict: boolean;
+  isResendingExistingEmail: boolean;
+  onResendExistingEmail: () => Promise<void>;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   onBackToEmail: () => void;
 };
@@ -53,6 +56,9 @@ export function RegisterPasswordStep({
   errors,
   clearError,
   isSubmitting,
+  duplicateEmailConflict,
+  isResendingExistingEmail,
+  onResendExistingEmail,
   onSubmit,
   onBackToEmail,
 }: RegisterPasswordStepProps) {
@@ -197,6 +203,33 @@ export function RegisterPasswordStep({
           >
             {errors.submit}
           </p>
+        ) : null}
+
+        {duplicateEmailConflict ? (
+          <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <p className="text-[13px] leading-snug text-neutral-700">
+              Аккаунт с этим email уже существует. Если вы ещё не подтвердили email, мы можем
+              отправить письмо повторно.
+            </p>
+            <Button
+              type="button"
+              className="h-[44px] w-full rounded-xl border border-neutral-900 bg-neutral-900 text-[14px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px disabled:opacity-50"
+              disabled={isResendingExistingEmail}
+              onClick={() => {
+                void onResendExistingEmail();
+              }}
+            >
+              {isResendingExistingEmail
+                ? "Отправляем письмо..."
+                : "Отправить письмо подтверждения"}
+            </Button>
+            <Link
+              href={ROUTES.login}
+              className="inline-flex h-[44px] w-full items-center justify-center rounded-xl border border-neutral-200 bg-white text-[14px] font-medium text-neutral-900 transition-colors hover:bg-neutral-100"
+            >
+              Перейти ко входу
+            </Link>
+          </div>
         ) : null}
 
         <Button

@@ -56,7 +56,16 @@
 - `POST /auth/login`
 - Success response: store in-memory `accessToken`, set user, navigate to dashboard.
 - 2FA response (`requires2fa`): store pending challenge, show 2FA step.
-- `EMAIL_NOT_VERIFIED`: show verify-email prompt and resend action.
+- `EMAIL_NOT_VERIFIED`: show resend action and redirect to `/verify-email?email=<address>`.
+
+### Unverified Account Recovery
+
+- Register with existing email (`409`) now shows recovery block:
+  - resend verification email
+  - navigate to login
+- Login with unverified email also offers resend and moves user to verify-email waiting screen.
+- Resend copy remains generic:
+  - "If account exists and email is unverified, we send a new verification email."
 
 ### 2FA Verify
 

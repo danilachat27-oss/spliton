@@ -32,6 +32,7 @@ export function LoginForm({ className }: { className?: string }) {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [emailValue, setEmailValue] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isResendingVerification, setIsResendingVerification] = React.useState(false);
 
   const trackPlaying = !showPassword && passwordValue.length > 0;
 
@@ -40,6 +41,7 @@ export function LoginForm({ className }: { className?: string }) {
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    setEmailValue(email);
 
     setErrorMessage(null);
     setIsSubmitting(true);
@@ -51,7 +53,7 @@ export function LoginForm({ className }: { className?: string }) {
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
-        setErrorMessage("Подтвердите email перед входом. Можно отправить письмо повторно.");
+        setErrorMessage("Подтвердите email перед входом. Мы можем отправить письмо повторно.");
       } else {
         setErrorMessage("Неверный email или пароль.");
       }
@@ -217,14 +219,23 @@ export function LoginForm({ className }: { className?: string }) {
               type="button"
               className="ml-2 underline underline-offset-2"
               onClick={async () => {
+                setIsResendingVerification(true);
                 try {
                   await resendEmail(emailValue);
+                  const next = new URLSearchParams();
+                  next.set("email", emailValue);
+                  router.push(`${ROUTES.verifyEmail}?${next.toString()}`);
                 } catch {
-                  // Keep UX non-blocking.
+                  setErrorMessage("Не удалось отправить письмо подтверждения. Попробуйте ещё раз.");
+                } finally {
+                  setIsResendingVerification(false);
                 }
               }}
+              disabled={isResendingVerification}
             >
-              Отправить письмо снова
+              {isResendingVerification
+                ? "Отправляем..."
+                : "Отправить письмо ещё раз"}
             </button>
           ) : null}
         </div>

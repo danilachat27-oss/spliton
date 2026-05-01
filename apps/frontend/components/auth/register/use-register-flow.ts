@@ -42,6 +42,8 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isRequestingOtp, setIsRequestingOtp] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
+  const [duplicateEmailConflict, setDuplicateEmailConflict] = React.useState(false);
+  const [isResendingExistingEmail, setIsResendingExistingEmail] = React.useState(false);
 
   const trimmedEmail = email.trim();
   const emailValid = trimmedEmail.length > 0 && emailPattern.test(trimmedEmail);
@@ -94,6 +96,10 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     });
   }, []);
 
+  const clearDuplicateConflict = React.useCallback(() => {
+    setDuplicateEmailConflict(false);
+  }, []);
+
   const goToOtpStep = React.useCallback(async () => {
     const msg = emailErrorMessage(trimmedEmail);
     setEmailTouched(true);
@@ -102,6 +108,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
       return;
     }
     clearSubmitError();
+    clearDuplicateConflict();
     setIsRequestingOtp(true);
     try {
       setErrors((prev) => {
@@ -115,7 +122,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     } finally {
       setIsRequestingOtp(false);
     }
-  }, [trimmedEmail, clearSubmitError]);
+  }, [trimmedEmail, clearSubmitError, clearDuplicateConflict]);
 
   const handleResendOtp = React.useCallback(async () => {
     if (resendSec > 0 || isResending) return;
@@ -142,6 +149,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     setStep(1);
     setOtp("");
     setErrors({});
+    setDuplicateEmailConflict(false);
   }, []);
 
   const backToEmailFromPassword = React.useCallback(() => {
@@ -151,7 +159,26 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     setTermsAccepted(false);
     setOtp("");
     setErrors({});
+    setDuplicateEmailConflict(false);
   }, []);
+
+  const resendForExistingEmail = React.useCallback(async () => {
+    if (!trimmedEmail || isResendingExistingEmail) return;
+    setIsResendingExistingEmail(true);
+    try {
+      await resendEmail(trimmedEmail);
+      const next = new URLSearchParams();
+      next.set("email", trimmedEmail);
+      router.push(`${ROUTES.verifyEmail}?${next.toString()}`);
+    } catch {
+      setErrors((prev) => ({
+        ...prev,
+        submit: "Не удалось отправить письмо подтверждения. Попробуйте ещё раз.",
+      }));
+    } finally {
+      setIsResendingExistingEmail(false);
+    }
+  }, [trimmedEmail, isResendingExistingEmail, resendEmail, router]);
 
   const onSubmitPasswordStep = React.useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -164,6 +191,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
       });
       setErrors((prev) => ({ ...prev, ...nextErrors }));
       if (Object.keys(nextErrors).length > 0) return;
+      setDuplicateEmailConflict(false);
 
       setIsSubmitting(true);
       try {
@@ -177,9 +205,11 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
         router.push(`${ROUTES.verifyEmail}?${next.toString()}`);
       } catch (error) {
         if (error instanceof ApiError && error.status === 409) {
+          setDuplicateEmailConflict(true);
           setErrors((prev) => ({
             ...prev,
-            submit: "Аккаунт с этим email уже существует.",
+            submit:
+              "Аккаунт с этим email уже существует. Если email ещё не подтверждён, отправьте письмо повторно.",
           }));
           return;
         }
@@ -216,6 +246,9 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     emailValid,
     errors,
     clearError,
+    duplicateEmailConflict,
+    isResendingExistingEmail,
+    resendForExistingEmail,
     isRequestingOtp,
     goToOtpStep,
     otp,

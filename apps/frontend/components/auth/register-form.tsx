@@ -86,6 +86,9 @@ export function RegisterForm({ className, onStepChange }: RegisterFormProps) {
           }}
           clearError={flow.clearError}
           isSubmitting={flow.isSubmitting}
+          duplicateEmailConflict={flow.duplicateEmailConflict}
+          isResendingExistingEmail={flow.isResendingExistingEmail}
+          onResendExistingEmail={flow.resendForExistingEmail}
           onSubmit={flow.onSubmitPasswordStep}
           onBackToEmail={flow.backToEmailFromPassword}
         />
