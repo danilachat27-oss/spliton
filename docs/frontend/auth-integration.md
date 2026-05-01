@@ -42,8 +42,11 @@
 
 ### Verify Email
 
-- Route: `/verify-email?token=...`
-- Calls `POST /auth/email/verify`.
+- Waiting screen: `/verify-email?email=...`
+  - Shows "check your email" state and resend action.
+- Verification screen: `/verify-email?token=...`
+  - Calls `POST /auth/email/verify` automatically.
+- If both `token` and `email` exist, token verification has priority.
 - Success: show confirmation and link to login.
 - Failure: show generic invalid/expired message and resend option (if email known).
 - No auto-login.
@@ -70,3 +73,12 @@
 1. Start backend (`apps/backend`) with auth env configured.
 2. Set frontend API URL via `VITE_API_BASE_URL`.
 3. Start frontend (`apps/frontend`) and use login/register screens with real backend auth.
+
+## Why email may not arrive in local dev
+
+- With backend `EMAIL_PROVIDER=dev`, real emails are not sent (expected behavior).
+- For real delivery, configure backend with Postmark provider:
+  - `EMAIL_PROVIDER=postmark`
+  - `POSTMARK_SERVER_TOKEN`
+  - `EMAIL_FROM`
+  - `APP_PUBLIC_URL` pointing to frontend URL (local or production).

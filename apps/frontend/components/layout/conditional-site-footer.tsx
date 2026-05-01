@@ -7,6 +7,9 @@ import { SiteFooter } from "@/components/layout/site-footer";
 
 function hideFooterForPath(pathname: string | null) {
   if (!pathname) return false;
+  if (pathname === ROUTES.login) return true;
+  if (pathname === ROUTES.register) return true;
+  if (pathname === ROUTES.verifyEmail) return true;
   if (pathname === ROUTES.dashboardCatalog) return true;
   if (pathname.startsWith(`${ROUTES.dashboardCatalog}/`)) return true;
   if (pathname === ROUTES.analyticsReleases) return true;
