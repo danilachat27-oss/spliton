@@ -41,6 +41,7 @@ export const ROUTES = {
   partnerProgram: "/partner-program",
   login: "/login",
   register: "/register",
+  verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
   terms: "/terms",
   privacy: "/privacy",

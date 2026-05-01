@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { AUTH_FIELD_BORDER, authFieldClassName } from "@/components/auth/auth-field-classes";
 import { GoogleMark } from "@/components/auth/google-mark";
@@ -12,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ROUTES } from "@/constants/routes";
-import { signInWithEmail, signInWithGoogle } from "@/services/auth.service";
+import { useAuth } from "@/components/providers/auth-provider";
+import { ApiError, signInWithGoogle } from "@/services/auth.service";
 import { cn } from "@/lib/utils";
 
 const tabInactive =
@@ -21,9 +23,14 @@ const tabActive =
   "cursor-default border-b-2 border-neutral-900 pb-3 text-[15px] font-semibold text-neutral-900";
 
 export function LoginForm({ className }: { className?: string }) {
+  const router = useRouter();
+  const { login, verify2fa, pendingTwoFactorChallenge, resendEmail } = useAuth();
   const [remember, setRemember] = React.useState(true);
   const [showPassword, setShowPassword] = React.useState(false);
   const [passwordValue, setPasswordValue] = React.useState("");
+  const [twoFactorCode, setTwoFactorCode] = React.useState("");
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [emailValue, setEmailValue] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const trackPlaying = !showPassword && passwordValue.length > 0;
@@ -34,11 +41,42 @@ export function LoginForm({ className }: { className?: string }) {
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
 
+    setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      await signInWithEmail({ email, password, remember });
+      const status = await login({ email, password, remember });
+      setEmailValue(email);
+      if (status === "authenticated") {
+        router.push(ROUTES.dashboard);
+      }
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
+        setErrorMessage("Подтвердите email перед входом. Можно отправить письмо повторно.");
+      } else {
+        setErrorMessage("Неверный email или пароль.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function onVerifyTwoFactor(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!pendingTwoFactorChallenge) {
+      return;
+    }
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      await verify2fa({
+        challengeId: pendingTwoFactorChallenge.challengeId,
+        code: twoFactorCode.trim(),
+        method: "totp",
+      });
+      setTwoFactorCode("");
+      router.push(ROUTES.dashboard);
     } catch {
-      // Replace with toast when auth exists.
+      setErrorMessage("Неверный 2FA-код. Попробуйте ещё раз.");
     } finally {
       setIsSubmitting(false);
     }
@@ -68,6 +106,7 @@ export function LoginForm({ className }: { className?: string }) {
         </span>
       </div>
 
+      {!pendingTwoFactorChallenge ? (
       <form className="mt-8 space-y-5" onSubmit={onSubmit}>
         <div className="space-y-2">
           <Label htmlFor="email" className="sr-only">
@@ -138,6 +177,58 @@ export function LoginForm({ className }: { className?: string }) {
           Войти
         </Button>
       </form>
+      ) : (
+        <form className="mt-8 space-y-5" onSubmit={onVerifyTwoFactor}>
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
+            Подтвердите вход: введите код из приложения-аутентификатора.
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="twoFactorCode" className="sr-only">
+              2FA код
+            </Label>
+            <Input
+              id="twoFactorCode"
+              name="twoFactorCode"
+              type="text"
+              inputMode="numeric"
+              placeholder="6-значный код"
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value)}
+              className={authFieldClassName}
+              style={fieldStyle}
+              required
+            />
+          </div>
+          <Button
+            type="submit"
+            className="mt-2 h-[52px] w-full rounded-xl border border-neutral-900 bg-neutral-900 text-[15px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px disabled:opacity-50"
+            disabled={isSubmitting}
+          >
+            Подтвердить вход
+          </Button>
+        </form>
+      )}
+
+      {errorMessage ? (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {errorMessage}
+          {errorMessage.includes("Подтвердите email") && emailValue ? (
+            <button
+              type="button"
+              className="ml-2 underline underline-offset-2"
+              onClick={async () => {
+                try {
+                  await resendEmail(emailValue);
+                } catch {
+                  // Keep UX non-blocking.
+                }
+              }}
+            >
+              Отправить письмо снова
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <p className="mt-8 text-center text-[15px] text-neutral-600">
         Нет аккаунта?{" "}

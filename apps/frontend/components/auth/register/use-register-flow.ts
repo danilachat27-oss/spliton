@@ -12,10 +12,8 @@ import {
   type FormErrorState,
 } from "@/components/auth/register/validation";
 import { ROUTES } from "@/constants/routes";
-import {
-  requestRegistrationOtp,
-  signUpWithEmail,
-} from "@/services/auth.service";
+import { useAuth } from "@/components/providers/auth-provider";
+import { ApiError } from "@/services/auth.service";
 
 export type UseRegisterFlowOptions = {
   onStepChange?: (step: 1 | 2 | 3) => void;
@@ -24,6 +22,7 @@ export type UseRegisterFlowOptions = {
 export function useRegisterFlow(options?: UseRegisterFlowOptions) {
   const onStepChange = options?.onStepChange;
   const router = useRouter();
+  const { register, resendEmail } = useAuth();
   const passwordRef = React.useRef<HTMLInputElement>(null);
   const emailFieldRef = React.useRef<HTMLDivElement>(null);
 
@@ -105,7 +104,6 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     clearSubmitError();
     setIsRequestingOtp(true);
     try {
-      await requestRegistrationOtp(trimmedEmail);
       setErrors((prev) => {
         const next = { ...prev };
         delete next.email;
@@ -113,12 +111,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
       });
       setOtp("");
       setResendSec(RESEND_SECONDS);
-      setStep(2);
-    } catch {
-      setErrors((prev) => ({
-        ...prev,
-        submit: "Не удалось отправить код. Попробуйте ещё раз.",
-      }));
+      setStep(3);
     } finally {
       setIsRequestingOtp(false);
     }
@@ -129,7 +122,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     setIsResending(true);
     clearSubmitError();
     try {
-      await requestRegistrationOtp(trimmedEmail);
+      await resendEmail(trimmedEmail);
       setResendSec(RESEND_SECONDS);
     } catch {
       setErrors((prev) => ({
@@ -139,7 +132,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     } finally {
       setIsResending(false);
     }
-  }, [resendSec, isResending, trimmedEmail, clearSubmitError]);
+  }, [resendSec, isResending, trimmedEmail, clearSubmitError, resendEmail]);
 
   const onOtpComplete = React.useCallback(() => {
     setStep(3);
@@ -174,13 +167,22 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
 
       setIsSubmitting(true);
       try {
-        await signUpWithEmail({
+        await register({
           email: trimmedEmail,
           password,
           acceptedTerms: termsAccepted,
         });
-        router.push(ROUTES.login);
-      } catch {
+        const next = new URLSearchParams();
+        next.set("email", trimmedEmail);
+        router.push(`${ROUTES.verifyEmail}?${next.toString()}`);
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409) {
+          setErrors((prev) => ({
+            ...prev,
+            submit: "Аккаунт с этим email уже существует.",
+          }));
+          return;
+        }
         setErrors((prev) => ({
           ...prev,
           submit: "Не удалось создать аккаунт. Попробуйте ещё раз.",
@@ -189,7 +191,15 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
         setIsSubmitting(false);
       }
     },
-    [clearSubmitError, trimmedEmail, password, confirmPassword, termsAccepted, router]
+    [
+      clearSubmitError,
+      trimmedEmail,
+      password,
+      confirmPassword,
+      termsAccepted,
+      register,
+      router,
+    ]
   );
 
   return {

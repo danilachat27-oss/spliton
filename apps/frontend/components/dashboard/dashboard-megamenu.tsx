@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import type {
   DashboardNavBadge,
@@ -9,6 +10,7 @@ import type {
 } from "@/components/dashboard/dashboard-nav";
 import { profileDashboardHref } from "@/constants/dashboard/profile-page";
 import { ROUTES } from "@/constants/routes";
+import { useAuth } from "@/components/providers/auth-provider";
 import { cn } from "@/lib/utils";
 
 export const DASHBOARD_MEGAMENU_PANEL_ID = "dashboard-header-megamenu";
@@ -215,7 +217,57 @@ function MegamenuLinkCard({
   index: number;
   onNavigate: () => void;
 }) {
+  const router = useRouter();
+  const { logout } = useAuth();
   const danger = Boolean(sub.danger);
+  const handleDangerClick = async () => {
+    if (!danger) {
+      return;
+    }
+    await logout();
+    onNavigate();
+    router.push(ROUTES.login);
+  };
+
+  if (danger) {
+    return (
+      <div
+        className="animate-dashboard-megamenu-card-in h-full w-full"
+        style={{ animationDelay: `${45 + index * 42}ms` }}
+      >
+        <button
+          type="button"
+          onClick={handleDangerClick}
+          className={cn(
+            cardShell,
+            "w-full text-left border-fuchsia-500/15 p-3 sm:p-3.5 hover:z-[2] hover:scale-[1.01] hover:border-fuchsia-400/35 hover:shadow-[0_16px_48px_-18px_rgba(80,0,60,0.5)]",
+          )}
+        >
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 opacity-25">
+            <CardInnerWaves className="size-full" />
+          </div>
+          <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="min-w-0 text-[13px] font-bold leading-snug text-fuchsia-200/95 sm:text-sm">
+                {sub.label}
+              </h3>
+              {sub.badge ? <SubnavBadge badge={sub.badge} /> : null}
+            </div>
+            <p className="mt-2 line-clamp-3 text-[11px] leading-relaxed text-fuchsia-200/50 sm:text-xs">
+              {sub.description}
+            </p>
+            <div className="relative mt-2 flex min-h-[88px] flex-1 flex-col justify-end overflow-hidden rounded-lg bg-fuchsia-950/20 py-3">
+              <MegamenuLineArt variant={index} className="absolute inset-0 size-full opacity-75" />
+              <div className="relative flex flex-1 items-center justify-center py-3">
+                <SubItemIcon sub={sub} />
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className="animate-dashboard-megamenu-card-in h-full w-full"
@@ -226,9 +278,7 @@ function MegamenuLinkCard({
         onClick={onNavigate}
         className={cn(
           cardShell,
-          !danger && cardHover,
-          danger &&
-            "border-fuchsia-500/15 hover:z-[2] hover:scale-[1.01] hover:border-fuchsia-400/35 hover:shadow-[0_16px_48px_-18px_rgba(80,0,60,0.5)]",
+          cardHover,
           "p-3 sm:p-3.5",
         )}
       >
@@ -241,7 +291,7 @@ function MegamenuLinkCard({
             <h3
               className={cn(
                 "min-w-0 text-[13px] font-bold leading-snug sm:text-sm",
-                danger ? "text-fuchsia-200/95" : "text-white",
+                "text-white",
               )}
             >
               {sub.label}
@@ -251,7 +301,7 @@ function MegamenuLinkCard({
           <p
             className={cn(
               "mt-2 line-clamp-3 text-[11px] leading-relaxed sm:text-xs",
-              danger ? "text-fuchsia-200/50" : "text-neutral-500",
+              "text-neutral-500",
             )}
           >
             {sub.description}
@@ -260,7 +310,7 @@ function MegamenuLinkCard({
           <div
             className={cn(
               "relative mt-2 flex min-h-[88px] flex-1 flex-col justify-end overflow-hidden rounded-lg py-3",
-              danger ? "bg-fuchsia-950/20" : "bg-black/25",
+              "bg-black/25",
             )}
           >
             <MegamenuLineArt variant={index} className="absolute inset-0 size-full opacity-75" />
