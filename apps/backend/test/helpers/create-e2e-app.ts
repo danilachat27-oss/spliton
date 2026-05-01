@@ -10,15 +10,12 @@ const throttleBypass = {
 };
 
 export async function createE2eApp(): Promise<INestApplication> {
-  const base = Test.createTestingModule({
+  const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
-  });
-  /** AppModule skips Throttler under Jest; only override when the guard is registered. */
-  const moduleFixture: TestingModule = await (
-    process.env.JEST_WORKER_ID
-      ? base
-      : base.overrideGuard(ThrottlerGuard).useValue(throttleBypass)
-  ).compile();
+  })
+    .overrideGuard(ThrottlerGuard)
+    .useValue(throttleBypass)
+    .compile();
 
   const app = moduleFixture.createNestApplication();
   app.use(helmet());

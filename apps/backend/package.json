@@ -19,8 +19,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "node --max-old-space-size=8192 node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand test/app.e2e-spec.ts test/auth-regression.e2e-spec.ts test/two-factor-auth.e2e-spec.ts",
-    "test:e2e:all": "node --max-old-space-size=8192 node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand"
+    "test:e2e": "node --max-old-space-size=8192 node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand",
+    "test:e2e:auth": "node --max-old-space-size=8192 node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand test/auth-regression.e2e-spec.ts test/two-factor-auth.e2e-spec.ts",
+    "test:e2e:all": "npm run test:e2e"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
