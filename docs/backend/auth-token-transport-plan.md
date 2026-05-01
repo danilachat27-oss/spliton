@@ -2,12 +2,12 @@
 
 ## Current State
 
-Backend currently returns tokens in JSON:
+Implemented transport:
 
-- `POST /auth/login` -> `user + { accessToken, refreshToken }` (or 2FA challenge branch).
-- `POST /auth/2fa/verify` -> `user + { accessToken, refreshToken }`.
-- `POST /auth/refresh` expects `refreshToken` in request body and returns rotated pair in JSON.
-- `POST /auth/logout` expects `refreshToken` in request body.
+- `POST /auth/login` -> sets HttpOnly refresh cookie, returns `user + accessToken` (+ optional deprecated body refresh token).
+- `POST /auth/2fa/verify` -> same behavior after challenge success.
+- `POST /auth/refresh` reads cookie first, optional deprecated body fallback, rotates and sets new cookie.
+- `POST /auth/logout` reads cookie first, optional deprecated body fallback, clears cookie.
 - `POST /auth/logout-all` requires access token.
 - `GET /users/me` requires Bearer access token.
 
@@ -15,8 +15,7 @@ Current platform-level behavior:
 
 - Access token TTL ~15m.
 - Refresh token TTL ~7d with rotation and reuse detection.
-- CORS is currently permissive by default (`CORS_ORIGIN='*'`).
-- No cookie transport for auth tokens yet.
+- CORS uses explicit allowlist from `FRONTEND_ORIGIN` with `credentials: true`.
 
 ## Threat Model
 
@@ -70,13 +69,13 @@ Use **hybrid transport**:
 
 This preserves current JWT guard model while materially reducing XSS impact on long-lived credentials.
 
-## Planned Backend Contract Changes
+## Backend Contract
 
 ### Register / Login / 2FA verify
 
-- Keep access token return in JSON.
-- Stop returning refresh token in JSON in production mode.
-- Set refresh token as HttpOnly cookie.
+- Access token remains in JSON.
+- Refresh token is set in HttpOnly cookie.
+- `AUTH_RETURN_REFRESH_TOKEN_IN_BODY=false` should be used in production to disable deprecated body refresh token.
 
 ### Refresh
 
@@ -96,14 +95,18 @@ This preserves current JWT guard model while materially reducing XSS impact on l
 - Revoke all sessions.
 - Clear refresh cookie.
 
-## Env / Config Additions (future implementation)
+## Env / Config
 
-- `FRONTEND_ORIGIN` (or strict origins list).
-- `AUTH_REFRESH_COOKIE_NAME` (e.g. `spliton_rt`).
+- `FRONTEND_ORIGIN` (comma-separated strict origins list).
+- `AUTH_REFRESH_COOKIE_NAME` (default `spliton_refresh_token`).
 - `AUTH_COOKIE_DOMAIN` (optional; env-specific).
 - `AUTH_COOKIE_SECURE` (`true` in staging/prod, local exception allowed).
 - `AUTH_COOKIE_SAME_SITE` (`lax|strict|none`).
-- Optional: `AUTH_COOKIE_PATH` (default `/auth` or `/` depending routing needs).
+- `AUTH_RETURN_REFRESH_TOKEN_IN_BODY` (temporary compatibility fallback).
+
+Validation rule:
+
+- `AUTH_COOKIE_SAME_SITE=none` requires `AUTH_COOKIE_SECURE=true`.
 
 ## Cookie Policy by Environment
 
@@ -151,21 +154,17 @@ Recommended phased controls:
 
 ## E2E Impact
 
-Current e2e uses JSON refresh token flow and fake email transport.
-
-When cookie transport is implemented:
-
 - Switch tests to `supertest.agent()` to persist cookies.
 - Add assertions for `Set-Cookie` on login/refresh and cookie clearing on logout/logout-all.
-- Keep temporary body-refresh fallback tests only while deprecated path exists.
+- Keep body-refresh fallback tests only while deprecated path exists.
 - Ensure e2e continues using `FakeEmailService` (no real outbound email).
 
 ## Rollout / Migration Plan
 
-1. Introduce cookie issuance + reading while keeping body refresh fallback.
-2. Update frontend to cookie refresh flow (`credentials: include`).
-3. Update e2e for cookie path.
-4. Remove JSON refresh token response and body fallback after frontend cutover.
+1. Backend hybrid transport is enabled.
+2. Frontend should use `credentials: 'include'` for refresh/logout.
+3. Set `AUTH_RETURN_REFRESH_TOKEN_IN_BODY=false` in staging/prod.
+4. After frontend cutover, remove deprecated body fallback.
 5. Monitor refresh failure/reuse metrics and CSRF-related anomalies.
 
 ## What Not To Do
@@ -175,10 +174,8 @@ When cookie transport is implemented:
 - Do not log refresh token/cookie values.
 - Do not disable rotation/reuse protections.
 
-## Decisions To Confirm Before Implementation
+## Remaining Decisions
 
 1. Cookie domain model (single domain vs subdomains).
-2. Exact `SameSite` strategy (`Lax` default vs `None` cross-site requirements).
-3. Whether to keep transitional body refresh fallback and for how long.
-4. CSRF mitigation level at first rollout (Lax+CORS only vs immediate CSRF token).
-5. Final API contract for refresh/logout request bodies during deprecation window.
+2. Timeline for disabling deprecated body fallback.
+3. Whether to add CSRF token protection when cookie-authenticated state-changing endpoints expand.

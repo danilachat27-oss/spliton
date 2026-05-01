@@ -3,6 +3,11 @@ import request from 'supertest';
 import { cleanupTwoFactorRegressionUsers } from './helpers/cleanup-two-factor-regression-users';
 import { createE2eApp, E2eApp } from './helpers/create-e2e-app';
 
+const SHOULD_RETURN_REFRESH_IN_BODY =
+  process.env.AUTH_RETURN_REFRESH_TOKEN_IN_BODY !== 'false';
+const REFRESH_COOKIE_NAME =
+  process.env.AUTH_REFRESH_COOKIE_NAME ?? 'spliton_refresh_token';
+
 function twoFaEmail(): string {
   return `test-2fa-regression-${Date.now()}@example.com`;
 }
@@ -201,7 +206,18 @@ describe('Two-factor auth (e2e)', () => {
 
     expect(verify.body.user?.id).toEqual(expect.any(String));
     expect(verify.body.tokens?.accessToken).toEqual(expect.any(String));
-    expect(verify.body.tokens?.refreshToken).toEqual(expect.any(String));
+    if (SHOULD_RETURN_REFRESH_IN_BODY) {
+      expect(verify.body.tokens?.refreshToken).toEqual(expect.any(String));
+    } else {
+      expect(verify.body.tokens?.refreshToken).toBeUndefined();
+    }
+    expect(verify.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          new RegExp(`^${REFRESH_COOKIE_NAME}=.*HttpOnly`, 'i'),
+        ),
+      ]),
+    );
 
     await request(app!.getHttpServer())
       .get('/users/me')

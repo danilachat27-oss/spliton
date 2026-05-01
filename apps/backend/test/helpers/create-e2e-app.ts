@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
@@ -25,6 +26,7 @@ export async function createE2eApp(): Promise<E2eApp> {
     .compile();
 
   const app = moduleFixture.createNestApplication();
+  app.use(cookieParser());
   app.use(helmet());
   app.useGlobalPipes(
     new ValidationPipe({

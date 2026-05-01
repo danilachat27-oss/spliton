@@ -24,6 +24,22 @@ Implemented auth endpoints:
   - signed with `JWT_REFRESH_SECRET`
   - payload: `sub`, `email`, `roles`, `sessionId`, `type: "refresh"`
   - TTL: `7d`
+  - transport: HttpOnly cookie (`AUTH_REFRESH_COOKIE_NAME`), `path=/auth`
+  - JSON body return is deprecated and controlled by `AUTH_RETURN_REFRESH_TOKEN_IN_BODY`
+
+## Auth Transport / Cookie Config
+
+- `FRONTEND_ORIGIN`: comma-separated CORS allowlist (default `http://localhost:3000`)
+- `AUTH_REFRESH_COOKIE_NAME`: refresh cookie name (default `spliton_refresh_token`)
+- `AUTH_COOKIE_DOMAIN`: optional cookie domain
+- `AUTH_COOKIE_SECURE`: `true` for staging/prod, `false` only for local http
+- `AUTH_COOKIE_SAME_SITE`: `lax|strict|none` (default `lax`)
+- `AUTH_RETURN_REFRESH_TOKEN_IN_BODY`: compatibility flag (`false` recommended in production)
+
+Constraints:
+
+- CORS uses exact allowlist + `credentials: true` (no wildcard with credentials).
+- If `AUTH_COOKIE_SAME_SITE=none`, `AUTH_COOKIE_SECURE` must be `true`.
 
 ## Session Model (`user_sessions`)
 
@@ -56,6 +72,7 @@ Implemented auth endpoints:
 4. If user status is `PENDING_EMAIL_VERIFICATION`: return `403` with code `EMAIL_NOT_VERIFIED`; no session/tokens.
 5. If TOTP 2FA **включена**: создать `two_factor_challenges` (без `user_session` и без токенов), вернуть `{ requires2fa, challengeId, availableMethods }`, аудит `TWO_FACTOR_CHALLENGE_CREATED` (без `LOGIN_SUCCESS`).
 6. Иначе: создать новую сессию и пару токенов, сохранить refresh hash, записать `LOGIN_SUCCESS` или `LOGIN_FAILED`.
+7. При успешном логине без 2FA backend ставит refresh cookie; access token остаётся в JSON.
 
 ## Email Verification
 
@@ -86,6 +103,7 @@ Refresh token is one-time use:
    - `replaced_by_session_id = <new_session_id>`
 5. Return new access + refresh pair for new session.
 6. Write `REFRESH_SUCCESS`.
+7. Refresh cookie перезаписывается новым токеном.
 
 Why one-time refresh token:
 
@@ -106,14 +124,17 @@ If a rotated (already revoked) token is reused, it is also treated as suspicious
 ## Logout
 
 - `POST /auth/logout`
-  - accepts `refreshToken`
+  - reads refresh token from HttpOnly cookie first
+  - may use body `refreshToken` only as deprecated compatibility fallback
   - revokes only that session with `revoked_reason = "LOGOUT"`
+  - clears refresh cookie always
   - idempotent response: `{ success: true }`
   - writes `LOGOUT` when session is found and active
 
 - `POST /auth/logout-all`
   - requires valid access token
   - revokes all active sessions of current user with `revoked_reason = "LOGOUT_ALL"`
+  - clears refresh cookie
   - writes `LOGOUT_ALL`
 
 ## Access Token Validation (`JwtStrategy`)

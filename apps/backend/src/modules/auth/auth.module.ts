@@ -10,6 +10,7 @@ import { EmailVerificationRepository } from './repositories/email-verification.r
 import { TwoFactorRepository } from './repositories/two-factor.repository';
 import { AuthAuditService } from './services/auth-audit.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { AuthCookieService } from './services/auth-cookie.service';
 import { EmailVerificationTokenService } from './services/email-verification-token.service';
 import { SessionService } from './services/session.service';
 import { TokenService } from './services/token.service';
@@ -36,6 +37,7 @@ import { TwoFactorAuthController } from './two-factor-auth.controller';
   controllers: [AuthController, TwoFactorAuthController],
   providers: [
     AuthService,
+    AuthCookieService,
     AuthRepository,
     EmailVerificationRepository,
     TwoFactorRepository,

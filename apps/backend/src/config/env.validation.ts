@@ -8,7 +8,31 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   JWT_REFRESH_SECRET: Joi.string().required(),
   PORT: Joi.number().port().default(4000),
-  CORS_ORIGIN: Joi.string().default('*'),
+  CORS_ORIGIN: Joi.string().optional().allow(''),
+  FRONTEND_ORIGIN: Joi.string()
+    .default('http://localhost:3000')
+    .custom((value, helpers) => {
+      const items = String(value)
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+      const invalid = items.find((item) => !/^https?:\/\/[^,\s]+$/i.test(item));
+      if (invalid) {
+        return helpers.error('any.invalid');
+      }
+      return items.join(',');
+    }, 'comma separated origins'),
+  AUTH_REFRESH_COOKIE_NAME: Joi.string().default('spliton_refresh_token'),
+  AUTH_COOKIE_DOMAIN: Joi.string().optional().allow(''),
+  AUTH_COOKIE_SECURE: Joi.when('AUTH_COOKIE_SAME_SITE', {
+    is: 'none',
+    then: Joi.boolean().valid(true).required(),
+    otherwise: Joi.boolean().default(false),
+  }),
+  AUTH_COOKIE_SAME_SITE: Joi.string()
+    .valid('lax', 'strict', 'none')
+    .default('lax'),
+  AUTH_RETURN_REFRESH_TOKEN_IN_BODY: Joi.boolean().default(true),
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),

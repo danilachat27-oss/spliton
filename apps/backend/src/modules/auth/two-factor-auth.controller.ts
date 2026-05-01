@@ -1,6 +1,6 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import {
@@ -10,11 +10,16 @@ import {
   TwoFactorVerifySetupDto,
 } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthCookieService } from './services/auth-cookie.service';
+import type { AuthResponse } from './types/auth-response.type';
 import type { AuthUser } from './types/auth-user.type';
 
 @Controller('auth/2fa')
 export class TwoFactorAuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly authCookieService: AuthCookieService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('setup')
@@ -36,8 +41,30 @@ export class TwoFactorAuthController {
 
   @Post('verify')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  verify(@Body() dto: TwoFactorVerifyDto, @Req() req: Request) {
-    return this.authService.twoFactorVerify(dto, this.meta(req));
+  async verify(
+    @Body() dto: TwoFactorVerifyDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const response = await this.authService.twoFactorVerify(
+      dto,
+      this.meta(req),
+    );
+    if (response.tokens.refreshToken) {
+      this.authCookieService.setRefreshTokenCookie(
+        res,
+        response.tokens.refreshToken,
+      );
+    }
+    if (this.authCookieService.shouldReturnRefreshTokenInBody()) {
+      return response;
+    }
+    return {
+      ...response,
+      tokens: {
+        accessToken: response.tokens.accessToken,
+      },
+    } satisfies AuthResponse;
   }
 
   @UseGuards(JwtAuthGuard)

@@ -249,6 +249,9 @@ export class AuthService {
     dto: RefreshTokenDto,
     meta?: RequestMeta,
   ): Promise<AuthResponse> {
+    if (!dto.refreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
     const payload = await this.tokenService.verifyRefreshToken(
       dto.refreshToken,
     );
@@ -367,6 +370,9 @@ export class AuthService {
 
   async logout(dto: LogoutDto, meta?: RequestMeta) {
     try {
+      if (!dto.refreshToken) {
+        return { success: true };
+      }
       const payload = await this.tokenService.verifyRefreshToken(
         dto.refreshToken,
       );

@@ -16,7 +16,12 @@ export type AuthTokens = {
   refreshToken: string;
 };
 
+export type AuthTokensResponse = {
+  accessToken: string;
+  refreshToken?: string;
+};
+
 export type AuthResponse = {
   user: SafeUserResponse;
-  tokens: AuthTokens;
+  tokens: AuthTokensResponse;
 };

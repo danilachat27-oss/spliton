@@ -2,6 +2,11 @@ import request from 'supertest';
 import { cleanupAuthRegressionUsers } from './helpers/cleanup-auth-regression-users';
 import { createE2eApp, E2eApp } from './helpers/create-e2e-app';
 
+const SHOULD_RETURN_REFRESH_IN_BODY =
+  process.env.AUTH_RETURN_REFRESH_TOKEN_IN_BODY !== 'false';
+const REFRESH_COOKIE_NAME =
+  process.env.AUTH_REFRESH_COOKIE_NAME ?? 'spliton_refresh_token';
+
 function regressionEmail(): string {
   return `test-auth-regression-${Date.now()}@example.com`;
 }
@@ -19,7 +24,7 @@ function assertNoPasswordLeak(payload: unknown): void {
 
 function assertAuthShape(body: {
   user: { id: string; email: string; roles: string[] };
-  tokens: { accessToken: string; refreshToken: string };
+  tokens: { accessToken: string; refreshToken?: string };
 }): void {
   expect(body.user).toMatchObject({
     id: expect.any(String),
@@ -27,7 +32,11 @@ function assertAuthShape(body: {
     roles: expect.any(Array),
   });
   expect(body.tokens?.accessToken).toEqual(expect.any(String));
-  expect(body.tokens?.refreshToken).toEqual(expect.any(String));
+  if (SHOULD_RETURN_REFRESH_IN_BODY) {
+    expect(body.tokens?.refreshToken).toEqual(expect.any(String));
+  } else {
+    expect(body.tokens?.refreshToken).toBeUndefined();
+  }
   assertNoPasswordLeak(body);
 }
 
@@ -114,7 +123,14 @@ describe('Auth regression (e2e)', () => {
       .expect(201);
 
     assertAuthShape(login.body);
-    const { accessToken, refreshToken } = login.body.tokens;
+    expect(login.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(
+          new RegExp(`^${REFRESH_COOKIE_NAME}=.*HttpOnly`, 'i'),
+        ),
+      ]),
+    );
+    const { accessToken } = login.body.tokens;
 
     await request(app!.getHttpServer()).get('/users/me').expect(401);
 
@@ -126,15 +142,27 @@ describe('Auth regression (e2e)', () => {
     assertNoPasswordLeak(me.body);
     expect(me.body.email).toBe(email.toLowerCase());
 
-    const refreshed = await request(app!.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken })
+    const agent = request.agent(app!.getHttpServer());
+    const agentLogin = await agent
+      .post('/auth/login')
+      .send({ email, password })
       .expect(201);
+    const agentRefreshToken = agentLogin.body.tokens.refreshToken as
+      | string
+      | undefined;
+    const refreshed = await agent.post('/auth/refresh').expect(201);
 
     assertAuthShape(refreshed.body);
+    expect(refreshed.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(new RegExp(`^${REFRESH_COOKIE_NAME}=`)),
+      ]),
+    );
     const access2 = refreshed.body.tokens.accessToken as string;
-    const refresh2 = refreshed.body.tokens.refreshToken as string;
-    expect(refresh2).not.toBe(refreshToken);
+    const refresh2 = refreshed.body.tokens.refreshToken as string | undefined;
+    if (SHOULD_RETURN_REFRESH_IN_BODY && agentRefreshToken && refresh2) {
+      expect(refresh2).not.toBe(agentRefreshToken);
+    }
     expect(access2).not.toBe(accessToken);
 
     await request(app!.getHttpServer())
@@ -142,15 +170,17 @@ describe('Auth regression (e2e)', () => {
       .set('Authorization', `Bearer ${access2}`)
       .expect(200);
 
-    await request(app!.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken })
-      .expect(401);
+    if (SHOULD_RETURN_REFRESH_IN_BODY && agentRefreshToken && refresh2) {
+      await request(app!.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: agentRefreshToken })
+        .expect(401);
 
-    await request(app!.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken: refresh2 })
-      .expect(401);
+      await request(app!.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: refresh2 })
+        .expect(401);
+    }
   });
 
   it('F: resend anti-enumeration and token rotation', async () => {
@@ -229,23 +259,26 @@ describe('Auth regression (e2e)', () => {
       .send({ token })
       .expect(201);
 
-    const login = await request(app!.getHttpServer())
+    const agent = request.agent(app!.getHttpServer());
+    const login = await agent
       .post('/auth/login')
       .send({ email, password })
       .expect(201);
 
     const accessToken = login.body.tokens.accessToken as string;
-    const refreshToken = login.body.tokens.refreshToken as string;
+    const refreshToken = login.body.tokens.refreshToken as string | undefined;
 
-    await request(app!.getHttpServer())
+    const logoutRes = await agent
       .post('/auth/logout')
-      .send({ refreshToken })
+      .send(refreshToken ? { refreshToken } : {})
       .expect(201);
+    expect(logoutRes.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(new RegExp(`^${REFRESH_COOKIE_NAME}=;`)),
+      ]),
+    );
 
-    await request(app!.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken })
-      .expect(401);
+    await agent.post('/auth/refresh').expect(401);
 
     await request(app!.getHttpServer())
       .get('/users/me')
@@ -278,23 +311,30 @@ describe('Auth regression (e2e)', () => {
       .expect(201);
 
     const access1 = login1.body.tokens.accessToken as string;
-    const refresh1 = login1.body.tokens.refreshToken as string;
+    const refresh1 = login1.body.tokens.refreshToken as string | undefined;
     const access2 = login2.body.tokens.accessToken as string;
-    const refresh2 = login2.body.tokens.refreshToken as string;
+    const refresh2 = login2.body.tokens.refreshToken as string | undefined;
 
-    await request(app!.getHttpServer())
+    const logoutAllRes = await request(app!.getHttpServer())
       .post('/auth/logout-all')
       .set('Authorization', `Bearer ${access1}`)
       .expect(201);
+    expect(logoutAllRes.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(new RegExp(`^${REFRESH_COOKIE_NAME}=;`)),
+      ]),
+    );
 
-    await request(app!.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken: refresh1 })
-      .expect(401);
-    await request(app!.getHttpServer())
-      .post('/auth/refresh')
-      .send({ refreshToken: refresh2 })
-      .expect(401);
+    if (SHOULD_RETURN_REFRESH_IN_BODY && refresh1 && refresh2) {
+      await request(app!.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: refresh1 })
+        .expect(401);
+      await request(app!.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: refresh2 })
+        .expect(401);
+    }
 
     await request(app!.getHttpServer())
       .get('/users/me')
