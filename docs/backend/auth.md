@@ -87,6 +87,11 @@ Constraints:
 - Postmark env: `POSTMARK_SERVER_TOKEN`, `EMAIL_FROM`, optional `POSTMARK_MESSAGE_STREAM`.
 - E2E always overrides to fake email service, so real emails are never sent in tests.
 
+Local-dev helper (dev provider only):
+
+- If `EMAIL_PROVIDER=dev` and `DEV_EMAIL_OUTBOX_ENABLED=true`, latest verification URL can be fetched via `GET /dev/email-outbox/latest?email=<address>`.
+- Endpoint is disabled outside non-production dev mode and must not be enabled in production.
+
 ## Two-factor (TOTP + backup codes)
 
 Требуется `TWO_FACTOR_ENCRYPTION_KEY` (base64 → 32 байта) для операций setup/verify. Backup codes показываются **plaintext только один раз** в ответах `verify-setup` и `recovery-codes/regenerate`. Подробности и список endpoints: [2fa-plan.md](./2fa-plan.md) §11.

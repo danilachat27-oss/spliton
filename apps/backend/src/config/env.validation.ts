@@ -37,6 +37,7 @@ export const envValidationSchema = Joi.object({
     .valid('development', 'production', 'test')
     .default('development'),
   EMAIL_PROVIDER: Joi.string().valid('dev', 'postmark').default('dev'),
+  DEV_EMAIL_OUTBOX_ENABLED: Joi.boolean().default(false),
   EMAIL_FROM: Joi.when('EMAIL_PROVIDER', {
     is: 'postmark',
     then: Joi.string().email().required(),

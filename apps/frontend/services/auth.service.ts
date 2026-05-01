@@ -31,8 +31,8 @@ export class ApiError extends Error {
 }
 
 const API_BASE_URL =
-  process.env.VITE_API_BASE_URL?.trim() ||
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+  process.env.VITE_API_BASE_URL?.trim() ||
   "http://localhost:3001";
 
 function resolveUrl(path: string): string {

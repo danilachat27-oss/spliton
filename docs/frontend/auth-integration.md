@@ -2,8 +2,8 @@
 
 ## Environment
 
-- `VITE_API_BASE_URL=http://localhost:3001`
-- Optional Next.js-compatible alias: `NEXT_PUBLIC_API_BASE_URL`
+- Primary (Next.js): `NEXT_PUBLIC_API_BASE_URL=http://localhost:4000`
+- Legacy fallback: `VITE_API_BASE_URL`
 
 ## Token Storage Model
 
@@ -77,6 +77,10 @@
 ## Why email may not arrive in local dev
 
 - With backend `EMAIL_PROVIDER=dev`, real emails are not sent (expected behavior).
+- For local verification in dev provider mode, enable:
+  - `DEV_EMAIL_OUTBOX_ENABLED=true`
+  - read latest link from `GET /dev/email-outbox/latest?email=<your-email>`
+  - endpoint is unavailable in production mode and should never be enabled in production.
 - For real delivery, configure backend with Postmark provider:
   - `EMAIL_PROVIDER=postmark`
   - `POSTMARK_SERVER_TOKEN`
