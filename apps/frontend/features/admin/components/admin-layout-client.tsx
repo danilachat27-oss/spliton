@@ -14,7 +14,6 @@ import { verifyAdminAccess } from "@/services/admin.service";
 
 import { AdminAccessDenied } from "./admin-access-denied";
 import { AdminHeader } from "./admin-header";
-import { AdminMobileNavProvider } from "./admin-mobile-nav";
 import { AdminSidebar } from "./admin-sidebar";
 import { adminPageBg } from "@/features/admin/lib/admin-ui";
 import { SplitonLoadingView } from "@/components/ui/spliton-loader";
@@ -109,7 +108,6 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
   }
 
     return (
-    <AdminMobileNavProvider>
     <div className="admin-portal flex h-dvh min-h-0 flex-col antialiased">
       <AdminHeader />
       <SystemAnnouncementBanners surface="admin" />
@@ -128,6 +126,5 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
         </main>
       </div>
     </div>
-    </AdminMobileNavProvider>
   );
 }

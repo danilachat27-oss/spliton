@@ -33,7 +33,6 @@ import {
 } from "@/features/admin/lib/admin-track-form";
 import {
   adminFieldInput,
-  adminFieldTextarea,
 } from "@/features/admin/lib/admin-ui";
 import {
   AdminConfirmDialog,
@@ -41,6 +40,9 @@ import {
   AdminFormField,
   AdminFormFooter,
   AdminLoadingState,
+  AdminMediaUploadButton,
+  AdminTextarea,
+  AdminCheckboxRow,
 } from "@/features/admin/ui";
 import { useAdminDrawerUnsavedGuard } from "@/features/admin/hooks/use-admin-drawer-unsaved-guard";
 import { AdminCopyButton } from "@/features/admin/ui/admin-copy-button";
@@ -409,6 +411,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.title")}
                     htmlFor="tr-title"
+                    info={a.t("admin.drawer.track.info.title")}
                     error={fe("title")}
                     className="sm:col-span-2"
                   >
@@ -425,6 +428,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.artist")}
                     htmlFor="tr-artist"
+                    info={a.t("admin.drawer.track.info.artist")}
                     error={fe("artist")}
                   >
                     <AdminArtistCombobox
@@ -438,6 +442,7 @@ export function AdminTrackDrawer({
                   <AdminStyledSelectField
                     label={a.t("admin.drawer.track.field.releaseType")}
                     id="tr-type"
+                    info={a.t("admin.drawer.track.info.releaseType")}
                     value={form.releaseType}
                     disabled={readOnly}
                     options={(Object.keys(RELEASE_TYPE_LABELS) as Array<keyof typeof RELEASE_TYPE_LABELS>).map(
@@ -451,6 +456,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.genre")}
                     htmlFor="tr-genre"
+                    info={a.t("admin.drawer.track.info.genre")}
                     hint={a.t("admin.drawer.track.field.genreHint")}
                     error={fe("genre")}
                   >
@@ -463,7 +469,11 @@ export function AdminTrackDrawer({
                       inputClassName={adminFieldInput}
                     />
                   </AdminFormField>
-                  <AdminFormField label={a.t("admin.drawer.track.field.releaseDate")} htmlFor="tr-date">
+                  <AdminFormField
+                    label={a.t("admin.drawer.track.field.releaseDate")}
+                    htmlFor="tr-date"
+                    info={a.t("admin.drawer.track.info.releaseDate")}
+                  >
                     <Input
                       id="tr-date"
                       type="date"
@@ -476,6 +486,7 @@ export function AdminTrackDrawer({
                   <AdminStyledSelectField
                     label={a.t("admin.drawer.track.field.crmStatus")}
                     id="tr-status"
+                    info={a.t("admin.drawer.track.info.crmStatus")}
                     value={form.status}
                     disabled
                     hint={a.t("admin.drawer.track.field.statusHint")}
@@ -492,97 +503,116 @@ export function AdminTrackDrawer({
                 title={a.t("admin.drawer.track.section.media")}
                 description={a.t("admin.drawer.track.section.mediaDesc")}
               >
-                {canUploadMedia && mode === "edit" && track ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                {mode === "create" || !track ? (
+                  <p className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-3 py-2.5 text-xs leading-relaxed text-zinc-400">
+                    {a.t("admin.drawer.track.media.uploadAfterDraft")}
+                  </p>
+                ) : canUploadMedia ? (
+                  <p className="text-xs leading-relaxed text-zinc-400">{a.t("admin.drawer.track.media.uploadReady")}</p>
+                ) : null}
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
                     <AdminFormField
                       label={a.t("admin.drawer.track.field.uploadCover")}
                       htmlFor="tr-cover-file"
+                      info={a.t("admin.drawer.track.info.coverUpload")}
                       hint={a.t("admin.drawer.track.field.coverHint")}
                     >
-                      <Input
-                        id="tr-cover-file"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className={adminFieldInput}
-                        disabled={readOnly || mediaUploading === "cover"}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file && onUploadCover) void onUploadCover(file);
-                          e.target.value = "";
-                        }}
-                      />
+                      {canUploadMedia && mode === "edit" && track && onUploadCover ? (
+                        <AdminMediaUploadButton
+                          id="tr-cover-file"
+                          accept="image/jpeg,image/png,image/webp"
+                          label={a.t("admin.drawer.track.field.uploadCover")}
+                          uploading={mediaUploading === "cover"}
+                          uploadingLabel={a.t("admin.drawer.common.saving")}
+                          disabled={readOnly}
+                          onFileSelected={onUploadCover}
+                        />
+                      ) : null}
                     </AdminFormField>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-600">
+                      {a.t("admin.drawer.track.media.orUrl")}
+                    </p>
+                    <AdminFormField
+                      label={a.t("admin.drawer.track.field.coverUrl")}
+                      htmlFor="tr-cover"
+                      info={a.t("admin.drawer.track.info.coverUrl")}
+                      hint={TRACK_FIELD_TOOLTIPS.cover}
+                      error={fe("coverUrl")}
+                    >
+                      <Input
+                        id="tr-cover"
+                        className={adminFieldInput}
+                        value={form.coverUrl}
+                        onChange={(e) => set("coverUrl", e.target.value)}
+                        readOnly={readOnly}
+                        placeholder="https://…"
+                        aria-invalid={Boolean(fe("coverUrl"))}
+                      />
+                      {form.coverUrl.trim() ? (
+                        <div className="mt-3 size-28 overflow-hidden rounded-xl bg-zinc-900/40">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={form.coverUrl.trim()} alt="" className="size-full object-cover" />
+                        </div>
+                      ) : null}
+                    </AdminFormField>
+                  </div>
+
+                  <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
                     <AdminFormField
                       label={a.t("admin.drawer.track.field.uploadAudio")}
                       htmlFor="tr-audio-file"
+                      info={a.t("admin.drawer.track.info.audioUpload")}
                       hint={a.t("admin.drawer.track.field.audioHint")}
                     >
+                      {canUploadMedia && mode === "edit" && track && onUploadAudio ? (
+                        <AdminMediaUploadButton
+                          id="tr-audio-file"
+                          accept="audio/mpeg,audio/mp3,audio/wav,audio/mp4,audio/aac"
+                          label={a.t("admin.drawer.track.field.uploadAudio")}
+                          uploading={mediaUploading === "audio"}
+                          uploadingLabel={a.t("admin.drawer.common.saving")}
+                          disabled={readOnly}
+                          onFileSelected={onUploadAudio}
+                        />
+                      ) : null}
+                    </AdminFormField>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-600">
+                      {a.t("admin.drawer.track.media.orUrl")}
+                    </p>
+                    <AdminFormField
+                      label={a.t("admin.drawer.track.field.audioPreviewUrl")}
+                      htmlFor="tr-audio"
+                      info={a.t("admin.drawer.track.info.audioUrl")}
+                      hint={TRACK_FIELD_TOOLTIPS.audioPreview}
+                      error={fe("audioPreviewUrl")}
+                    >
                       <Input
-                        id="tr-audio-file"
-                        type="file"
-                        accept="audio/mpeg,audio/mp3,audio/wav,audio/mp4,audio/aac"
+                        id="tr-audio"
                         className={adminFieldInput}
-                        disabled={readOnly || mediaUploading === "audio"}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file && onUploadAudio) void onUploadAudio(file);
-                          e.target.value = "";
-                        }}
+                        value={form.audioPreviewUrl}
+                        onChange={(e) => set("audioPreviewUrl", e.target.value)}
+                        readOnly={readOnly}
+                        placeholder="https://…/preview.mp3"
+                        aria-invalid={Boolean(fe("audioPreviewUrl"))}
                       />
+                      {form.audioPreviewUrl.trim() && !readOnly ? (
+                        <audio controls className="mt-2 w-full max-w-md" src={form.audioPreviewUrl.trim()} preload="none">
+                          <track kind="captions" />
+                        </audio>
+                      ) : null}
                     </AdminFormField>
                   </div>
-                ) : mode === "create" ? (
-                  <p className="text-xs text-zinc-500">
-                    Сохраните черновик релиза, затем загрузите обложку и preview через Supabase Storage.
-                  </p>
-                ) : null}
-                <AdminFormField
-                  label={a.t("admin.drawer.track.field.coverUrl")}
-                  htmlFor="tr-cover"
-                  hint={TRACK_FIELD_TOOLTIPS.cover}
-                  error={fe("coverUrl")}
-                >
-                  <Input
-                    id="tr-cover"
-                    className={adminFieldInput}
-                    value={form.coverUrl}
-                    onChange={(e) => set("coverUrl", e.target.value)}
-                    readOnly={readOnly}
-                    placeholder="https://…"
-                    aria-invalid={Boolean(fe("coverUrl"))}
-                  />
-                  {form.coverUrl.trim() ? (
-                    <div className="mt-3 size-28 overflow-hidden rounded-xl bg-zinc-900/40">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={form.coverUrl.trim()} alt="" className="size-full object-cover" />
-                    </div>
-                  ) : null}
-                </AdminFormField>
-                <AdminFormField
-                  label="Audio preview (URL)"
-                  htmlFor="tr-audio"
-                  hint={TRACK_FIELD_TOOLTIPS.audioPreview}
-                  error={fe("audioPreviewUrl")}
-                >
-                  <Input
-                    id="tr-audio"
-                    className={adminFieldInput}
-                    value={form.audioPreviewUrl}
-                    onChange={(e) => set("audioPreviewUrl", e.target.value)}
-                    readOnly={readOnly}
-                    placeholder="https://…/preview.mp3"
-                    aria-invalid={Boolean(fe("audioPreviewUrl"))}
-                  />
-                  {form.audioPreviewUrl.trim() && !readOnly ? (
-                    <audio controls className="mt-2 w-full max-w-md" src={form.audioPreviewUrl.trim()} preload="none">
-                      <track kind="captions" />
-                    </audio>
-                  ) : null}
-                </AdminFormField>
+                </div>
               </Section>
 
               <Section title={a.t("admin.drawer.track.section.rights")}>
-                <AdminFormField label={a.t("admin.drawer.track.field.shortDesc")} htmlFor="tr-short">
+                <AdminFormField
+                  label={a.t("admin.drawer.track.field.shortDesc")}
+                  htmlFor="tr-short"
+                  info={a.t("admin.drawer.track.info.shortDesc")}
+                >
                   <Input
                     id="tr-short"
                     className={adminFieldInput}
@@ -592,45 +622,62 @@ export function AdminTrackDrawer({
                     placeholder={a.t("admin.drawer.track.field.shortDescPlaceholder")}
                   />
                 </AdminFormField>
-                <AdminFormField label={a.t("admin.drawer.track.field.fullDesc")} htmlFor="tr-desc">
-                  <textarea
+                <AdminFormField
+                  label={a.t("admin.drawer.track.field.fullDesc")}
+                  htmlFor="tr-desc"
+                  info={a.t("admin.drawer.track.info.fullDesc")}
+                >
+                  <AdminTextarea
                     id="tr-desc"
-                    className={cn(adminFieldTextarea, "min-h-[88px]")}
+                    className="min-h-[88px]"
                     value={form.description}
                     onChange={(e) => set("description", e.target.value)}
                     readOnly={readOnly}
                     placeholder={a.t("admin.drawer.track.field.fullDescPlaceholder")}
                   />
                 </AdminFormField>
-                <AdminFormField label={a.t("admin.drawer.track.field.riskDisclosure")} htmlFor="tr-risk">
-                  <textarea
+                <AdminFormField
+                  label={a.t("admin.drawer.track.field.riskDisclosure")}
+                  htmlFor="tr-risk"
+                  info={a.t("admin.drawer.track.info.riskDisclosure")}
+                >
+                  <AdminTextarea
                     id="tr-risk"
-                    className={cn(adminFieldTextarea, "disabled:opacity-50")}
+                    className="min-h-[88px]"
                     value={form.riskDisclosureText}
                     onChange={(e) => set("riskDisclosureText", e.target.value)}
                     readOnly={readOnly}
+                    placeholder={a.t("admin.drawer.track.field.riskDisclosurePlaceholder")}
                   />
                 </AdminFormField>
-                <AdminFormField label={a.t("admin.drawer.track.field.legalTerms")} htmlFor="tr-legal">
-                  <textarea
+                <AdminFormField
+                  label={a.t("admin.drawer.track.field.legalTerms")}
+                  htmlFor="tr-legal"
+                  info={a.t("admin.drawer.track.info.legalTerms")}
+                >
+                  <AdminTextarea
                     id="tr-legal"
-                    className={cn(adminFieldTextarea, "disabled:opacity-50")}
+                    className="min-h-[88px]"
                     value={form.legalDisclaimer}
                     onChange={(e) => set("legalDisclaimer", e.target.value)}
                     readOnly={readOnly}
+                    placeholder={a.t("admin.drawer.track.field.legalTermsPlaceholder")}
                   />
                 </AdminFormField>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.secondaryEnabled}
-                    disabled={readOnly}
-                    onChange={(e) => set("secondaryEnabled", e.target.checked)}
-                  />
-                  Вторичный рынок доступен для этого релиза
-                </label>
+                <AdminCheckboxRow
+                  id="tr-secondary"
+                  label={a.t("admin.drawer.track.field.secondaryEnabled")}
+                  info={a.t("admin.drawer.track.info.secondaryEnabled")}
+                  checked={form.secondaryEnabled}
+                  onCheckedChange={(checked) => set("secondaryEnabled", checked)}
+                  disabled={readOnly}
+                />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <AdminFormField label={a.t("admin.drawer.track.field.labelCopyright")} htmlFor="tr-label">
+                  <AdminFormField
+                    label={a.t("admin.drawer.track.field.labelCopyright")}
+                    htmlFor="tr-label"
+                    info={a.t("admin.drawer.track.info.labelCopyright")}
+                  >
                     <AdminLabelCombobox
                       id="tr-label"
                       value={form.labelName}
@@ -639,7 +686,11 @@ export function AdminTrackDrawer({
                       inputClassName={adminFieldInput}
                     />
                   </AdminFormField>
-                  <AdminFormField label={a.t("admin.drawer.track.field.copyrightOwner")} htmlFor="tr-copy">
+                  <AdminFormField
+                    label={a.t("admin.drawer.track.field.copyrightOwner")}
+                    htmlFor="tr-copy"
+                    info={a.t("admin.drawer.track.info.copyrightOwner")}
+                  >
                     <Input
                       id="tr-copy"
                       className={adminFieldInput}
@@ -648,59 +699,80 @@ export function AdminTrackDrawer({
                       readOnly={readOnly}
                     />
                   </AdminFormField>
-                  <AdminFormField label="ISRC" htmlFor="tr-isrc">
+                  <AdminFormField label="ISRC" htmlFor="tr-isrc" info={a.t("admin.drawer.track.info.isrc")}>
                     <Input
                       id="tr-isrc"
                       className={adminFieldInput}
                       value={form.isrc}
                       onChange={(e) => set("isrc", e.target.value)}
                       readOnly={readOnly}
+                      placeholder="USRC17607839"
                     />
                   </AdminFormField>
-                  <AdminFormField label="UPC" htmlFor="tr-upc">
+                  <AdminFormField label="UPC" htmlFor="tr-upc" info={a.t("admin.drawer.track.info.upc")}>
                     <Input
                       id="tr-upc"
                       className={adminFieldInput}
                       value={form.upc}
                       onChange={(e) => set("upc", e.target.value)}
                       readOnly={readOnly}
+                      placeholder="190295000123"
                     />
                   </AdminFormField>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <AdminFormField label="Spotify" htmlFor="tr-spotify" error={fe("spotifyUrl")}>
+                  <AdminFormField
+                    label="Spotify"
+                    htmlFor="tr-spotify"
+                    info={a.t("admin.drawer.track.info.spotifyUrl")}
+                    error={fe("spotifyUrl")}
+                  >
                     <Input
                       id="tr-spotify"
                       className={adminFieldInput}
                       value={form.spotifyUrl}
                       onChange={(e) => set("spotifyUrl", e.target.value)}
                       readOnly={readOnly}
+                      placeholder="https://open.spotify.com/album/…"
                       aria-invalid={Boolean(fe("spotifyUrl"))}
                     />
                   </AdminFormField>
-                  <AdminFormField label="Apple Music" htmlFor="tr-apple" error={fe("appleMusicUrl")}>
+                  <AdminFormField
+                    label="Apple Music"
+                    htmlFor="tr-apple"
+                    info={a.t("admin.drawer.track.info.appleMusicUrl")}
+                    error={fe("appleMusicUrl")}
+                  >
                     <Input
                       id="tr-apple"
                       className={adminFieldInput}
                       value={form.appleMusicUrl}
                       onChange={(e) => set("appleMusicUrl", e.target.value)}
                       readOnly={readOnly}
+                      placeholder="https://music.apple.com/…"
                       aria-invalid={Boolean(fe("appleMusicUrl"))}
                     />
                   </AdminFormField>
-                  <AdminFormField label="YouTube" htmlFor="tr-yt" error={fe("youtubeUrl")}>
+                  <AdminFormField
+                    label="YouTube"
+                    htmlFor="tr-yt"
+                    info={a.t("admin.drawer.track.info.youtubeUrl")}
+                    error={fe("youtubeUrl")}
+                  >
                     <Input
                       id="tr-yt"
                       className={adminFieldInput}
                       value={form.youtubeUrl}
                       onChange={(e) => set("youtubeUrl", e.target.value)}
                       readOnly={readOnly}
+                      placeholder="https://youtube.com/watch?v=…"
                       aria-invalid={Boolean(fe("youtubeUrl"))}
                     />
                   </AdminFormField>
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.yandexMusic")}
                     htmlFor="tr-yandex"
+                    info={a.t("admin.drawer.track.info.yandexMusicUrl")}
                     error={fe("yandexMusicUrl")}
                   >
                     <Input
@@ -709,6 +781,7 @@ export function AdminTrackDrawer({
                       value={form.yandexMusicUrl}
                       onChange={(e) => set("yandexMusicUrl", e.target.value)}
                       readOnly={readOnly}
+                      placeholder="https://music.yandex.ru/album/…"
                       aria-invalid={Boolean(fe("yandexMusicUrl"))}
                     />
                   </AdminFormField>
@@ -720,7 +793,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.holderSharePct")}
                     htmlFor="tr-holder"
-                    hint={TRACK_FIELD_TOOLTIPS.holderShare}
+                    info={a.t("admin.drawer.track.info.holderSharePct")}
                     error={fe("holderSharePct")}
                   >
                     <Input
@@ -735,7 +808,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.artistSharePct")}
                     htmlFor="tr-artist-share"
-                    hint={TRACK_FIELD_TOOLTIPS.artistShare}
+                    info={a.t("admin.drawer.track.info.artistSharePct")}
                     error={fe("artistSharePct")}
                   >
                     <Input
@@ -750,7 +823,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.platformSharePct")}
                     htmlFor="tr-platform"
-                    hint={TRACK_FIELD_TOOLTIPS.platformShare}
+                    info={a.t("admin.drawer.track.info.platformSharePct")}
                     error={fe("platformSharePct")}
                   >
                     <Input
@@ -772,6 +845,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.totalUnits")}
                     htmlFor="tr-total"
+                    info={a.t("admin.drawer.track.info.totalUnits")}
                     error={fe("totalUnits")}
                   >
                     <Input
@@ -786,6 +860,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.availablePrimary")}
                     htmlFor="tr-avail"
+                    info={a.t("admin.drawer.track.info.availablePrimary")}
                     error={fe("availableUnits")}
                   >
                     <Input
@@ -809,6 +884,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.unitPrice")}
                     htmlFor="tr-price"
+                    info={a.t("admin.drawer.track.info.unitPrice")}
                     error={fe("primaryUnitPrice")}
                   >
                     <Input
@@ -823,6 +899,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.minPurchase")}
                     htmlFor="tr-min"
+                    info={a.t("admin.drawer.track.info.minPurchase")}
                     error={fe("minPurchaseUnits")}
                   >
                     <Input
@@ -834,7 +911,11 @@ export function AdminTrackDrawer({
                       aria-invalid={Boolean(fe("minPurchaseUnits"))}
                     />
                   </AdminFormField>
-                  <AdminFormField label={a.t("admin.drawer.track.field.maxPurchase")} htmlFor="tr-max">
+                  <AdminFormField
+                    label={a.t("admin.drawer.track.field.maxPurchase")}
+                    htmlFor="tr-max"
+                    info={a.t("admin.drawer.track.info.maxPurchase")}
+                  >
                     <Input
                       id="tr-max"
                       className={cn("tabular-nums", adminFieldInput)}
@@ -852,7 +933,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.raiseTarget")}
                     htmlFor="tr-raise"
-                    hint={TRACK_FIELD_TOOLTIPS.raiseTarget}
+                    info={a.t("admin.drawer.track.info.raiseTarget")}
                   >
                     <Input
                       id="tr-raise"
@@ -865,7 +946,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.hardCap")}
                     htmlFor="tr-cap"
-                    hint={TRACK_FIELD_TOOLTIPS.hardCap}
+                    info={a.t("admin.drawer.track.info.hardCap")}
                   >
                     <Input
                       id="tr-cap"
@@ -878,7 +959,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.promoBudget")}
                     htmlFor="tr-promo"
-                    hint={TRACK_FIELD_TOOLTIPS.promoBudget}
+                    info={a.t("admin.drawer.track.info.promoBudget")}
                   >
                     <Input
                       id="tr-promo"
@@ -891,7 +972,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.artistAdvance")}
                     htmlFor="tr-adv-a"
-                    hint={TRACK_FIELD_TOOLTIPS.artistUpfront}
+                    info={a.t("admin.drawer.track.info.artistAdvance")}
                   >
                     <Input
                       id="tr-adv-a"
@@ -904,7 +985,7 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.platformAdvance")}
                     htmlFor="tr-adv-p"
-                    hint={TRACK_FIELD_TOOLTIPS.platformUpfront}
+                    info={a.t("admin.drawer.track.info.platformAdvance")}
                   >
                     <Input
                       id="tr-adv-p"
@@ -917,14 +998,16 @@ export function AdminTrackDrawer({
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.distributionNotes")}
                     htmlFor="tr-notes"
+                    info={a.t("admin.drawer.track.info.distributionNotes")}
                     className="sm:col-span-2"
                   >
-                    <textarea
+                    <AdminTextarea
                       id="tr-notes"
-                      className={adminFieldTextarea}
+                      className="min-h-[88px]"
                       value={form.distributionNotes}
                       onChange={(e) => set("distributionNotes", e.target.value)}
                       readOnly={readOnly}
+                      placeholder={a.t("admin.drawer.track.field.distributionNotesPlaceholder")}
                     />
                   </AdminFormField>
                 </div>

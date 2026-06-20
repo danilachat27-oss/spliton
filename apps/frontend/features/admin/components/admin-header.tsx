@@ -4,12 +4,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ExternalLink, Menu, User } from "@/lib/lucide";
+import { ChevronDown, ExternalLink, User } from "@/lib/lucide";
 
 import { SplitonLogo } from "@/components/dashboard/revshare-logo";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AdminGlobalSearch } from "@/features/admin/components/admin-global-search";
-import { useAdminMobileNav } from "@/features/admin/components/admin-mobile-nav";
 import { adminSectionFromPathname } from "@/features/admin/config/admin-sections";
 import { getPrimaryStaffRole } from "@/features/admin/lib/admin-access";
 import { getAdminEnvironmentLabel } from "@/features/admin/lib/admin-format";
@@ -27,7 +26,6 @@ const headerIconClass =
 
 export function AdminHeader() {
   const a = useAdminI18n();
-  const { setOpen: setMobileNavOpen } = useAdminMobileNav();
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const sectionId = adminSectionFromPathname(pathname);
@@ -37,15 +35,6 @@ export function AdminHeader() {
 
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center gap-2 border-b border-zinc-800/80 bg-[#141416] px-3 text-zinc-100 sm:gap-4 sm:px-5">
-      <button
-        type="button"
-        className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 md:hidden"
-        aria-label={a.t("admin.header.openMenu")}
-        onClick={() => setMobileNavOpen(true)}
-      >
-        <Menu className="size-5" strokeWidth={1.75} aria-hidden />
-      </button>
-
       <div className="hidden shrink-0 md:block">
         <SplitonLogo href={ROUTES.admin} />
       </div>

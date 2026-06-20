@@ -500,10 +500,13 @@ export function TracksSection() {
                 try {
                   const updated = await uploadTrackCover(editTrack.id, file, client);
                   setEditTrack(updated);
-                  setFeedback("Обложка загружена");
+                  setFeedback("Обложка загружена в Spliton Storage");
                   await reload();
                 } catch (e) {
-                  actionError(e, "Ошибка загрузки обложки");
+                  actionError(
+                    e,
+                    "Не удалось загрузить обложку. Проверьте Supabase Storage (bucket release-covers) и права сервиса.",
+                  );
                 } finally {
                   setMediaUploading(null);
                 }
@@ -518,10 +521,13 @@ export function TracksSection() {
                 try {
                   const updated = await uploadTrackAudioPreview(editTrack.id, file, client);
                   setEditTrack(updated);
-                  setFeedback("Audio preview загружен");
+                  setFeedback("Audio preview загружен в Spliton Storage");
                   await reload();
                 } catch (e) {
-                  actionError(e, "Ошибка загрузки audio preview");
+                  actionError(
+                    e,
+                    "Не удалось загрузить preview. Проверьте bucket release-audio (private) и SUPABASE на backend.",
+                  );
                 } finally {
                   setMediaUploading(null);
                 }

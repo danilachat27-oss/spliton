@@ -20,6 +20,7 @@ export function AdminStyledSelectField({
   label,
   className,
   hint,
+  info,
   error,
   htmlFor,
   ...props
@@ -27,6 +28,7 @@ export function AdminStyledSelectField({
   label: string;
   className?: string;
   hint?: ReactNode;
+  info?: string;
   error?: string | null;
   htmlFor?: string;
 } & AdminStyledSelectProps) {
@@ -35,6 +37,7 @@ export function AdminStyledSelectField({
       label={label}
       htmlFor={htmlFor ?? props.id}
       hint={hint}
+      info={info}
       error={error}
       className={className}
     >

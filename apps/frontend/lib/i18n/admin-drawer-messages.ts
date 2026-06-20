@@ -354,6 +354,84 @@ const RU: Record<string, string> = {
   "admin.drawer.track.field.coverHint": "JPG, PNG, WebP · до 5 MB · bucket release-covers (public)",
   "admin.drawer.track.field.audioHint": "MP3, WAV, AAC · до 20 MB · bucket release-audio (private)",
   "admin.drawer.track.field.coverUrl": "URL обложки",
+  "admin.drawer.track.field.audioPreviewUrl": "Audio preview (URL)",
+  "admin.drawer.track.media.orUrl": "или укажите URL",
+  "admin.drawer.track.media.uploadAfterDraft":
+    "Сначала сохраните черновик релиза — после этого появится кнопка загрузки файлов в Spliton Storage.",
+  "admin.drawer.track.media.uploadReady":
+    "Можно загрузить файл с компьютера — он попадёт в Supabase Storage и подставится в поле ниже.",
+  "admin.drawer.track.info.title":
+    "Публичное название релиза в каталоге Spliton, карточках раунда и аналитике.",
+  "admin.drawer.track.info.artist":
+    "Исполнитель или группа. Берётся из справочника артистов — дубликаты имён лучше не создавать.",
+  "admin.drawer.track.info.releaseType":
+    "Формат релиза (сингл, EP, альбом) влияет на отображение в каталоге и обязательные поля ISRC/UPC.",
+  "admin.drawer.track.info.genre":
+    "Жанр для фильтров каталога и аналитики. Можно выбрать из справочника или добавить новый.",
+  "admin.drawer.track.info.releaseDate":
+    "Дата выхода релиза — для карточки, сортировки и юридических текстов на странице.",
+  "admin.drawer.track.info.crmStatus":
+    "Внутренний этап работы оператора: черновик → проверка → публикация → активен. Меняется кнопками внизу формы, не из списка.",
+  "admin.drawer.track.info.coverUpload":
+    "Загрузка квадратной обложки в публичный bucket release-covers. После загрузки URL появится в каталоге и карточке релиза.",
+  "admin.drawer.track.info.coverUrl":
+    "Альтернатива загрузке: вставьте прямую ссылку на JPG/PNG/WebP до 5 MB, если файл уже лежит на CDN.",
+  "admin.drawer.track.info.audioUpload":
+    "Короткий фрагмент 30–60 сек в приватный bucket release-audio. В админке и каталоге открывается через временный signed URL.",
+  "admin.drawer.track.info.audioUrl":
+    "Альтернатива загрузке: URL на уже обрезанный preview. Не используйте полный трек и не вставляйте signed URL вручную.",
+  "admin.drawer.track.info.secondaryEnabled":
+    "Если включено, после первичного раунда юниты этого релиза можно будет продавать на вторичном рынке Spliton.",
+  "admin.drawer.track.info.totalUnits":
+    "Общее количество UNT (долей) релиза — определяет максимальный объём первичного размещения.",
+  "admin.drawer.track.info.unitPrice":
+    "Цена одного UNT в USDT на первичном раунде для инвесторов.",
+  "admin.drawer.track.field.secondaryEnabled": "Вторичный рынок",
+  "admin.drawer.track.info.shortDesc":
+    "1–2 предложения для карточки в каталоге — видны инвесторам до открытия полного описания.",
+  "admin.drawer.track.info.fullDesc":
+    "Развёрнутый текст на странице релиза: история, контекст, цели раунда для держателей.",
+  "admin.drawer.track.info.riskDisclosure":
+    "Обязательное раскрытие рисков инвестирования в музыкальные активы — показывается на странице релиза.",
+  "admin.drawer.track.info.legalTerms":
+    "Юридические условия сделки, disclaimer и ссылки на документы платформы.",
+  "admin.drawer.track.info.labelCopyright":
+    "Лейбл дистрибуции или правообладателя. Используйте справочник, чтобы не плодить дубликаты.",
+  "admin.drawer.track.info.copyrightOwner":
+    "Юридическое имя правообладателя контента — для документов и комплаенса.",
+  "admin.drawer.track.info.isrc":
+    "International Standard Recording Code — идентификатор записи для сингла/трека.",
+  "admin.drawer.track.info.upc":
+    "Universal Product Code — штрихкод релиза (альбом, EP, сингл в дистрибуции).",
+  "admin.drawer.track.info.spotifyUrl": "Ссылка на релиз в Spotify для верификации и embed.",
+  "admin.drawer.track.info.appleMusicUrl": "Ссылка на релиз в Apple Music.",
+  "admin.drawer.track.info.youtubeUrl": "Ссылка на официальный клип или релиз на YouTube.",
+  "admin.drawer.track.info.yandexMusicUrl": "Ссылка на релиз в Яндекс Музыке.",
+  "admin.drawer.track.info.holderSharePct":
+    "Доля дохода держателей UNT. Вместе с долями артиста и платформы должна давать ровно 100%.",
+  "admin.drawer.track.info.artistSharePct": "Доля артиста от потока дохода релиза после выплат держателям.",
+  "admin.drawer.track.info.platformSharePct":
+    "Доля платформы Spliton за инфраструктуру, комплаенс и сопровождение сделки.",
+  "admin.drawer.track.info.availablePrimary":
+    "Сколько UNT доступно к продаже в первичном раунде — не больше общего количества.",
+  "admin.drawer.track.info.minPurchase": "Минимальный лот покупки для инвестора на первичке.",
+  "admin.drawer.track.info.maxPurchase": "Максимальный лот за одну сделку на первичке (анти-концентрация).",
+  "admin.drawer.track.info.raiseTarget":
+    "Целевая сумма первичного раунда — сколько USDT планируется привлечь от держателей.",
+  "admin.drawer.track.info.hardCap":
+    "Максимальный объём сбора — после достижения новые покупки юнитов закрываются.",
+  "admin.drawer.track.info.promoBudget": "Бюджет на продвижение релиза (маркетинг, медиа, реклама).",
+  "admin.drawer.track.info.artistAdvance": "Авансовый платёж артисту до начала или в ходе раунда.",
+  "admin.drawer.track.info.platformAdvance":
+    "Аванс платформе Spliton за сопровождение релиза и инфраструктуру.",
+  "admin.drawer.track.info.distributionNotes":
+    "Внутренние заметки для finance и операторов — не показываются инвесторам.",
+  "admin.drawer.track.field.riskDisclosurePlaceholder":
+    "Стандартные риски инвестирования, волатильность дохода, отсутствие гарантий…",
+  "admin.drawer.track.field.legalTermsPlaceholder":
+    "Условия сделки, отказ от ответственности, ссылки на legal-документы…",
+  "admin.drawer.track.field.distributionNotesPlaceholder":
+    "Внутренние заметки по распределению средств, особые условия сделки…",
   "admin.drawer.track.section.rights": "3. Описание и права",
   "admin.drawer.track.field.shortDesc": "Краткое описание (каталог)",
   "admin.drawer.track.field.shortDescPlaceholder": "1–2 предложения для карточки релиза",
@@ -838,6 +916,81 @@ const EN: Record<string, string> = {
   "admin.drawer.track.field.coverHint": "JPG, PNG, WebP · up to 5 MB · bucket release-covers (public)",
   "admin.drawer.track.field.audioHint": "MP3, WAV, AAC · up to 20 MB · bucket release-audio (private)",
   "admin.drawer.track.field.coverUrl": "Cover URL",
+  "admin.drawer.track.field.audioPreviewUrl": "Audio preview (URL)",
+  "admin.drawer.track.media.orUrl": "or paste URL",
+  "admin.drawer.track.media.uploadAfterDraft":
+    "Save a draft first — then file upload to Spliton Storage becomes available.",
+  "admin.drawer.track.media.uploadReady":
+    "You can upload from your computer — the file goes to Supabase Storage and fills the field below.",
+  "admin.drawer.track.info.title":
+    "Public release title in Spliton catalog, round cards, and analytics.",
+  "admin.drawer.track.info.artist":
+    "Performer or band from the artist directory — avoid duplicate names.",
+  "admin.drawer.track.info.releaseType":
+    "Release format (single, EP, album) affects catalog display and required ISRC/UPC fields.",
+  "admin.drawer.track.info.genre":
+    "Genre for catalog filters and analytics. Pick from directory or add new.",
+  "admin.drawer.track.info.releaseDate":
+    "Release date for the card, sorting, and legal copy on the page.",
+  "admin.drawer.track.info.crmStatus":
+    "Internal operator stage: draft → review → publish → active. Changed via footer actions, not this dropdown.",
+  "admin.drawer.track.info.coverUpload":
+    "Upload square cover to public release-covers bucket. URL appears in catalog after upload.",
+  "admin.drawer.track.info.coverUrl":
+    "Alternative to upload: paste a direct JPG/PNG/WebP link up to 5 MB if already on CDN.",
+  "admin.drawer.track.info.audioUpload":
+    "30–60 sec clip to private release-audio bucket. Opened via signed URL in admin and catalog.",
+  "admin.drawer.track.info.audioUrl":
+    "Alternative to upload: URL to a trimmed preview. Do not use full track or manual signed URLs.",
+  "admin.drawer.track.info.secondaryEnabled":
+    "When enabled, units can trade on Spliton secondary market after the primary round.",
+  "admin.drawer.track.info.totalUnits":
+    "Total UNT (shares) for the release — caps primary offering size.",
+  "admin.drawer.track.info.unitPrice": "Price per UNT in USDT on the primary round.",
+  "admin.drawer.track.field.secondaryEnabled": "Secondary market",
+  "admin.drawer.track.info.shortDesc":
+    "1–2 sentences for the catalog card — visible before the full description.",
+  "admin.drawer.track.info.fullDesc":
+    "Long-form copy on the release page: story, context, round goals for holders.",
+  "admin.drawer.track.info.riskDisclosure":
+    "Required investment risk disclosure — shown on the public release page.",
+  "admin.drawer.track.info.legalTerms":
+    "Deal terms, disclaimer, and links to platform legal documents.",
+  "admin.drawer.track.info.labelCopyright":
+    "Distribution label or rights holder. Use directory to avoid duplicates.",
+  "admin.drawer.track.info.copyrightOwner":
+    "Legal copyright owner name — for documents and compliance.",
+  "admin.drawer.track.info.isrc": "International Standard Recording Code for a track/single.",
+  "admin.drawer.track.info.upc": "Universal Product Code — release barcode (album, EP, single).",
+  "admin.drawer.track.info.spotifyUrl": "Spotify release link for verification and embed.",
+  "admin.drawer.track.info.appleMusicUrl": "Apple Music release link.",
+  "admin.drawer.track.info.youtubeUrl": "Official video or release on YouTube.",
+  "admin.drawer.track.info.yandexMusicUrl": "Yandex Music release link.",
+  "admin.drawer.track.info.holderSharePct":
+    "Holder revenue share. Together with artist and platform shares must total 100%.",
+  "admin.drawer.track.info.artistSharePct": "Artist share of release revenue after holder payouts.",
+  "admin.drawer.track.info.platformSharePct":
+    "Spliton platform share for infrastructure, compliance, and deal support.",
+  "admin.drawer.track.info.availablePrimary":
+    "UNT available in primary round — cannot exceed total units.",
+  "admin.drawer.track.info.minPurchase": "Minimum purchase lot for investors on primary.",
+  "admin.drawer.track.info.maxPurchase": "Maximum lot per trade on primary (anti-concentration).",
+  "admin.drawer.track.info.raiseTarget":
+    "Primary round target — planned USDT to raise from holders.",
+  "admin.drawer.track.info.hardCap":
+    "Maximum raise — new unit purchases close after this cap.",
+  "admin.drawer.track.info.promoBudget": "Marketing and promotion budget for the release.",
+  "admin.drawer.track.info.artistAdvance": "Upfront payment to artist before or during the round.",
+  "admin.drawer.track.info.platformAdvance":
+    "Upfront payment to Spliton for release support and infrastructure.",
+  "admin.drawer.track.info.distributionNotes":
+    "Internal notes for finance and operators — not shown to investors.",
+  "admin.drawer.track.field.riskDisclosurePlaceholder":
+    "Standard investment risks, revenue volatility, no guarantees…",
+  "admin.drawer.track.field.legalTermsPlaceholder":
+    "Deal terms, disclaimer, links to legal documents…",
+  "admin.drawer.track.field.distributionNotesPlaceholder":
+    "Internal notes on fund distribution, special deal terms…",
   "admin.drawer.track.section.rights": "3. Description & rights",
   "admin.drawer.track.field.shortDesc": "Short description (catalog)",
   "admin.drawer.track.field.shortDescPlaceholder": "1–2 sentences for the release card",
@@ -1322,6 +1475,81 @@ const ES: Record<string, string> = {
   "admin.drawer.track.field.coverHint": "JPG, PNG, WebP · up to 5 MB · bucket release-covers (public)",
   "admin.drawer.track.field.audioHint": "MP3, WAV, AAC · up to 20 MB · bucket release-audio (private)",
   "admin.drawer.track.field.coverUrl": "Cover URL",
+  "admin.drawer.track.field.audioPreviewUrl": "Audio preview (URL)",
+  "admin.drawer.track.media.orUrl": "or paste URL",
+  "admin.drawer.track.media.uploadAfterDraft":
+    "Save a draft first — then file upload to Spliton Storage becomes available.",
+  "admin.drawer.track.media.uploadReady":
+    "You can upload from your computer — the file goes to Supabase Storage and fills the field below.",
+  "admin.drawer.track.info.title":
+    "Public release title in Spliton catalog, round cards, and analytics.",
+  "admin.drawer.track.info.artist":
+    "Performer or band from the artist directory — avoid duplicate names.",
+  "admin.drawer.track.info.releaseType":
+    "Release format (single, EP, album) affects catalog display and required ISRC/UPC fields.",
+  "admin.drawer.track.info.genre":
+    "Genre for catalog filters and analytics. Pick from directory or add new.",
+  "admin.drawer.track.info.releaseDate":
+    "Release date for the card, sorting, and legal copy on the page.",
+  "admin.drawer.track.info.crmStatus":
+    "Internal operator stage: draft → review → publish → active. Changed via footer actions, not this dropdown.",
+  "admin.drawer.track.info.coverUpload":
+    "Upload square cover to public release-covers bucket. URL appears in catalog after upload.",
+  "admin.drawer.track.info.coverUrl":
+    "Alternative to upload: paste a direct JPG/PNG/WebP link up to 5 MB if already on CDN.",
+  "admin.drawer.track.info.audioUpload":
+    "30–60 sec clip to private release-audio bucket. Opened via signed URL in admin and catalog.",
+  "admin.drawer.track.info.audioUrl":
+    "Alternative to upload: URL to a trimmed preview. Do not use full track or manual signed URLs.",
+  "admin.drawer.track.info.secondaryEnabled":
+    "When enabled, units can trade on Spliton secondary market after the primary round.",
+  "admin.drawer.track.info.totalUnits":
+    "Total UNT (shares) for the release — caps primary offering size.",
+  "admin.drawer.track.info.unitPrice": "Price per UNT in USDT on the primary round.",
+  "admin.drawer.track.field.secondaryEnabled": "Secondary market",
+  "admin.drawer.track.info.shortDesc":
+    "1–2 sentences for the catalog card — visible before the full description.",
+  "admin.drawer.track.info.fullDesc":
+    "Long-form copy on the release page: story, context, round goals for holders.",
+  "admin.drawer.track.info.riskDisclosure":
+    "Required investment risk disclosure — shown on the public release page.",
+  "admin.drawer.track.info.legalTerms":
+    "Deal terms, disclaimer, and links to platform legal documents.",
+  "admin.drawer.track.info.labelCopyright":
+    "Distribution label or rights holder. Use directory to avoid duplicates.",
+  "admin.drawer.track.info.copyrightOwner":
+    "Legal copyright owner name — for documents and compliance.",
+  "admin.drawer.track.info.isrc": "International Standard Recording Code for a track/single.",
+  "admin.drawer.track.info.upc": "Universal Product Code — release barcode (album, EP, single).",
+  "admin.drawer.track.info.spotifyUrl": "Spotify release link for verification and embed.",
+  "admin.drawer.track.info.appleMusicUrl": "Apple Music release link.",
+  "admin.drawer.track.info.youtubeUrl": "Official video or release on YouTube.",
+  "admin.drawer.track.info.yandexMusicUrl": "Yandex Music release link.",
+  "admin.drawer.track.info.holderSharePct":
+    "Holder revenue share. Together with artist and platform shares must total 100%.",
+  "admin.drawer.track.info.artistSharePct": "Artist share of release revenue after holder payouts.",
+  "admin.drawer.track.info.platformSharePct":
+    "Spliton platform share for infrastructure, compliance, and deal support.",
+  "admin.drawer.track.info.availablePrimary":
+    "UNT available in primary round — cannot exceed total units.",
+  "admin.drawer.track.info.minPurchase": "Minimum purchase lot for investors on primary.",
+  "admin.drawer.track.info.maxPurchase": "Maximum lot per trade on primary (anti-concentration).",
+  "admin.drawer.track.info.raiseTarget":
+    "Primary round target — planned USDT to raise from holders.",
+  "admin.drawer.track.info.hardCap":
+    "Maximum raise — new unit purchases close after this cap.",
+  "admin.drawer.track.info.promoBudget": "Marketing and promotion budget for the release.",
+  "admin.drawer.track.info.artistAdvance": "Upfront payment to artist before or during the round.",
+  "admin.drawer.track.info.platformAdvance":
+    "Upfront payment to Spliton for release support and infrastructure.",
+  "admin.drawer.track.info.distributionNotes":
+    "Internal notes for finance and operators — not shown to investors.",
+  "admin.drawer.track.field.riskDisclosurePlaceholder":
+    "Standard investment risks, revenue volatility, no guarantees…",
+  "admin.drawer.track.field.legalTermsPlaceholder":
+    "Deal terms, disclaimer, links to legal documents…",
+  "admin.drawer.track.field.distributionNotesPlaceholder":
+    "Internal notes on fund distribution, special deal terms…",
   "admin.drawer.track.section.rights": "3. Description & rights",
   "admin.drawer.track.field.shortDesc": "Short description (catalog)",
   "admin.drawer.track.field.shortDescPlaceholder": "1–2 sentences for the release card",
@@ -1806,6 +2034,81 @@ const PT: Record<string, string> = {
   "admin.drawer.track.field.coverHint": "JPG, PNG, WebP · up to 5 MB · bucket release-covers (public)",
   "admin.drawer.track.field.audioHint": "MP3, WAV, AAC · up to 20 MB · bucket release-audio (private)",
   "admin.drawer.track.field.coverUrl": "Cover URL",
+  "admin.drawer.track.field.audioPreviewUrl": "Audio preview (URL)",
+  "admin.drawer.track.media.orUrl": "or paste URL",
+  "admin.drawer.track.media.uploadAfterDraft":
+    "Save a draft first — then file upload to Spliton Storage becomes available.",
+  "admin.drawer.track.media.uploadReady":
+    "You can upload from your computer — the file goes to Supabase Storage and fills the field below.",
+  "admin.drawer.track.info.title":
+    "Public release title in Spliton catalog, round cards, and analytics.",
+  "admin.drawer.track.info.artist":
+    "Performer or band from the artist directory — avoid duplicate names.",
+  "admin.drawer.track.info.releaseType":
+    "Release format (single, EP, album) affects catalog display and required ISRC/UPC fields.",
+  "admin.drawer.track.info.genre":
+    "Genre for catalog filters and analytics. Pick from directory or add new.",
+  "admin.drawer.track.info.releaseDate":
+    "Release date for the card, sorting, and legal copy on the page.",
+  "admin.drawer.track.info.crmStatus":
+    "Internal operator stage: draft → review → publish → active. Changed via footer actions, not this dropdown.",
+  "admin.drawer.track.info.coverUpload":
+    "Upload square cover to public release-covers bucket. URL appears in catalog after upload.",
+  "admin.drawer.track.info.coverUrl":
+    "Alternative to upload: paste a direct JPG/PNG/WebP link up to 5 MB if already on CDN.",
+  "admin.drawer.track.info.audioUpload":
+    "30–60 sec clip to private release-audio bucket. Opened via signed URL in admin and catalog.",
+  "admin.drawer.track.info.audioUrl":
+    "Alternative to upload: URL to a trimmed preview. Do not use full track or manual signed URLs.",
+  "admin.drawer.track.info.secondaryEnabled":
+    "When enabled, units can trade on Spliton secondary market after the primary round.",
+  "admin.drawer.track.info.totalUnits":
+    "Total UNT (shares) for the release — caps primary offering size.",
+  "admin.drawer.track.info.unitPrice": "Price per UNT in USDT on the primary round.",
+  "admin.drawer.track.field.secondaryEnabled": "Secondary market",
+  "admin.drawer.track.info.shortDesc":
+    "1–2 sentences for the catalog card — visible before the full description.",
+  "admin.drawer.track.info.fullDesc":
+    "Long-form copy on the release page: story, context, round goals for holders.",
+  "admin.drawer.track.info.riskDisclosure":
+    "Required investment risk disclosure — shown on the public release page.",
+  "admin.drawer.track.info.legalTerms":
+    "Deal terms, disclaimer, and links to platform legal documents.",
+  "admin.drawer.track.info.labelCopyright":
+    "Distribution label or rights holder. Use directory to avoid duplicates.",
+  "admin.drawer.track.info.copyrightOwner":
+    "Legal copyright owner name — for documents and compliance.",
+  "admin.drawer.track.info.isrc": "International Standard Recording Code for a track/single.",
+  "admin.drawer.track.info.upc": "Universal Product Code — release barcode (album, EP, single).",
+  "admin.drawer.track.info.spotifyUrl": "Spotify release link for verification and embed.",
+  "admin.drawer.track.info.appleMusicUrl": "Apple Music release link.",
+  "admin.drawer.track.info.youtubeUrl": "Official video or release on YouTube.",
+  "admin.drawer.track.info.yandexMusicUrl": "Yandex Music release link.",
+  "admin.drawer.track.info.holderSharePct":
+    "Holder revenue share. Together with artist and platform shares must total 100%.",
+  "admin.drawer.track.info.artistSharePct": "Artist share of release revenue after holder payouts.",
+  "admin.drawer.track.info.platformSharePct":
+    "Spliton platform share for infrastructure, compliance, and deal support.",
+  "admin.drawer.track.info.availablePrimary":
+    "UNT available in primary round — cannot exceed total units.",
+  "admin.drawer.track.info.minPurchase": "Minimum purchase lot for investors on primary.",
+  "admin.drawer.track.info.maxPurchase": "Maximum lot per trade on primary (anti-concentration).",
+  "admin.drawer.track.info.raiseTarget":
+    "Primary round target — planned USDT to raise from holders.",
+  "admin.drawer.track.info.hardCap":
+    "Maximum raise — new unit purchases close after this cap.",
+  "admin.drawer.track.info.promoBudget": "Marketing and promotion budget for the release.",
+  "admin.drawer.track.info.artistAdvance": "Upfront payment to artist before or during the round.",
+  "admin.drawer.track.info.platformAdvance":
+    "Upfront payment to Spliton for release support and infrastructure.",
+  "admin.drawer.track.info.distributionNotes":
+    "Internal notes for finance and operators — not shown to investors.",
+  "admin.drawer.track.field.riskDisclosurePlaceholder":
+    "Standard investment risks, revenue volatility, no guarantees…",
+  "admin.drawer.track.field.legalTermsPlaceholder":
+    "Deal terms, disclaimer, links to legal documents…",
+  "admin.drawer.track.field.distributionNotesPlaceholder":
+    "Internal notes on fund distribution, special deal terms…",
   "admin.drawer.track.section.rights": "3. Description & rights",
   "admin.drawer.track.field.shortDesc": "Short description (catalog)",
   "admin.drawer.track.field.shortDescPlaceholder": "1–2 sentences for the release card",

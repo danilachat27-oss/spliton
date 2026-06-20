@@ -152,6 +152,12 @@ export function rootLayoutMeta(locale: AppLocale = DEFAULT_LOCALE): Metadata {
 
     manifest: "/manifest.json",
 
+    icons: {
+      icon: "/images/LOGO/mini-logo.png",
+      shortcut: "/images/LOGO/mini-logo.png",
+      apple: "/images/LOGO/mini-logo.png",
+    },
+
     appleWebApp: {
 
       capable: true,

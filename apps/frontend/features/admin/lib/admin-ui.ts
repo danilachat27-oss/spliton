@@ -67,7 +67,8 @@ export const adminLoginFieldInput =
 
 export const adminFieldTextarea = cn(
   adminFieldInput,
-  "min-h-[72px] w-full rounded-lg px-3 py-2 text-sm outline-none focus-visible:ring-2",
+  "min-h-[72px] w-full resize-none rounded-lg px-3 py-2 text-sm outline-none focus-visible:ring-2",
+  "read-only:cursor-default read-only:opacity-70",
 );
 
 /** Dropdown / popover panel */
