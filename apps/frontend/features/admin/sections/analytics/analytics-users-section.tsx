@@ -327,7 +327,13 @@ export function AnalyticsUsersSection() {
             <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
               {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
             </Button>
-            <AdminAnalyticsExportButton reportType="users_funnel" label={a.t("admin.analytics.common.export")} />
+            <AdminAnalyticsExportButton
+              reportType="users_funnel"
+              label={a.t("admin.analytics.common.export")}
+              period={period}
+              customFrom={customFrom}
+              customTo={customTo}
+            />
           </div>
           {lastUpdated ? (
             <p className="text-xs text-zinc-400">Обновлено: {formatAdminDateShort(lastUpdated)}</p>
@@ -338,7 +344,7 @@ export function AnalyticsUsersSection() {
       {(tab) => (
         <>
           <AdminAnalyticsTabPanel activeTab={tab} tabId="overview">
-            <div className={cn(ADMIN_SECTION_TILE, "border p-5 shadow-sm", healthBannerClass)}>
+            <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
               <p
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wider",
@@ -411,7 +417,7 @@ export function AnalyticsUsersSection() {
           </AdminAnalyticsTabPanel>
 
           <AdminAnalyticsTabPanel activeTab={tab} tabId="funnel">
-            <div className={cn(ADMIN_SECTION_TILE, "p-5 shadow-sm")}>
+            <div className={cn(ADMIN_SECTION_TILE, "p-5")}>
               <h2 className="text-base font-semibold text-zinc-100">Воронка активации</h2>
               <p className="mt-1 text-sm text-zinc-500">
                 {FUNNEL_STEPS_RU.join(" → ")}. Клик по этапу открывает фильтр в пользователях.
@@ -566,7 +572,7 @@ export function AnalyticsUsersSection() {
             <AdminChartCard title="Пользователи с рисками" className="mt-6" drilldownHref={ROUTES.adminCompliance} empty={!riskUsers?.items?.length}>
               <AdminDataTable columns={riskCols} rows={riskUsers?.items ?? []} rowKey={(r) => r.userId} emptyMessage={USER_CHART_EMPTY.risk.description} />
             </AdminChartCard>
-            <section className={cn(ADMIN_SECTION_TILE, "mt-6 p-5 shadow-sm")}>
+            <section className={cn(ADMIN_SECTION_TILE, "mt-6 p-5")}>
               <h2 className="text-sm font-semibold text-zinc-100">Переходы</h2>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {DRILL_LINKS.map((link) => (

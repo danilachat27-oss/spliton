@@ -21,7 +21,7 @@ import { AdminPeriodSelector } from "@/features/admin/analytics/components/admin
 import { parseAnalyticsMoney, useAnalyticsPeriod } from "@/features/admin/analytics/hooks/use-analytics-period";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminDateShort, formatAdminMetricUsdt, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   buildMarketHealthSummary,
@@ -344,6 +344,9 @@ export function AnalyticsMarketSection() {
             <AdminAnalyticsExportButton
               reportType="market_volume"
               label={a.t("admin.analytics.common.report")}
+              period={period}
+              customFrom={customFrom}
+              customTo={customTo}
             />
           </div>
           {lastUpdated ? (
@@ -357,7 +360,7 @@ export function AnalyticsMarketSection() {
       {(tab) => (
         <>
           <AdminAnalyticsTabPanel activeTab={tab} tabId="overview">
-            <div className={cn(ADMIN_SECTION_TILE, "border p-5 shadow-sm", healthBannerClass)}>
+            <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
           <h2 className={cn("text-sm font-semibold", adminAnalyticsHealthBannerTitleClass(health.tone))}>
             {health.title}
           </h2>
@@ -414,7 +417,7 @@ export function AnalyticsMarketSection() {
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.avgPricePerUnit")}
-                value={s.avgPricePerUnitUsdt ? formatUsdtAmount(s.avgPricePerUnitUsdt) : "—"}
+                value={formatAdminMetricUsdt(s.avgPricePerUnitUsdt)}
                 tooltip={MARKET_KPI_TOOLTIPS.avgPrice}
               />
               <AdminMetricTrendCard label={a.t("admin.analytics.metric.uniqueSellers")} value={String(s.uniqueSellers)} tooltip={MARKET_KPI_TOOLTIPS.uniqueSellers} />
@@ -476,7 +479,7 @@ export function AnalyticsMarketSection() {
                 />
               </AdminChartCard>
             </div>
-            <section className={cn(ADMIN_SECTION_TILE, "mt-6 p-5 shadow-sm")}>
+            <section className={cn(ADMIN_SECTION_TILE, "mt-6 p-5")}>
               <h2 className="text-sm font-semibold text-zinc-100">Переходы</h2>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {drillLinks.map((link) => (
@@ -494,7 +497,7 @@ export function AnalyticsMarketSection() {
           </AdminAnalyticsTabPanel>
 
           <AdminAnalyticsTabPanel activeTab={tab} tabId="orderbook">
-        <section className={cn(ADMIN_SECTION_TILE, "p-5 shadow-sm")}>
+        <section className={cn(ADMIN_SECTION_TILE, "p-5")}>
           <h2 className="text-base font-semibold text-zinc-100">Стакан листингов</h2>
           <p className="mt-1 text-sm text-zinc-500">
             Агрегированный стакан активных листингов на продажу (не биржевой стакан ценных бумаг).
@@ -584,7 +587,7 @@ export function AnalyticsMarketSection() {
           </AdminAnalyticsTabPanel>
 
           <AdminAnalyticsTabPanel activeTab={tab} tabId="prices">
-        <section className={cn(ADMIN_SECTION_TILE, "p-5 shadow-sm", complianceFocus && "ring-2 ring-amber-200/80")}>
+        <section className={cn(ADMIN_SECTION_TILE, "p-5", complianceFocus && "ring-2 ring-amber-200/80")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-zinc-100">Цены и спред</h2>
@@ -595,19 +598,18 @@ export function AnalyticsMarketSection() {
             </Link>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-            <div className="rounded-lg bg-zinc-50 px-3 py-2">
+            <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
               <p className="text-xs text-zinc-500">Ср. цена листинга</p>
-              <p className="font-semibold">{prices?.avgListingPriceUsdt ? formatUsdtAmount(prices.avgListingPriceUsdt) : "—"}</p>
+              <p className="font-semibold">{formatAdminMetricUsdt(prices?.avgListingPriceUsdt)}</p>
             </div>
-            <div className="rounded-lg bg-zinc-50 px-3 py-2">
+            <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
               <p className="text-xs text-zinc-500">Ср. цена сделки</p>
-              <p className="font-semibold">{prices?.avgTradePriceUsdt ? formatUsdtAmount(prices.avgTradePriceUsdt) : "—"}</p>
+              <p className="font-semibold">{formatAdminMetricUsdt(prices?.avgTradePriceUsdt)}</p>
             </div>
-            <div className="rounded-lg bg-zinc-50 px-3 py-2">
+            <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
               <p className="text-xs text-zinc-500">Min / max сделки</p>
               <p className="font-semibold text-xs">
-                {prices?.minTradePriceUsdt ? formatUsdtAmount(prices.minTradePriceUsdt) : "—"} —{" "}
-                {prices?.maxTradePriceUsdt ? formatUsdtAmount(prices.maxTradePriceUsdt) : "—"}
+                {formatAdminMetricUsdt(prices?.minTradePriceUsdt)} · {formatAdminMetricUsdt(prices?.maxTradePriceUsdt)}
               </p>
             </div>
           </div>
@@ -630,7 +632,7 @@ export function AnalyticsMarketSection() {
           </AdminAnalyticsTabPanel>
 
           <AdminAnalyticsTabPanel activeTab={tab} tabId="liquidity">
-        <section className={cn(ADMIN_SECTION_TILE, "p-5 shadow-sm")}>
+        <section className={cn(ADMIN_SECTION_TILE, "p-5")}>
           <h2 className="text-base font-semibold text-zinc-100">Ликвидность по релизам</h2>
           <AdminDataTable
             columns={liquidityCols}
@@ -668,7 +670,7 @@ export function AnalyticsMarketSection() {
           </AdminAnalyticsTabPanel>
 
           <AdminAnalyticsTabPanel activeTab={tab} tabId="risk">
-        <section className={cn(ADMIN_SECTION_TILE, "p-5 shadow-sm", complianceFocus && "border-amber-300")}>
+        <section className={cn(ADMIN_SECTION_TILE, "p-5", complianceFocus && "border-amber-300")}>
           <h2 className="text-base font-semibold text-zinc-100">Подозрительная активность</h2>
           <div className="mt-4">
             {(risk?.suspiciousTrades ?? []).length === 0 && (risk?.frozenListings ?? []).length === 0 ? (

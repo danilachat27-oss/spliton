@@ -16,6 +16,7 @@ import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminSectionTab } from "@/features/admin/hooks/use-admin-section-tab";
 import { useAuth } from "@/components/providers/auth-provider";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
+import { fetchAllAdminPaginatedItems } from "@/services/admin/admin-api.util";
 import { formatAdminDate } from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_FILTERS } from "@/features/admin/lib/admin-section-styles";
 import {
@@ -75,11 +76,17 @@ export function DisputesSection() {
     setLoading(true);
     setError(null);
     Promise.all([
-      listAdminDisputesPaginated({ pageSize: 200, status: tab === "all" ? undefined : tab }, client),
+      fetchAllAdminPaginatedItems(
+        (query) =>
+          listAdminDisputesPaginated(
+            { ...query, status: tab === "all" ? undefined : tab },
+            client,
+          ),
+      ),
       getAdminDisputesSummary(client),
     ])
-      .then(([page, s]) => {
-        setRows(page.items);
+      .then(([items, s]) => {
+        setRows(items);
         setSummary({
           open: s.open,
           waitingAdmin: s.waitingAdmin,

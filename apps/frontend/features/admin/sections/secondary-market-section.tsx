@@ -35,7 +35,7 @@ import {
   tradeStatusLabel,
   tradeStatusTone,
 } from "@/features/admin/lib/admin-secondary-market-i18n";
-import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminDate, formatAdminMetricUsdt, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type {
   AdminListingDetail,
@@ -54,6 +54,7 @@ import {
   AdminPagination,
   AdminReadOnlyBanner,
   AdminRiskBadge,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -383,13 +384,10 @@ export function SecondaryMarketSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("secondaryMarket")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Контроль листингов, сделок, ликвидности, заблокированных юнитов, комиссий и риск-операций на вторичном
-          рынке Spliton.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Контроль листингов, сделок, ликвидности, заблокированных юнитов, комиссий и риск-операций на вторичном
+        рынке Spliton.
+      </AdminSectionInfoHint>
 
       <AdminFilterBar
         fields={[
@@ -469,7 +467,7 @@ export function SecondaryMarketSection() {
           />
           <AdminMetricTrendCard
             label={a.t("admin.kpi.market.avgPricePerUnit")}
-            value={summary.avgPricePerUnitUsdt ? formatUsdtAmount(summary.avgPricePerUnitUsdt) : "—"}
+            value={formatAdminMetricUsdt(summary.avgPricePerUnitUsdt)}
             tooltip={SECONDARY_MARKET_FIELD_TOOLTIPS.avgPrice}
             onClick={() => goToTab("liquidity")}
           />

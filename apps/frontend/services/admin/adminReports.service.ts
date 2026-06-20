@@ -247,7 +247,7 @@ export async function generateAdminReport(
   actorRoles?: string[],
   format: "csv" | "xlsx" | "pdf" | "docx" = "csv",
 ): Promise<AdminReportJob> {
-  if (!canGenerateReportType(actorRoles, type)) {
+  if (actorRoles && !canGenerateReportType(actorRoles, type)) {
     throw new ApiError(403, "Report type not allowed for this role", "ADMIN_FORBIDDEN");
   }
 

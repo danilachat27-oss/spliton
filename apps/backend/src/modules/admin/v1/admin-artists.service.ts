@@ -26,17 +26,47 @@ export class AdminArtistsService {
 
 
 
-  async list(roles: string[], search?: string) {
+  async list(
+    roles: string[],
+    query?: {
+      search?: string;
+      status?: string;
+      releases?: string;
+      sort?: string;
+    },
+  ) {
 
     this.assertView(roles);
 
-    const q = search?.trim();
+    const q = query?.search?.trim();
+    const where: Prisma.ArtistWhereInput = {};
+
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { slug: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const status = query?.status?.trim().toLowerCase();
+    if (status === 'active') where.isActive = true;
+    else if (status === 'inactive') where.isActive = false;
+
+    const releases = query?.releases?.trim().toLowerCase();
+    if (releases === 'with') where.releaseArtists = { some: {} };
+    else if (releases === 'without') where.releaseArtists = { none: {} };
+
+    const sortKey = query?.sort?.trim().toLowerCase() ?? 'name_asc';
+    let orderBy: Prisma.ArtistOrderByWithRelationInput = { name: 'asc' };
+    if (sortKey === 'name_desc') orderBy = { name: 'desc' };
+    else if (sortKey === 'created_desc') orderBy = { createdAt: 'desc' };
+    else if (sortKey === 'releases_desc') orderBy = { releaseArtists: { _count: 'desc' } };
 
     const rows = await this.prisma.artist.findMany({
 
-      where: q ? { name: { contains: q, mode: 'insensitive' } } : undefined,
+      where: Object.keys(where).length ? where : undefined,
 
-      orderBy: { name: 'asc' },
+      orderBy,
 
       take: 200,
 

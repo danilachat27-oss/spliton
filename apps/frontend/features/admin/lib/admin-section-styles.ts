@@ -10,3 +10,7 @@ export const ADMIN_SECTION_TILE =
 
 export const ADMIN_SECTION_FILTERS =
   "grid gap-3 rounded-2xl bg-zinc-900/40 p-4 sm:grid-cols-2 lg:grid-cols-4";
+
+/** Info / notice strip — без рамки (OKX-style). */
+export const ADMIN_SECTION_NOTICE =
+  "flex gap-3 rounded-2xl bg-zinc-900/45 px-4 py-3.5";

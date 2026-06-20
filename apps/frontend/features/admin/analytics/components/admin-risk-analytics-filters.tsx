@@ -1,8 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { AdminResponsiveFilters } from "@/features/admin/ui/admin-responsive-filters";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
-import { adminAnalyticsFilterBar } from "@/features/admin/analytics/lib/admin-analytics-theme";
+import {
+  adminAnalyticsFilterBar,
+  adminAnalyticsFilterField,
+} from "@/features/admin/analytics/lib/admin-analytics-theme";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { cn } from "@/lib/utils";
 
@@ -65,9 +69,23 @@ export function AdminRiskAnalyticsFilters({ value, onChange, className }: Props)
     { id: "blocked", label: a.formatAdminStatus("blocked") },
   ];
 
+  const emptyFilters: RiskAnalyticsFilters = {
+    severity: "",
+    entityType: "",
+    ruleCode: "",
+    status: "",
+  };
+  const activeCount =
+    (value.severity ? 1 : 0) +
+    (value.entityType ? 1 : 0) +
+    (value.ruleCode ? 1 : 0) +
+    (value.status ? 1 : 0);
+
   return (
-    <div
-      className={cn(adminAnalyticsFilterBar, className)}
+    <AdminResponsiveFilters
+      activeCount={activeCount}
+      onReset={activeCount > 0 ? () => onChange(emptyFilters) : undefined}
+      panelClassName={cn(adminAnalyticsFilterBar, className)}
     >
       <FilterSelect
         label={a.t("admin.analytics.common.severity")}
@@ -97,11 +115,12 @@ export function AdminRiskAnalyticsFilters({ value, onChange, className }: Props)
         type="button"
         size="sm"
         variant="ghost"
-        onClick={() => onChange({ severity: "", entityType: "", ruleCode: "", status: "" })}
+        className="hidden md:inline-flex"
+        onClick={() => onChange(emptyFilters)}
       >
         {a.t("admin.analytics.common.reset")}
       </Button>
-    </div>
+    </AdminResponsiveFilters>
   );
 }
 
@@ -122,7 +141,7 @@ function FilterSelect({
       value={value}
       options={options.map((o) => ({ value: o.id, label: o.label }))}
       onChange={onChange}
-      className="text-zinc-500"
+      className={cn(adminAnalyticsFilterField, "text-zinc-500")}
     />
   );
 }

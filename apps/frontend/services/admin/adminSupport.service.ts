@@ -6,7 +6,7 @@ import {
   MOCK_ADMIN_TICKETS,
   type AdminTicketListItem,
 } from "@/features/admin/mocks/admin-support.mock";
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { requireAdminLiveClient } from "./admin-service.util";
 
 export type AdminTicketDetail = AdminTicketListItem & {
@@ -46,8 +46,14 @@ export async function listAdminTicketsPaginated(
 }
 
 export async function listAdminTickets(client?: AdminApiClient): Promise<AdminTicketListItem[]> {
-  const res = await listAdminTicketsPaginated({ pageSize: 500 }, client);
-  return res.items;
+  if (getAdminDataSource() === "live") {
+    requireAdminLiveClient(client);
+    return fetchAllAdminPaginatedItems(
+      (query) => client.getPaginated<AdminTicketListItem>(ADMIN_API_PATHS.supportTickets, query),
+    );
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_TICKETS;
 }
 
 export async function getAdminTicket(id: string, client?: AdminApiClient): Promise<AdminTicketDetail> {

@@ -9,8 +9,30 @@ export const adminAccentBg = "bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]";
 export const adminAccentRing = "focus-visible:ring-[#B7F500]/40";
 
 /** Shell surfaces */
-export const adminShellHeader = "bg-[#141416] text-zinc-100";
+export const adminShellHeader = "bg-[#141416]/95 text-zinc-100 backdrop-blur-md";
 export const adminShellSidebar = "bg-[#0f0f11] text-zinc-100";
+
+/** Top bar — aligned with sidebar chrome */
+export const adminHeaderBar =
+  "relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-zinc-800/80 px-3 sm:gap-4 sm:px-5";
+
+export const adminHeaderToolbar =
+  "flex shrink-0 items-center gap-px rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-0.5 sm:p-1";
+
+export const adminHeaderDivider = "hidden h-5 w-px shrink-0 bg-zinc-800/90 sm:block";
+
+export const adminHeaderIconBtn =
+  "flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800/80 hover:text-zinc-100";
+
+export function adminHeaderEnvBadge(env: "Production" | "Staging" | string) {
+  if (env === "Production") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-400";
+  }
+  if (env === "Staging") {
+    return "border-amber-500/30 bg-amber-500/10 text-amber-400";
+  }
+  return "border-zinc-700 bg-zinc-800/60 text-zinc-400";
+}
 
 /** Карточка / панель — без рамок и теней */
 export function adminCard(className?: string) {
@@ -72,7 +94,8 @@ export const adminFieldTextarea = cn(
 );
 
 /** Dropdown / popover panel */
-export const adminDropdownPanel = "rounded-xl bg-zinc-900 py-2 text-zinc-100";
+export const adminDropdownPanel =
+  "rounded-xl border border-zinc-800/80 bg-zinc-900 py-2 text-zinc-100 shadow-xl shadow-black/30";
 
 export const adminDropdownItem = "block px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800/80";
 
@@ -113,11 +136,11 @@ export const adminTableRowHover = "hover:bg-zinc-800/40";
 /** Status badge tones — dark fintech */
 export const adminStatusToneClass = {
   neutral: "bg-zinc-800/90 text-zinc-300",
-  success: "bg-emerald-500/15 text-emerald-300",
-  warning: "bg-amber-500/15 text-amber-300",
-  danger: "bg-red-500/15 text-red-300",
-  pending: "bg-sky-500/10 text-sky-300",
-  info: "bg-violet-500/10 text-violet-300",
+  success: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25",
+  warning: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30",
+  danger: "bg-red-500/15 text-red-300 ring-1 ring-red-500/30",
+  pending: "bg-sky-500/10 text-sky-300 ring-1 ring-sky-500/25",
+  info: "bg-violet-500/10 text-violet-300 ring-1 ring-violet-500/25",
 } as const;
 
 /** Skeleton */
@@ -133,4 +156,32 @@ export function adminInsetRow(className?: string) {
     "rounded-xl px-3 py-3 transition-colors hover:bg-zinc-800/50",
     className,
   );
+}
+
+/** Flat list row — без рамок, только фон (OKX-style). */
+export function adminListRow(className?: string) {
+  return cn(
+    "rounded-xl bg-zinc-900/35 px-3 py-2.5 transition-colors hover:bg-zinc-800/45",
+    className,
+  );
+}
+
+/** Hero / summary card — без border, только surface. */
+export function adminHeroCard(className?: string) {
+  return cn("rounded-2xl bg-zinc-900/45 p-5 sm:p-6", className);
+}
+
+/** Акцентная обводка для важных состояний (риск, блок, pending). */
+export function adminHighlightRing(
+  level: "neutral" | "success" | "warning" | "danger" | "info",
+  className?: string,
+) {
+  const rings = {
+    neutral: "bg-zinc-900/40 ring-1 ring-zinc-800/80",
+    success: "bg-emerald-500/10 ring-1 ring-emerald-500/25",
+    warning: "bg-amber-500/10 ring-1 ring-amber-500/30",
+    danger: "bg-red-500/10 ring-1 ring-red-500/30",
+    info: "bg-sky-500/10 ring-1 ring-sky-500/25",
+  };
+  return cn("rounded-xl", rings[level], className);
 }

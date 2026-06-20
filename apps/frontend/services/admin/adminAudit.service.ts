@@ -6,7 +6,7 @@ import {
   MOCK_ADMIN_AUDIT,
   type AdminAuditListItem,
 } from "@/features/admin/mocks/admin-audit.mock";
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { requireAdminLiveClient } from "./admin-service.util";
 
 type LiveAuditRow = {
@@ -55,6 +55,13 @@ export async function listAdminAuditPaginated(
 export async function listAdminAudit(
   client?: AdminApiClient,
 ): Promise<AdminAuditListItem[]> {
-  const res = await listAdminAuditPaginated({ pageSize: 500 }, client);
-  return res.items;
+  if (getAdminDataSource() === "live") {
+    requireAdminLiveClient(client);
+    return fetchAllAdminPaginatedItems(async (query) => {
+      const res = await client.getPaginated<LiveAuditRow>(ADMIN_API_PATHS.auditLogs, query);
+      return { ...res, items: res.items.map(mapLiveAudit) };
+    });
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_AUDIT;
 }

@@ -8,7 +8,6 @@ import {
   AdminDrawerPrimaryButton,
   AdminDrawerSecondaryButton,
 } from "@/features/admin/components/admin-drawer-buttons";
-import { Input } from "@/components/ui/input";
 import {
   getReportCatalogEntry,
   groupReportsByDomain,
@@ -22,8 +21,9 @@ import {
   XLSX_DISABLED_MESSAGE,
 } from "@/features/admin/lib/admin-reports-i18n";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { AdminDetailDrawer, AdminFormField, AdminFormFooter, AdminStatusBadge } from "@/features/admin/ui";
-import { adminFieldInput } from "@/features/admin/lib/admin-ui";
+import { ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
+import { adminCard } from "@/features/admin/lib/admin-ui";
+import { AdminDetailDrawer, AdminDatePicker, AdminFormField, AdminFormFooter, AdminStatusBadge } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
 import type { AdminReportType } from "@/services/admin/adminReports.service";
 
@@ -75,6 +75,35 @@ function applyPreset(preset: string): { from: string; to: string } {
     return { from: f.toISOString().slice(0, 10), to: t.toISOString().slice(0, 10) };
   }
   return { from: "", to: "" };
+}
+
+function reportDomainChip(active: boolean) {
+  return cn(
+    "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+    active
+      ? "bg-zinc-800 text-zinc-100 ring-1 ring-[#B7F500]/40"
+      : "bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200",
+  );
+}
+
+function reportTypeCard(active: boolean, disabled: boolean) {
+  return cn(
+    "h-full w-full rounded-xl border p-3 text-left text-sm transition-colors",
+    active
+      ? "border-[#B7F500]/50 bg-zinc-900/80"
+      : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700",
+    disabled && "cursor-not-allowed opacity-50",
+  );
+}
+
+function reportFormatCard(active: boolean, disabled: boolean) {
+  return cn(
+    "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors",
+    active && !disabled
+      ? "border-[#B7F500]/50 bg-zinc-900/80"
+      : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700",
+    disabled && "cursor-not-allowed opacity-50",
+  );
 }
 
 export function AdminReportCreateDrawer({
@@ -176,10 +205,7 @@ export function AdminReportCreateDrawer({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className={cn(
-                "rounded-lg px-3 py-1 text-xs font-medium",
-                domainFilter === "all" ? "bg-zinc-900 text-white" : "bg-zinc-100",
-              )}
+              className={reportDomainChip(domainFilter === "all")}
               onClick={() => setDomainFilter("all")}
             >
               Все
@@ -188,10 +214,7 @@ export function AdminReportCreateDrawer({
               <button
                 key={d}
                 type="button"
-                className={cn(
-                  "rounded-lg px-3 py-1 text-xs font-medium",
-                  domainFilter === d ? "bg-zinc-900 text-white" : "bg-zinc-100",
-                )}
+                className={reportDomainChip(domainFilter === d)}
                 onClick={() => setDomainFilter(d)}
               >
                 {REPORT_DOMAIN_LABELS[d]}
@@ -207,16 +230,16 @@ export function AdminReportCreateDrawer({
                     type="button"
                     disabled={!allowed}
                     onClick={() => allowed && setReportType(t.value)}
-                    className={cn(
-                      "h-full w-full rounded-xl border p-3 text-left text-sm transition-colors",
-                      reportType === t.value ? "border-zinc-900 bg-zinc-50" : "border-zinc-800",
-                      !allowed && "opacity-50",
-                    )}
+                    className={reportTypeCard(reportType === t.value, !allowed)}
                   >
-                    <span className="font-semibold">{t.label}</span>
+                    <span className="font-semibold text-zinc-100">{t.label}</span>
                     <p className="mt-1 text-xs text-zinc-500">{t.description}</p>
                     {t.sensitive ? (
-                      <AdminStatusBadge label="sensitive" tone="warning" className="mt-2" />
+                      <AdminStatusBadge
+                        label={a.t("admin.reports.sensitive")}
+                        tone="warning"
+                        className="mt-2"
+                      />
                     ) : null}
                   </button>
                 </li>
@@ -224,10 +247,10 @@ export function AdminReportCreateDrawer({
             })}
           </ul>
           {entry ? (
-            <div className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-400">
+            <div className={cn(adminCard("space-y-2 border border-zinc-800 p-3 text-xs"))}>
               <p className="font-medium text-zinc-200">{entry.longDescription}</p>
-              <p className="mt-2">Поля: {entry.fields.join(", ")}</p>
-              <p className="mt-1">Роли: {entry.roles.join(", ")}</p>
+              <p className="text-zinc-500">Поля: {entry.fields.join(", ")}</p>
+              <p className="text-zinc-500">Роли: {entry.roles.join(", ")}</p>
             </div>
           ) : null}
         </div>
@@ -240,10 +263,7 @@ export function AdminReportCreateDrawer({
               <button
                 key={p.id}
                 type="button"
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-medium",
-                  preset === p.id ? "bg-zinc-900 text-white" : "bg-zinc-100",
-                )}
+                className={reportDomainChip(preset === p.id)}
                 onClick={() => setPreset(p.id)}
               >
                 {p.label}
@@ -252,27 +272,23 @@ export function AdminReportCreateDrawer({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <AdminFormField label={a.t("admin.drawer.reportCreate.dateFrom")} htmlFor="rpt-from">
-              <Input
+              <AdminDatePicker
                 id="rpt-from"
-                type="date"
                 value={range.from}
-                onChange={(e) => {
+                onChange={(from) => {
                   setPreset("custom");
-                  setRange((r) => ({ ...r, from: e.target.value }));
+                  setRange((r) => ({ ...r, from }));
                 }}
-                className={adminFieldInput}
               />
             </AdminFormField>
             <AdminFormField label={a.t("admin.drawer.reportCreate.dateTo")} htmlFor="rpt-to">
-              <Input
+              <AdminDatePicker
                 id="rpt-to"
-                type="date"
                 value={range.to}
-                onChange={(e) => {
+                onChange={(to) => {
                   setPreset("custom");
-                  setRange((r) => ({ ...r, to: e.target.value }));
+                  setRange((r) => ({ ...r, to }));
                 }}
-                className={adminFieldInput}
               />
             </AdminFormField>
           </div>
@@ -299,17 +315,13 @@ export function AdminReportCreateDrawer({
                 type="button"
                 disabled={disabled}
                 onClick={() => !disabled && setFormat(f)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm",
-                  format === f && !disabled ? "border-zinc-900 bg-zinc-50" : "border-zinc-800",
-                  disabled && "opacity-50",
-                )}
+                className={reportFormatCard(format === f, disabled)}
               >
-                <span className="font-medium uppercase">{f}</span>
+                <span className="font-medium uppercase text-zinc-100">{f}</span>
                 {disabled ? (
                   <span className="text-xs text-zinc-500">Только compliance/finance отчёты</span>
                 ) : (
-                  <span className="text-xs text-emerald-700">Доступен</span>
+                  <span className="text-xs text-emerald-400">Доступен</span>
                 )}
               </button>
             );
@@ -325,8 +337,8 @@ export function AdminReportCreateDrawer({
           </div>
           <div>
             <dt className="text-zinc-500">Период</dt>
-            <dd>
-              {range.from || "—"} — {range.to || "—"}
+            <dd className="text-zinc-200">
+              {range.from || ADMIN_METRIC_NA_LABEL} — {range.to || ADMIN_METRIC_NA_LABEL}
             </dd>
           </div>
           <div>
@@ -335,11 +347,11 @@ export function AdminReportCreateDrawer({
           </div>
           <div>
             <dt className="text-zinc-500">Объём</dt>
-            <dd>{entry?.estimatedVolume ?? "—"}</dd>
+            <dd className="text-zinc-200">{entry?.estimatedVolume ?? ADMIN_METRIC_NA_LABEL}</dd>
           </div>
           <div>
             <dt className="text-zinc-500">Создаёт</dt>
-            <dd>{actorEmail ?? "—"}</dd>
+            <dd className="text-zinc-200">{actorEmail ?? ADMIN_METRIC_NA_LABEL}</dd>
           </div>
           <div>
             <dt className="text-zinc-500">Storage</dt>

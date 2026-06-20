@@ -1,8 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { AdminResponsiveFilters } from "@/features/admin/ui/admin-responsive-filters";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
-import { adminAnalyticsFilterBar } from "@/features/admin/analytics/lib/admin-analytics-theme";
+import {
+  adminAnalyticsFilterBar,
+  adminAnalyticsFilterField,
+} from "@/features/admin/analytics/lib/admin-analytics-theme";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { cn } from "@/lib/utils";
 
@@ -43,9 +47,15 @@ export function AdminUserAnalyticsFilters({ value, onChange, className }: Props)
     { id: "investor", label: a.adminRoleLabel("INVESTOR") },
   ];
 
+  const emptyFilters: UserAnalyticsFilters = { status: "", segment: "", role: "" };
+  const activeCount =
+    (value.status ? 1 : 0) + (value.segment ? 1 : 0) + (value.role ? 1 : 0);
+
   return (
-    <div
-      className={cn(adminAnalyticsFilterBar, className)}
+    <AdminResponsiveFilters
+      activeCount={activeCount}
+      onReset={activeCount > 0 ? () => onChange(emptyFilters) : undefined}
+      panelClassName={cn(adminAnalyticsFilterBar, className)}
     >
       <FilterSelect
         label={a.t("admin.analytics.common.status")}
@@ -69,11 +79,12 @@ export function AdminUserAnalyticsFilters({ value, onChange, className }: Props)
         type="button"
         size="sm"
         variant="ghost"
-        onClick={() => onChange({ status: "", segment: "", role: "" })}
+        className="hidden md:inline-flex"
+        onClick={() => onChange(emptyFilters)}
       >
         {a.t("admin.analytics.common.reset")}
       </Button>
-    </div>
+    </AdminResponsiveFilters>
   );
 }
 
@@ -94,7 +105,7 @@ function FilterSelect({
       value={value}
       options={options.map((o) => ({ value: o.id, label: o.label }))}
       onChange={onChange}
-      className="text-zinc-500"
+      className={cn(adminAnalyticsFilterField, "text-zinc-500")}
     />
   );
 }

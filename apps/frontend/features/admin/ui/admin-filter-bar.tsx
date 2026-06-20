@@ -3,6 +3,8 @@
 import { Search } from "@/lib/lucide";
 
 import { Input } from "@/components/ui/input";
+import { AdminDatePicker } from "@/features/admin/ui/admin-date-picker";
+import { AdminResponsiveFilters } from "@/features/admin/ui/admin-responsive-filters";
 import { AdminStyledSelect } from "@/features/admin/ui/admin-styled-select";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { adminCard, adminFieldInput } from "@/features/admin/lib/admin-ui";
@@ -24,12 +26,31 @@ type AdminFilterBarProps = {
   className?: string;
 };
 
+function countActiveFilterFields(fields: AdminFilterField[]) {
+  return fields.filter((field) => {
+    const value = field.value.trim();
+    return value !== "" && value !== "all";
+  }).length;
+}
+
 export function AdminFilterBar({ fields, actions, className }: AdminFilterBarProps) {
   const a = useAdminI18n();
+  const activeCount = countActiveFilterFields(fields);
+
+  const resetFilters = () => {
+    fields.forEach((field) => {
+      if (field.value !== "") field.onChange("");
+    });
+  };
+
   return (
-    <div className={cn(adminCard("flex flex-wrap items-end gap-3 p-4"), className)}>
+    <AdminResponsiveFilters
+      activeCount={activeCount}
+      onReset={activeCount > 0 ? resetFilters : undefined}
+      panelClassName={cn(adminCard("flex flex-wrap items-end gap-3 p-4"), className)}
+    >
       {fields.map((field) => (
-        <div key={field.id} className="min-w-[140px] flex-1">
+        <div key={field.id} className="w-full min-w-0 overflow-visible md:min-w-[140px] md:flex-1">
           <label
             htmlFor={field.id}
             className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-zinc-500"
@@ -45,12 +66,11 @@ export function AdminFilterBar({ fields, actions, className }: AdminFilterBarPro
               fullWidth
             />
           ) : field.type === "date" ? (
-            <Input
+            <AdminDatePicker
               id={field.id}
-              type="date"
               value={field.value}
-              onChange={(e) => field.onChange(e.target.value)}
-              className={cn("h-9", adminFieldInput)}
+              onChange={field.onChange}
+              aria-label={field.label}
             />
           ) : (
             <div className="relative">
@@ -69,7 +89,7 @@ export function AdminFilterBar({ fields, actions, className }: AdminFilterBarPro
           )}
         </div>
       ))}
-      {actions ? <div className="flex shrink-0 items-center gap-2 pb-0.5">{actions}</div> : null}
-    </div>
+      {actions ? <div className="flex w-full shrink-0 items-center gap-2 pb-0.5 md:w-auto">{actions}</div> : null}
+    </AdminResponsiveFilters>
   );
 }

@@ -22,9 +22,9 @@ type SectionUnavailableStateProps = {
 
 const variantClasses: Record<SectionUnavailableVariant, { box: string; title: string; description: string }> = {
   light: {
-    box: "border-neutral-200/80 bg-neutral-50/90 text-neutral-700",
-    title: "text-neutral-800",
-    description: "text-neutral-500",
+    box: "border-amber-200 bg-amber-50/95 text-amber-900",
+    title: "text-amber-950",
+    description: "text-amber-800",
   },
   dark: {
     box: "border-white/10 bg-white/[0.04] text-zinc-400",
@@ -71,7 +71,7 @@ export function SectionUnavailableState({
           <RetryButton
             onClick={onRetry}
             label={retryLabel}
-            className={variant === "light" ? "text-neutral-800" : "text-zinc-200"}
+            className={variant === "light" ? "text-amber-900 hover:text-amber-950" : "text-zinc-200"}
           />
         </div>
       ) : null}

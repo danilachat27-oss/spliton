@@ -14,7 +14,7 @@ import {
 
 } from "@/features/admin/mocks/admin-tracks.mock";
 
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { assertLiveAdminClient } from "./admin-service.util";
 
 
@@ -83,11 +83,14 @@ export async function listAdminTracksPaginated(
 
 
 export async function listAdminTracks(client?: AdminApiClient): Promise<AdminTrackListItem[]> {
-
-  const res = await listAdminTracksPaginated({ pageSize: 500 }, client);
-
-  return res.items;
-
+  if (getAdminDataSource() === "live") {
+    assertLiveAdminClient(client);
+    return fetchAllAdminPaginatedItems((query) =>
+      client.getPaginated<AdminTrackListItem>(ADMIN_API_PATHS.tracks, query),
+    );
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_TRACKS;
 }
 
 

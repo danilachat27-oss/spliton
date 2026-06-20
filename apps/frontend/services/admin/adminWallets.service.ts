@@ -10,7 +10,7 @@ import {
   type AdminWalletListItem,
   type AdminWalletSummary,
 } from "@/features/admin/mocks/admin-wallets.mock";
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { requireAdminLiveClient } from "./admin-service.util";
 
 export type AdminWalletsQuery = AdminListQuery & {
@@ -79,8 +79,14 @@ export async function listAdminWalletsPaginated(
 }
 
 export async function listAdminWallets(client?: AdminApiClient): Promise<AdminWalletListItem[]> {
-  const res = await listAdminWalletsPaginated({ pageSize: 500 }, client);
-  return res.items;
+  if (getAdminDataSource() === "live") {
+    requireAdminLiveClient(client);
+    return fetchAllAdminPaginatedItems((query) =>
+      client.getPaginated<AdminWalletListItem>(ADMIN_API_PATHS.wallets, query),
+    );
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_WALLETS;
 }
 
 export async function getAdminWallet(

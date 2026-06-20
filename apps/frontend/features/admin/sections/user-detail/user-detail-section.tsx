@@ -6,7 +6,13 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
-import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
+import {
+  adminBtnOutline,
+  adminBtnSecondary,
+  adminHeroCard,
+  adminHighlightRing,
+  adminListRow,
+} from "@/features/admin/lib/admin-ui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminStyledSelect } from "@/features/admin/ui/admin-styled-select";
@@ -33,7 +39,8 @@ import {
   visibleUserDetailTabs,
   type UserDetailTab,
 } from "@/features/admin/lib/admin-action-permissions";
-import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminDate, formatAdminOptionalDate, formatAdminOptionalText, formatUsdtAmount, isAdminMetricEmpty, ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
+import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type { StaffRoleCode } from "@/features/admin/types/admin-roles";
 import {
   AdminConfirmDialog,
@@ -44,6 +51,7 @@ import {
   AdminReadOnlyBanner,
   AdminRoleBadge,
   AdminStatusBadge,
+  AdminKpiValue,
   type AdminColumn,
 } from "@/features/admin/ui";
 import {
@@ -64,6 +72,7 @@ import {
   type AdminUserOperatorContext,
 } from "@/services/admin/adminUserContext.service";
 import { useAdminSectionTab } from "@/features/admin/hooks/use-admin-section-tab";
+import { cn } from "@/lib/utils";
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "pending"> = {
   ACTIVE: "success",
@@ -88,6 +97,32 @@ const TAB_LABELS: Record<UserDetailTab, string> = {
   risk: "Риск / Compliance",
   support: "Поддержка",
 };
+
+function kycStatusTone(status: string | null | undefined): "success" | "warning" | "danger" | "pending" | "neutral" {
+  const key = status?.toLowerCase().replace(/\s+/g, "_") ?? "";
+  if (["approved", "verified"].includes(key)) return "success";
+  if (["pending", "in_review", "manual_review_required"].includes(key)) return "pending";
+  if (["rejected", "declined", "expired"].includes(key)) return "danger";
+  if (key === "not_started") return "neutral";
+  return "neutral";
+}
+
+function UserDetailField({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn(ADMIN_SECTION_TILE, "space-y-1.5", className)}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+      <div className="text-sm text-zinc-100">{children}</div>
+    </div>
+  );
+}
 
 export function UserDetailSection() {
   const a = useAdminI18n();
@@ -211,11 +246,16 @@ export function UserDetailSection() {
 
   const auditColumns: AdminColumn<{ id: string; action?: string; createdAt: string; actorEmail?: string }>[] = [
     { key: "at", header: a.table.created, render: (r) => formatAdminDate(r.createdAt) },
-    { key: "action", header: "Событие", render: (r) => r.action ?? "—" },
-    { key: "actor", header: "Инициатор", render: (r) => r.actorEmail ?? "—" },
+    { key: "action", header: "Событие", render: (r) => formatAdminOptionalText(r.action) },
+    { key: "actor", header: "Инициатор", render: (r) => formatAdminOptionalText(r.actorEmail) },
   ];
 
+  const kycLabel = profile.kycStatus && !isAdminMetricEmpty(profile.kycStatus)
+    ? a.adminKycStatusLabel(profile.kycStatus)
+    : ADMIN_METRIC_NA_LABEL;
+
   const isBlocked = profile.status === "SUSPENDED" || profile.status === "BANNED";
+  const kycPending = profile.kycStatus?.toUpperCase() === "PENDING";
 
   return (
     <AdminSectionShell
@@ -223,10 +263,7 @@ export function UserDetailSection() {
       title={profile.name ?? profile.email}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={ROUTES.adminUsers}
-            className="inline-flex h-8 items-center rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-sm font-medium text-zinc-100 hover:bg-zinc-800/60"
-          >
+          <Link href={ROUTES.adminUsers} className={cn("inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium", adminBtnOutline)}>
             <ArrowLeft className="mr-1.5 size-4" />
             К списку
           </Link>
@@ -243,26 +280,63 @@ export function UserDetailSection() {
         </div>
       }
     >
-      <header className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 shadow-sm">
+      <header
+        className={cn(
+          adminHeroCard("mb-6"),
+          isBlocked && "ring-1 ring-red-500/35",
+          !isBlocked && kycPending && "ring-1 ring-amber-500/30",
+        )}
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-xs text-zinc-500">{profile.id}</p>
-            <h1 className="mt-1 text-xl font-semibold text-zinc-100">{profile.name ?? "—"}</h1>
-            <p className="text-sm text-zinc-400">{profile.email}</p>
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] text-zinc-600">{profile.id}</p>
+            <p className="mt-1 text-sm text-zinc-400">{profile.email}</p>
+            {profile.name ? (
+              <p className="mt-0.5 text-xs text-zinc-500">{profile.name}</p>
+            ) : null}
           </div>
           <div className="flex flex-col items-end gap-2">
             <AdminStatusBadge
               label={a.formatAdminStatus(profile.status)}
               tone={STATUS_TONE[profile.status] ?? "neutral"}
             />
-            <p className="text-xs text-zinc-500">Регистрация: {formatAdminDate(profile.createdAt)}</p>
+            <p className="text-xs text-zinc-600">Регистрация: {formatAdminDate(profile.createdAt)}</p>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-1">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           {profile.roles.map((role) => (
-            <AdminRoleBadge key={role} role={role} />
+            <AdminRoleBadge
+              key={role}
+              role={role}
+              className={
+                role === "COMPLIANCE" || role === "SUPER_ADMIN"
+                  ? "ring-2 ring-amber-500/40"
+                  : undefined
+              }
+            />
           ))}
+          <AdminStatusBadge
+            label={`KYC: ${kycLabel}`}
+            tone={profile.kycStatus && !isAdminMetricEmpty(profile.kycStatus) ? kycStatusTone(profile.kycStatus) : "neutral"}
+          />
         </div>
+        {(isBlocked || kycPending) && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {isBlocked ? (
+              <span className={cn(adminHighlightRing("danger"), "px-3 py-1.5 text-xs font-medium text-red-300")}>
+                Аккаунт заблокирован — проверьте риск и аудит перед разблокировкой
+              </span>
+            ) : null}
+            {kycPending ? (
+              <Link
+                href={ROUTES.adminKyc}
+                className={cn(adminHighlightRing("warning"), "px-3 py-1.5 text-xs font-medium text-amber-300 hover:text-amber-200")}
+              >
+                KYC на проверке → очередь верификации
+              </Link>
+            ) : null}
+          </div>
+        )}
       </header>
 
       {tabs.length > 1 ? (
@@ -276,58 +350,79 @@ export function UserDetailSection() {
 
       <AdminSectionPanel>
         {tab === "overview" ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            <section className="space-y-3 text-sm">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Базовая информация</h3>
-              <dl className="grid gap-2">
-                <div>
-                  <dt className="text-zinc-500">{a.table.status}</dt>
-                  <dd>{a.formatAdminStatus(profile.status)}</dd>
+          <div className="space-y-6">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className={ADMIN_SECTION_TILE}>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{a.table.available}</p>
+                <AdminKpiValue value={formatUsdtAmount(profile.availableBalanceUsdt)} className="mt-1.5!" />
+              </div>
+              <div className={ADMIN_SECTION_TILE}>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{a.table.locked}</p>
+                <AdminKpiValue value={formatUsdtAmount(profile.lockedBalanceUsdt)} className="mt-1.5!" />
+              </div>
+              <div className={ADMIN_SECTION_TILE}>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{a.table.units}</p>
+                <AdminKpiValue value={profile.totalHoldingsUnits} className="mt-1.5!" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Базовая информация</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <UserDetailField label={a.table.status}>
+                    <AdminStatusBadge
+                      label={a.formatAdminStatus(profile.status)}
+                      tone={STATUS_TONE[profile.status] ?? "neutral"}
+                    />
+                  </UserDetailField>
+                  <UserDetailField label="KYC">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {profile.kycStatus && !isAdminMetricEmpty(profile.kycStatus) ? (
+                        <AdminStatusBadge label={kycLabel} tone={kycStatusTone(profile.kycStatus)} />
+                      ) : (
+                        <span className="text-zinc-500">{ADMIN_METRIC_NA_LABEL}</span>
+                      )}
+                      {profile.kycStatus?.toUpperCase() === "PENDING" ? (
+                        <Link href={ROUTES.adminKyc} className="text-xs font-medium text-[#B7F500] hover:underline">
+                          Очередь KYC
+                        </Link>
+                      ) : null}
+                    </div>
+                  </UserDetailField>
+                  <UserDetailField label="Последняя активность" className="sm:col-span-2">
+                    <span className={isAdminMetricEmpty(profile.lastActivityAt) ? "text-zinc-500" : undefined}>
+                      {formatAdminOptionalDate(profile.lastActivityAt)}
+                    </span>
+                  </UserDetailField>
                 </div>
-                <div>
-                  <dt className="text-zinc-500">{a.table.available}</dt>
-                  <dd className="font-medium">{formatUsdtAmount(profile.availableBalanceUsdt)}</dd>
+              </section>
+
+              <section className={cn(ADMIN_SECTION_TILE, "space-y-4")}>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Ключевые метрики</h3>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  Сводка по кошельку и позициям пользователя. Детальная аналитика и история операций — во вкладках
+                  «Кошелёк» и «Активность / аудит».
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {canAccessUserDetailTab(actorRoles, "wallet") ? (
+                    <Button type="button" variant="ghost" className={adminBtnOutline} size="sm" onClick={() => setTab("wallet")}>
+                      Кошелёк
+                    </Button>
+                  ) : null}
+                  {canAccessUserDetailTab(actorRoles, "audit") ? (
+                    <Button type="button" variant="ghost" className={adminBtnOutline} size="sm" onClick={() => setTab("audit")}>
+                      Журнал активности
+                    </Button>
+                  ) : null}
+                  {canAccessUserDetailTab(actorRoles, "risk") ? (
+                    <Button type="button" variant="ghost" className={adminBtnOutline} size="sm" onClick={() => setTab("risk")}>
+                      Compliance
+                    </Button>
+                  ) : null}
                 </div>
-                <div>
-                  <dt className="text-zinc-500">{a.table.locked}</dt>
-                  <dd>{formatUsdtAmount(profile.lockedBalanceUsdt)}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">{a.table.units}</dt>
-                  <dd>{profile.totalHoldingsUnits}</dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">KYC</dt>
-                  <dd className="flex flex-wrap items-center gap-2">
-                    <span>{profile.kycStatus ?? "—"}</span>
-                    {profile.kycStatus?.toUpperCase() === "PENDING" ? (
-                      <Link
-                        href={ROUTES.adminKyc}
-                        className="text-xs font-medium text-blue-700 hover:underline"
-                      >
-                        Очередь KYC →
-                      </Link>
-                    ) : null}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-zinc-500">Последняя активность</dt>
-                  <dd>{formatAdminDate(profile.lastActivityAt)}</dd>
-                </div>
-              </dl>
-            </section>
-            <section className="space-y-3 text-sm">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Ключевые метрики</h3>
-              <p className="text-zinc-400">
-                Детальная аналитика по пользователю будет расширена на следующем этапе. Сейчас отображаются
-                данные из карточки пользователя Spliton.
-              </p>
-              {canAccessUserDetailTab(actorRoles, "audit") ? (
-                <Button type="button" variant="ghost" className={adminBtnOutline} size="sm" onClick={() => setTab("audit")}>
-                  Открыть журнал активности
-                </Button>
-              ) : null}
-            </section>
+              </section>
+            </div>
           </div>
         ) : null}
 
@@ -342,17 +437,25 @@ export function UserDetailSection() {
                   <dl className="grid gap-2">
                     <div>
                       <dt className="text-zinc-500">{a.table.status}</dt>
-                      <dd>{String((operatorContext.kyc as { status?: string }).status ?? "—")}</dd>
+                      <dd>
+                        {formatAdminOptionalText(
+                          (operatorContext.kyc as { status?: string }).status
+                            ? a.adminKycStatusLabel(String((operatorContext.kyc as { status?: string }).status))
+                            : null,
+                        )}
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-zinc-500">Document ref</dt>
                       <dd className="font-mono text-xs">
-                        {String((operatorContext.kyc as { documentReference?: string }).documentReference ?? "—")}
+                        {formatAdminOptionalText(
+                          String((operatorContext.kyc as { documentReference?: string }).documentReference ?? ""),
+                        )}
                       </dd>
                     </div>
                   </dl>
-                  <p className="text-xs text-amber-800">{a.t("admin.userDetail.kycPlaceholder")}</p>
-                  <Link href={ROUTES.adminKyc} className="text-xs font-medium text-blue-700 hover:underline">
+                  <p className="text-xs text-amber-300/90">{a.t("admin.userDetail.kycPlaceholder")}</p>
+                  <Link href={ROUTES.adminKyc} className="text-xs font-medium text-[#B7F500] hover:underline">
                     {a.adminSectionLabel("kyc")} →
                   </Link>
                 </section>
@@ -362,15 +465,17 @@ export function UserDetailSection() {
                     Принято согласий: {operatorContext.legal.acceptedConsentsCount}
                   </p>
                   {operatorContext.legal.missingRegisterConsents.length > 0 ? (
-                    <ul className="list-disc pl-4 text-amber-900">
+                    <ul className="list-disc pl-4 text-amber-300/90">
                       {operatorContext.legal.missingRegisterConsents.map((m) => (
                         <li key={`${m.type}-${m.version}`}>{m.title} v{m.version}</li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-emerald-800">REGISTER consents OK</p>
+                    <p className={cn(adminHighlightRing("success"), "inline-block px-2.5 py-1 text-xs text-emerald-300")}>
+                      REGISTER consents OK
+                    </p>
                   )}
-                  <Link href={ROUTES.adminLegal} className="text-xs font-medium text-blue-700 hover:underline">
+                  <Link href={ROUTES.adminLegal} className="text-xs font-medium text-[#B7F500] hover:underline">
                     {a.adminSectionLabel("legal")} →
                   </Link>
                 </section>
@@ -380,11 +485,20 @@ export function UserDetailSection() {
                   </h3>
                   <ul className="grid gap-2 sm:grid-cols-2">
                     {Object.entries(operatorContext.eligibility).map(([key, val]) => (
-                      <li key={key} className="rounded-lg border border-zinc-800 px-3 py-2">
-                        <span className="font-medium">{key}</span>
-                        <span className={val.allowed ? " text-emerald-700" : " text-amber-800"}>
-                          {" "}
-                          — {val.allowed ? "allowed" : val.blockingCode ?? val.userMessage}
+                      <li
+                        key={key}
+                        className={cn(
+                          adminListRow(),
+                          adminHighlightRing(val.allowed ? "success" : "warning"),
+                          "text-sm",
+                        )}
+                      >
+                        <span className="font-medium text-zinc-200">{key}</span>
+                        <span className={val.allowed ? " text-emerald-400" : " text-amber-300"}>
+                          {": "}
+                          {val.allowed
+                            ? "allowed"
+                            : formatAdminOptionalText(val.blockingCode ?? val.userMessage)}
                         </span>
                       </li>
                     ))}
@@ -394,7 +508,7 @@ export function UserDetailSection() {
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Споры</h3>
                   <p>
                     Открыто: {operatorContext.disputes.openCount}{" "}
-                    <Link href={ROUTES.adminDisputes} className="text-xs font-medium text-blue-700 hover:underline">
+                    <Link href={ROUTES.adminDisputes} className="text-xs font-medium text-[#B7F500] hover:underline">
                       Очередь →
                     </Link>
                   </p>
@@ -403,7 +517,7 @@ export function UserDetailSection() {
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Support</h3>
                   <p>
                     Открыто тикетов: {operatorContext.support.openCount}{" "}
-                    <Link href={ROUTES.adminSupport} className="text-xs font-medium text-blue-700 hover:underline">
+                    <Link href={ROUTES.adminSupport} className="text-xs font-medium text-[#B7F500] hover:underline">
                       Очередь →
                     </Link>
                   </p>
@@ -426,7 +540,7 @@ export function UserDetailSection() {
                   </div>
                   <div>
                     <dt className="text-zinc-500">AML risk</dt>
-                    <dd>{operatorContext.risk.amlRiskLevel ?? "—"}</dd>
+                    <dd>{formatAdminOptionalText(operatorContext.risk.amlRiskLevel)}</dd>
                   </div>
                   <div>
                     <dt className="text-zinc-500">Compliance flags</dt>
@@ -434,8 +548,13 @@ export function UserDetailSection() {
                   </div>
                 </dl>
                 {operatorContext.risk.accountFrozen ? (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                  <p className={cn(adminHighlightRing("danger"), "px-3 py-2.5 text-sm text-red-300")}>
                     Аккаунт заморожен (AML restrictions)
+                  </p>
+                ) : null}
+                {operatorContext.risk.complianceOpenFlagsCount > 0 ? (
+                  <p className={cn(adminHighlightRing("warning"), "px-3 py-2.5 text-sm text-amber-300")}>
+                    Открытых compliance-флагов: {operatorContext.risk.complianceOpenFlagsCount}
                   </p>
                 ) : null}
                 <h4 className="text-xs font-semibold uppercase text-zinc-500">Security events</h4>
@@ -444,7 +563,7 @@ export function UserDetailSection() {
                 ) : (
                   <ul className="space-y-2">
                     {operatorContext.securityEvents.map((ev) => (
-                      <li key={ev.id} className="rounded-lg border border-zinc-800 px-3 py-2">
+                      <li key={ev.id} className={adminListRow("text-sm")}>
                         <span className="font-medium">{ev.action}</span>
                         <span className="text-xs text-zinc-500"> · {formatAdminDate(ev.createdAt)}</span>
                         {ev.ip ? <span className="block text-xs text-zinc-500">{ev.ip}</span> : null}
@@ -462,7 +581,7 @@ export function UserDetailSection() {
 
         {tab === "roles" ? (
           <div className="space-y-4 text-sm">
-            <p className="text-xs text-amber-800 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className={cn(adminHighlightRing("info"), "px-3 py-2 text-xs text-sky-300/90")}>
               Все изменения ролей записываются в журнал аудита Spliton.
             </p>
             <div className="flex flex-wrap gap-1">
@@ -518,7 +637,7 @@ export function UserDetailSection() {
             ) : (
               <ul className="space-y-2 text-sm">
                 {walletTx.map((tx) => (
-                  <li key={tx.id} className="flex justify-between rounded-lg border border-zinc-800 px-3 py-2">
+                  <li key={tx.id} className={cn(adminListRow(), "flex justify-between text-sm")}>
                     <span>{tx.txType}</span>
                     <span className="tabular-nums">{formatUsdtAmount(tx.amountUsdt)}</span>
                   </li>
@@ -570,7 +689,7 @@ export function UserDetailSection() {
                   const item = row as { id: string; title?: string; status?: string };
                   const { status: complianceStatus } = item;
                   return (
-                    <li key={item.id} className="rounded-lg border border-zinc-800 px-3 py-2">
+                    <li key={item.id} className={cn(adminListRow(), adminHighlightRing("warning"), "text-sm")}>
                       <span className="font-medium">{item.title ?? item.id}</span>
                       {complianceStatus ? (
                         <AdminLocalizedStatusBadge status={complianceStatus} />
@@ -599,7 +718,7 @@ export function UserDetailSection() {
                   const t = row as { id: string; subject?: string; status?: string; createdAt?: string };
                   const { status: ticketStatus } = t;
                   return (
-                    <li key={t.id} className="rounded-lg border border-zinc-800 px-3 py-2">
+                    <li key={t.id} className={adminListRow("text-sm")}>
                       <p className="font-medium">{t.subject ?? t.id}</p>
                       {ticketStatus ? <AdminLocalizedStatusBadge status={ticketStatus} /> : null}
                       {t.createdAt ? (

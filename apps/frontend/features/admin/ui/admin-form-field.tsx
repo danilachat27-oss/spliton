@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 
-import { Info } from "@/lib/lucide";
 import { Label } from "@/components/ui/label";
+import { AdminInfoHint } from "@/features/admin/ui/admin-info-hint";
 import { cn } from "@/lib/utils";
 
 type AdminFormFieldProps = {
@@ -18,17 +18,7 @@ type AdminFormFieldProps = {
 };
 
 export function AdminFieldInfo({ text }: { text: string }) {
-  return (
-    <button
-      type="button"
-      tabIndex={0}
-      className="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7F500]/40"
-      title={text}
-      aria-label={text}
-    >
-      <Info className="size-3.5" strokeWidth={2.25} aria-hidden />
-    </button>
-  );
+  return <AdminInfoHint text={text} />;
 }
 
 /** Consistent label → control → helper/error spacing for admin forms. */

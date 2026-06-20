@@ -400,7 +400,7 @@ export const REPORT_DOMAIN_LABELS: Record<ReportDomainId, string> = {
 
   content: "Контент",
 
-  compliance: "Compliance",
+  compliance: "Риски и контроль",
 
   operations: "Операции",
 

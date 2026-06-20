@@ -17,7 +17,7 @@ import {
   formatWalletUserStatus,
   WALLET_FIELD_TOOLTIPS,
 } from "@/features/admin/lib/admin-wallet-i18n";
-import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminDate, formatUsdtAmount, ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
 import { AdminDataTable, AdminDetailDrawer, AdminFormFooter, AdminLoadingState, AdminPagination, AdminStatusBadge, type AdminColumn } from "@/features/admin/ui";
 import { listAdminWalletTransactions } from "@/services/admin/adminWallets.service";
 import { AdminCopyButton } from "@/features/admin/ui/admin-copy-button";
@@ -390,7 +390,7 @@ export function AdminWalletDrawer({
                   <li key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-zinc-800 p-3">
                     <div>
                       <p className="font-medium">{formatMarketKind(m.kind)}</p>
-                      <p className="text-xs text-zinc-500">{m.releaseTitle ?? "—"}</p>
+                      <p className="text-xs text-zinc-500">{m.releaseTitle ?? ADMIN_METRIC_NA_LABEL}</p>
                     </div>
                     <div className="text-right tabular-nums">
                       <p>{formatUsdtAmount(m.amountUsdt)}</p>
@@ -412,7 +412,7 @@ export function AdminWalletDrawer({
                     <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
                     <div>
                       <p className="font-medium">{f.flagCode}</p>
-                      <p className="text-xs text-zinc-400">{f.note ?? "—"}</p>
+                      <p className="text-xs text-zinc-400">{f.note ?? ADMIN_METRIC_NA_LABEL}</p>
                       <AdminStatusBadge label={f.severity} tone="danger" />
                     </div>
                   </li>

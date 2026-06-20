@@ -16,6 +16,7 @@ import type { AdminNewsFormBody } from "@/features/admin/components/admin-news-d
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { AdminDataTable, AdminLocalizedStatusBadge, AdminReadOnlyBanner, type AdminColumn } from "@/features/admin/ui";
+import { ImageIcon } from "@/lib/lucide";
 import {
   archiveAdminNewsPost,
   createAdminNewsPost,
@@ -56,6 +57,7 @@ export function NewsSection() {
   const [detailLoading, setDetailLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [coverUploading, setCoverUploading] = React.useState(false);
+  const [pendingCoverFile, setPendingCoverFile] = React.useState<File | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
 
   const load = React.useCallback(() => {
@@ -79,6 +81,7 @@ export function NewsSection() {
     if (!canEdit) return;
     setMode("create");
     setEditPost(null);
+    setPendingCoverFile(null);
     setDrawerOpen(true);
     setFeedback(null);
   }
@@ -102,18 +105,46 @@ export function NewsSection() {
   async function persistNews(form: AdminNewsFormBody) {
     setSaving(true);
     setFeedback(null);
+    const wasCreate = mode === "create";
     try {
       const payload = newsFormToPayload(form);
-      if (mode === "create") {
-        const created = await createAdminNewsPost(payload, client);
-        setEditPost(created);
-        setMode("edit");
-        setFeedback("Черновик создан — можно загрузить обложку и опубликовать.");
-      } else if (editPost) {
-        const updated = await updateAdminNewsPost(editPost.id, payload, client);
-        setEditPost(updated);
-        setFeedback("Сохранено");
+      if (form.coverUrl.startsWith("blob:")) {
+        delete payload.coverUrl;
       }
+
+      let saved: AdminNewsPost;
+      if (mode === "create") {
+        saved = await createAdminNewsPost(payload, client);
+        setEditPost(saved);
+        setMode("edit");
+      } else if (editPost) {
+        saved = await updateAdminNewsPost(editPost.id, payload, client);
+        setEditPost(saved);
+      } else {
+        return;
+      }
+
+      const fileToUpload = pendingCoverFile;
+      if (fileToUpload) {
+        setCoverUploading(true);
+        try {
+          saved = await uploadAdminNewsCover(saved.id, fileToUpload, client);
+          setEditPost(saved);
+          setPendingCoverFile(null);
+        } finally {
+          setCoverUploading(false);
+        }
+      }
+
+      setFeedback(
+        wasCreate
+          ? fileToUpload
+            ? "Черновик создан, обложка загружена."
+            : "Черновик создан — можно опубликовать."
+          : fileToUpload
+            ? "Сохранено, обложка загружена."
+            : "Сохранено",
+      );
       load();
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : "Ошибка сохранения");
@@ -134,7 +165,12 @@ export function NewsSection() {
             <img src={r.coverUrl} alt="" className="size-full object-cover" />
           </div>
         ) : (
-          <span className="text-xs text-zinc-400">—</span>
+          <span
+            className="inline-flex size-10 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/60 text-zinc-500"
+            aria-hidden
+          >
+            <ImageIcon className="size-4" />
+          </span>
         ),
     },
     { key: "title", header: "Заголовок", render: (r) => r.title },
@@ -266,19 +302,24 @@ export function NewsSection() {
               }
             : undefined
         }
-        onUploadCover={
-          canEdit && editPost
+        onCoverFileSelected={
+          canEdit
             ? async (file) => {
-                setCoverUploading(true);
-                try {
-                  const updated = await uploadAdminNewsCover(editPost.id, file, client);
-                  setEditPost(updated);
-                  setFeedback("Обложка загружена");
-                  load();
-                } catch (e) {
-                  setFeedback(e instanceof Error ? e.message : "Ошибка загрузки обложки");
-                } finally {
-                  setCoverUploading(false);
+                if (editPost) {
+                  setCoverUploading(true);
+                  try {
+                    const updated = await uploadAdminNewsCover(editPost.id, file, client);
+                    setEditPost(updated);
+                    setPendingCoverFile(null);
+                    setFeedback("Обложка загружена");
+                    load();
+                  } catch (e) {
+                    setFeedback(e instanceof Error ? e.message : "Ошибка загрузки обложки");
+                  } finally {
+                    setCoverUploading(false);
+                  }
+                } else {
+                  setPendingCoverFile(file);
                 }
               }
             : undefined

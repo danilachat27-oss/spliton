@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BarChart3, Info, Plus } from "@/lib/lucide";
+import { BarChart3, Plus } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
@@ -25,7 +25,13 @@ import {
   revenueStatusLabel,
   revenueStatusTone,
 } from "@/features/admin/lib/admin-revenue-i18n";
-import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import {
+  ADMIN_METRIC_NA_LABEL,
+  formatAdminDate,
+  formatAdminMetricUsdt,
+  formatUsdtAmount,
+  isAdminMetricEmpty,
+} from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type { AdminRevenueDetail, AdminRevenueListItem } from "@/features/admin/mocks/admin-revenue.mock";
 import {
@@ -33,6 +39,7 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -89,18 +96,26 @@ function StatTile({
 }) {
   const valueClass =
     tone === "success"
-      ? "text-emerald-800"
+      ? "text-emerald-400"
       : tone === "warning"
-        ? "text-amber-800"
+        ? "text-amber-400"
         : tone === "info"
-          ? "text-sky-800"
+          ? "text-sky-400"
           : tone === "danger"
-            ? "text-red-800"
+            ? "text-red-400"
             : "text-zinc-100";
+  const empty = isAdminMetricEmpty(value);
   return (
     <div className={cn(ADMIN_SECTION_TILE, "space-y-1")}>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
+      <p
+        className={cn(
+          "tabular-nums tracking-tight",
+          empty ? "text-base font-medium text-zinc-500" : cn("text-2xl font-semibold", valueClass),
+        )}
+      >
+        {empty ? ADMIN_METRIC_NA_LABEL : value}
+      </p>
     </div>
   );
 }
@@ -371,14 +386,11 @@ export function RevenueSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("revenue")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Управление доходами релизов Spliton, предпросмотром распределения и начислениями держателям юнитов через
-          wallet ledger. Начисления рассчитываются автоматически на основе юнитов держателей; запуск выполняется
-          оператором.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Управление доходами релизов Spliton, предпросмотром распределения и начислениями держателям юнитов через
+        wallet ledger. Начисления рассчитываются автоматически на основе юнитов держателей; запуск выполняется
+        оператором.
+      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9">
         <StatTile
@@ -410,9 +422,7 @@ export function RevenueSection() {
           value={
             summaryLoading
               ? "…"
-              : summary?.avgPayoutPerHolderUsdt
-                ? formatUsdtAmount(summary.avgPayoutPerHolderUsdt)
-                : "—"
+              : formatAdminMetricUsdt(summary?.avgPayoutPerHolderUsdt ?? null)
           }
         />
         <StatTile

@@ -127,8 +127,9 @@ export function AdminGlobalSearch({ className }: Props) {
         aria-expanded={showDropdown}
         aria-controls="admin-search-results"
         className={cn(
-          "h-9 w-full max-w-xl rounded-xl border border-zinc-800 bg-zinc-900/50 py-2 pl-10 pr-10 text-sm text-zinc-100",
-          "placeholder:text-zinc-400 outline-none focus:border-zinc-600",
+          "h-9 w-full max-w-xl rounded-xl border border-zinc-800/80 bg-zinc-900/50 py-2 pl-10 pr-10 text-sm text-zinc-100",
+          "placeholder:text-zinc-500 outline-none transition-colors",
+          "focus:border-zinc-700 focus-visible:ring-2 focus-visible:ring-[#B7F500]/20",
         )}
       />
       {loading ? (

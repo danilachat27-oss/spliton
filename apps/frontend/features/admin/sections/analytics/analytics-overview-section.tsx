@@ -44,7 +44,12 @@ import {
   feeCodeLabel,
   kpiTooltipsForLocale,
 } from "@/features/admin/lib/admin-analytics-i18n";
-import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import {
+  ADMIN_METRIC_NA_LABEL,
+  formatAdminDateShort,
+  formatAdminMetricUsdt,
+  formatUsdtAmount,
+} from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   labelFromMap,
@@ -254,10 +259,10 @@ export function AnalyticsOverviewSection() {
   const activeListings = pickNumber(marketRec, "activeListings");
   const avgPrice =
     marketRec?.avgPricePerUnit != null
-      ? String(marketRec.avgPricePerUnit)
+      ? formatUsdtAmount(String(marketRec.avgPricePerUnit))
       : completedTrades > 0
         ? formatUsdtAmount(String(parseAnalyticsMoney(volumeUsdt) / completedTrades))
-        : "—";
+        : ADMIN_METRIC_NA_LABEL;
 
   const openFlags = pickNumber(riskRec, "openFlags");
   const criticalRisk = pickNumber(riskRec, "criticalCount");
@@ -385,7 +390,7 @@ export function AnalyticsOverviewSection() {
   );
 
   const drillSection = (
-    <section className={cn(ADMIN_SECTION_TILE, "p-5 shadow-sm")}>
+    <section className={cn(ADMIN_SECTION_TILE, "p-5")}>
       <h2 className="text-sm font-semibold text-zinc-100">Детальная аналитика</h2>
       <p className="mt-1 text-xs text-zinc-500">
         Перейдите в доменные разделы для drill-down, сегментов и экспорта.
@@ -397,7 +402,7 @@ export function AnalyticsOverviewSection() {
             <Link
               key={link.href}
               href={link.href}
-              className="group flex items-center justify-between gap-2 rounded-2xl bg-zinc-50/80 px-4 py-3 text-sm font-medium text-zinc-200 shadow-sm transition-colors hover:bg-zinc-900/80"
+              className="group flex items-center justify-between gap-2 rounded-2xl bg-zinc-50/80 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-900/80"
             >
               <span className="flex items-center gap-2">
                 <Icon className="size-4 text-zinc-500 group-hover:text-zinc-200" />
@@ -434,6 +439,9 @@ export function AnalyticsOverviewSection() {
             <AdminAnalyticsExportButton
               reportType="finance_cashflow"
               label={a.t("admin.analytics.common.export")}
+              period={period}
+              customFrom={customFrom}
+              customTo={customTo}
             />
           </div>
           {lastUpdated ? (
@@ -452,7 +460,7 @@ export function AnalyticsOverviewSection() {
                 {a.t("admin.ui.widgetUnavailable")}
               </p>
             ) : null}
-            <div className={cn(ADMIN_SECTION_TILE, "border p-5 sm:p-6 shadow-sm", executiveBannerClass)}>
+            <div className={cn(ADMIN_SECTION_TILE, "border p-5 sm:p-6", executiveBannerClass)}>
               <p
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wider",
@@ -663,7 +671,7 @@ export function AnalyticsOverviewSection() {
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.avgPricePerUnit")}
-                value={avgPrice === "—" ? avgPrice : formatUsdtAmount(avgPrice)}
+                value={avgPrice}
                 tooltip={KPI.avgPrice}
                 href={ROUTES.adminAnalyticsMarket}
               />

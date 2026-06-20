@@ -1,4 +1,5 @@
 import { ROUTES } from "@/constants/routes";
+import { ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
 import type { AnalyticsInsightItem } from "@/features/admin/analytics/components/admin-analytics-insights-panel";
 
 export const OPS_CHART_EMPTY = {
@@ -78,7 +79,7 @@ export function financeEntityHref(category: string, entityId: string | null | un
 }
 
 export function formatDurationRu(minutes: number | null | undefined): string {
-  if (minutes == null) return "Нет данных для сравнения";
+  if (minutes == null) return ADMIN_METRIC_NA_LABEL;
   if (minutes < 60) return `${Math.round(minutes)} мин`;
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
@@ -89,7 +90,7 @@ export function formatDurationRu(minutes: number | null | undefined): string {
 }
 
 export function formatHoursRu(hours: number | null | undefined): string {
-  if (hours == null) return "Нет данных для сравнения";
+  if (hours == null) return ADMIN_METRIC_NA_LABEL;
   return formatDurationRu(hours * 60);
 }
 

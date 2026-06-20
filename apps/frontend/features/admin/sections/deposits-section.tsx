@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BarChart3, Info } from "@/lib/lucide";
+import { BarChart3 } from "@/lib/lucide";
 
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import {
@@ -25,7 +25,13 @@ import {
   isReadyToCredit,
   tronTxExplorerUrl,
 } from "@/features/admin/lib/admin-deposit-i18n";
-import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import {
+  ADMIN_METRIC_NA_LABEL,
+  formatAdminDate,
+  formatAdminMetricMinutes,
+  formatUsdtAmount,
+  isAdminMetricEmpty,
+} from "@/features/admin/lib/admin-format";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type { AdminDepositDetail, AdminDepositListItem } from "@/features/admin/mocks/admin-deposits.mock";
@@ -34,6 +40,7 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -86,18 +93,26 @@ function StatTile({
 }) {
   const valueClass =
     tone === "success"
-      ? "text-emerald-800"
+      ? "text-emerald-400"
       : tone === "warning"
-        ? "text-amber-800"
+        ? "text-amber-400"
         : tone === "info"
-          ? "text-sky-800"
+          ? "text-sky-400"
           : tone === "danger"
-            ? "text-red-800"
+            ? "text-red-400"
             : "text-zinc-100";
+  const empty = isAdminMetricEmpty(value);
   return (
     <div className={cn(ADMIN_SECTION_TILE, "space-y-1")}>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
+      <p
+        className={cn(
+          "tabular-nums tracking-tight",
+          empty ? "text-base font-medium text-zinc-500" : cn("text-2xl font-semibold", valueClass),
+        )}
+      >
+        {empty ? ADMIN_METRIC_NA_LABEL : value}
+      </p>
     </div>
   );
 }
@@ -373,13 +388,10 @@ export function DepositsSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("deposits")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Контроль входящих USDT TRC20 платежей Spliton: подтверждения сети, ручная сверка и зачисления на кошельки
-          пользователей через wallet ledger.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Контроль входящих USDT TRC20 платежей Spliton: подтверждения сети, ручная сверка и зачисления на кошельки
+        пользователей через wallet ledger.
+      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <StatTile
@@ -404,9 +416,7 @@ export function DepositsSection() {
           value={
             summaryLoading
               ? "…"
-              : summary?.avgConfirmationMinutes != null
-                ? `${summary.avgConfirmationMinutes} мин`
-                : "—"
+              : formatAdminMetricMinutes(summary?.avgConfirmationMinutes ?? null)
           }
         />
         <StatTile label={a.t("admin.filter.highValue")} value={summaryLoading ? "…" : String(summary?.highValueCount ?? 0)} tone="warning" />

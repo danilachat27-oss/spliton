@@ -10,7 +10,7 @@ import {
 } from "@/features/admin/components/admin-drawer-buttons";
 import { Input } from "@/components/ui/input";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
-import { AdminDetailDrawer, AdminFormField, AdminFormFooter } from "@/features/admin/ui";
+import { AdminDetailDrawer, AdminFormField, AdminFormFooter, AdminMediaUploadButton } from "@/features/admin/ui";
 import { AdminLocalizedStatusBadge } from "@/features/admin/ui";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { fieldErrorMap, fieldErrorMessage } from "@/features/admin/lib/admin-form-field-errors";
@@ -123,7 +123,7 @@ type AdminNewsDrawerProps = {
   onPublish?: () => Promise<void>;
   onUnpublish?: () => Promise<void>;
   onArchive?: () => Promise<void>;
-  onUploadCover?: (file: File) => Promise<void>;
+  onCoverFileSelected?: (file: File) => void | Promise<void>;
 };
 
 export function AdminNewsDrawer({
@@ -139,9 +139,10 @@ export function AdminNewsDrawer({
   onPublish,
   onUnpublish,
   onArchive,
-  onUploadCover,
+  onCoverFileSelected,
 }: AdminNewsDrawerProps) {
   const a = useAdminI18n();
+  const localPreviewRef = React.useRef<string | null>(null);
   const newsCategories = React.useMemo(
     () =>
       NEWS_CATEGORY_VALUES.map((value) => ({
@@ -170,6 +171,24 @@ export function AdminNewsDrawer({
     }
     setErrors([]);
   }, [open, mode, post]);
+
+  React.useEffect(() => {
+    if (open) return;
+    if (localPreviewRef.current) {
+      URL.revokeObjectURL(localPreviewRef.current);
+      localPreviewRef.current = null;
+    }
+  }, [open]);
+
+  async function handleCoverFile(file: File) {
+    if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
+    const preview = URL.createObjectURL(file);
+    localPreviewRef.current = preview;
+    set("coverUrl", preview);
+    if (onCoverFileSelected) {
+      await onCoverFileSelected(file);
+    }
+  }
 
   const set = <K extends keyof AdminNewsFormBody>(key: K, value: AdminNewsFormBody[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -299,38 +318,29 @@ export function AdminNewsDrawer({
             </AdminFormField>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-50/50 p-4">
+          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
             <p className="text-sm font-medium text-zinc-100">{a.t("admin.drawer.news.field.cover")}</p>
-            {mode === "edit" && onUploadCover && !readOnly ? (
+            {!readOnly ? (
               <AdminFormField
                 label={a.t("admin.drawer.news.field.uploadImage")}
                 htmlFor="news-cover-file"
                 hint={a.t("admin.drawer.news.field.coverHint")}
-                className="mt-3"
               >
-                <Input
+                <AdminMediaUploadButton
                   id="news-cover-file"
-                  type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  className={adminFieldInput}
-                  disabled={coverUploading}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void onUploadCover(file);
-                    e.target.value = "";
-                  }}
+                  label={a.t("admin.drawer.news.field.uploadImage")}
+                  uploading={coverUploading}
+                  uploadingLabel={a.t("admin.drawer.common.saving")}
+                  disabled={readOnly}
+                  onFileSelected={handleCoverFile}
                 />
               </AdminFormField>
-            ) : mode === "create" ? (
-              <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-                {a.t("admin.drawer.news.field.draftCoverHint")}
-              </p>
             ) : null}
-            <AdminFormField
-              label={a.t("admin.drawer.news.field.coverUrl")}
-              htmlFor="news-cover-url"
-              className="mt-3"
-            >
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-600">
+              {a.t("admin.drawer.track.media.orUrl")}
+            </p>
+            <AdminFormField label={a.t("admin.drawer.news.field.coverUrl")} htmlFor="news-cover-url">
               <Input
                 id="news-cover-url"
                 className={adminFieldInput}
@@ -341,7 +351,7 @@ export function AdminNewsDrawer({
               />
             </AdminFormField>
             {form.coverUrl.trim() ? (
-              <div className="mt-3 aspect-[16/9] max-w-sm overflow-hidden rounded-xl border border-zinc-800">
+              <div className="aspect-[16/9] max-w-sm overflow-hidden rounded-xl bg-zinc-900/40">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={form.coverUrl.trim()} alt="" className="size-full object-cover" />
               </div>

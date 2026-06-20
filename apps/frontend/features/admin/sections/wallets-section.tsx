@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BarChart3, Info, Wallet } from "@/lib/lucide";
+import { BarChart3, Wallet } from "@/lib/lucide";
 
 import { AdminWalletDrawer } from "@/features/admin/components/admin-wallet-drawer";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
@@ -28,6 +28,7 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -63,6 +64,27 @@ const SORT_OPTIONS = [
   { value: "available", label: "Больше available" },
   { value: "locked", label: "Больше locked" },
 ];
+
+function parseUsdtNumber(value: string): number {
+  return Number(value.replace(/[^\d.-]/g, ""));
+}
+
+function WalletAssetCell({ assetCode, network }: { assetCode: string; network: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-xs font-semibold text-zinc-100">
+        {assetCode}
+      </span>
+      <span className="rounded-md bg-zinc-900 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+        {network}
+      </span>
+    </div>
+  );
+}
+
+function WalletZeroUsdt({ value }: { value: string }) {
+  return <span className="text-sm tabular-nums text-zinc-500">{formatUsdtAmount(value)}</span>;
+}
 
 function StatTile({
   label,
@@ -203,12 +225,17 @@ export function WalletsSection() {
           >
             {r.userEmail}
           </Link>
-          {r.userDisplayName ? <p className="text-xs text-zinc-500">{r.userDisplayName}</p> : null}
-          <div className="mt-1 flex flex-wrap gap-1">
-            <AdminStatusBadge label={formatWalletUserStatus(r.userStatus)} tone="neutral" />
-            {r.userRoles.slice(0, 1).map((role) => (
-              <AdminStatusBadge key={role} label={a.adminRoleLabel(role) ?? role} tone="neutral" />
-            ))}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-zinc-500">
+            {r.userDisplayName ? <span>{r.userDisplayName}</span> : null}
+            {r.userRoles[0] ? (
+              <span className="text-zinc-600">{a.adminRoleLabel(r.userRoles[0]) ?? r.userRoles[0]}</span>
+            ) : null}
+          </div>
+          <div className="mt-1">
+            <AdminStatusBadge
+              label={formatWalletUserStatus(r.userStatus)}
+              tone={r.userStatus === "active" ? "success" : "neutral"}
+            />
           </div>
         </div>
       ),
@@ -226,13 +253,7 @@ export function WalletsSection() {
     {
       key: "asset",
       header: a.table.asset,
-      render: (r) => (
-        <span className="text-sm text-zinc-300">
-          {r.assetCode}
-          <span className="text-zinc-400"> · </span>
-          {r.network}
-        </span>
-      ),
+      render: (r) => <WalletAssetCell assetCode={r.assetCode} network={r.network} />,
     },
     {
       key: "avail",
@@ -253,11 +274,11 @@ export function WalletsSection() {
       key: "locked",
       header: a.table.locked,
       render: (r) => {
-        const locked = Number(r.lockedUsdt.replace(/\s/g, ""));
+        const locked = parseUsdtNumber(r.lockedUsdt);
         return locked > 0 ? (
           <AdminStatusBadge label={formatUsdtAmount(r.lockedUsdt)} tone="warning" />
         ) : (
-          <span className="text-sm text-zinc-500">0</span>
+          <WalletZeroUsdt value="0" />
         );
       },
     },
@@ -265,55 +286,56 @@ export function WalletsSection() {
       key: "pending",
       header: a.t("admin.table.pendingCol"),
       render: (r) =>
-        Number(r.pendingUsdt.replace(/\s/g, "")) > 0 ? (
+        parseUsdtNumber(r.pendingUsdt) > 0 ? (
           <AdminStatusBadge label={formatUsdtAmount(r.pendingUsdt)} tone="pending" />
         ) : (
-          <span className="text-zinc-400">—</span>
+          <WalletZeroUsdt value="0" />
         ),
     },
     {
       key: "earned",
-      header: "Начислено",
+      header: a.t("admin.kpi.wallets.accrued"),
       render: (r) => (
         <span className="tabular-nums text-zinc-200">{formatUsdtAmount(r.earnedTotalUsdt)}</span>
       ),
     },
     {
       key: "withdrawn",
-      header: "Выведено",
+      header: a.t("admin.kpi.wallets.withdrawn"),
       render: (r) => (
         <span className="tabular-nums text-zinc-200">{formatUsdtAmount(r.withdrawnTotalUsdt)}</span>
       ),
     },
     {
       key: "deposits",
-      header: "Пополнено",
+      header: a.t("admin.wallets.col.deposited"),
       render: (r) => (
         <span className="tabular-nums text-zinc-300">{formatUsdtAmount(r.depositsTotalUsdt)}</span>
       ),
     },
     {
       key: "lastOp",
-      header: "Последняя операция",
-      render: (r) => (
-        <div className="text-xs">
-          {r.lastOperationType ? (
+      header: a.t("admin.wallets.col.lastOperation"),
+      render: (r) => {
+        if (!r.lastOperationType) {
+          return <span className="text-sm text-zinc-500">{a.t("admin.wallets.noOperations")}</span>;
+        }
+        return (
+          <div className="min-w-[140px] text-xs">
             <p className="font-medium text-zinc-200">{formatWalletOperation(r.lastOperationType)}</p>
-          ) : (
-            <p className="text-zinc-400">—</p>
-          )}
-          <p className="tabular-nums text-zinc-500">{formatAdminDate(r.lastTransactionAt)}</p>
-        </div>
-      ),
+            <p className="mt-0.5 tabular-nums text-zinc-500">{formatAdminDate(r.lastTransactionAt)}</p>
+          </div>
+        );
+      },
     },
     {
       key: "risk",
       header: a.table.risk,
       render: (r) =>
         r.hasRiskFlag ? (
-          <AdminStatusBadge label={r.riskSeverity ?? "flag"} tone="danger" />
+          <AdminStatusBadge label={a.formatAdminStatus(r.riskSeverity ?? "warning")} tone="danger" />
         ) : (
-          <span className="text-zinc-400">—</span>
+          <span className="text-sm text-zinc-500">{a.t("admin.wallets.risk.none")}</span>
         ),
     },
     {
@@ -353,13 +375,10 @@ export function WalletsSection() {
     >
       {isReadOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("wallets")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Контроль пользовательских балансов Spliton: доступные и заблокированные средства, начисления, выводы и
-          ledger-операции. Live mode — только данные из API.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Контроль пользовательских балансов Spliton: доступные и заблокированные средства, начисления, выводы и
+        ledger-операции. Live mode — только данные из API.
+      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatTile
@@ -492,7 +511,7 @@ export function WalletsSection() {
               type: "search",
               value: maxAvailable,
               onChange: setMaxAvailable,
-              placeholder: "∞",
+              placeholder: a.t("admin.wallets.filter.maxPlaceholder"),
             },
             {
               id: "minLocked",
@@ -508,7 +527,7 @@ export function WalletsSection() {
               type: "search",
               value: maxLocked,
               onChange: setMaxLocked,
-              placeholder: "∞",
+              placeholder: a.t("admin.wallets.filter.maxPlaceholder"),
             },
           ]}
         />

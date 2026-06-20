@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { ClipboardList, Info } from "@/lib/lucide";
+import { ClipboardList } from "@/lib/lucide";
 
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import {
@@ -25,6 +25,7 @@ import {
   AdminLocalizedStatusBadge,
   AdminPagination,
   AdminRoleBadge,
+  AdminSectionInfoHint,
   type AdminColumn,
 } from "@/features/admin/ui";
 import { listAdminAuditPaginated } from "@/services/admin/adminAudit.service";
@@ -185,13 +186,10 @@ export function AuditSection() {
       title={a.adminSectionLabel("audit")}
       actions={<AdminSectionRefreshButton onClick={reload} />}
     >
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Неизменяемый журнал действий операторов: финансовые операции, роли, риски и системные
-          изменения. Каждая запись содержит состояние до и после, IP и браузер.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Неизменяемый журнал действий операторов: финансовые операции, роли, риски и системные
+        изменения. Каждая запись содержит состояние до и после, IP и браузер.
+      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label={a.t("admin.kpi.audit.totalRecords")} value={loading ? "…" : String(page.total)} />

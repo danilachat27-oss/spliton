@@ -33,10 +33,13 @@ import { useAuth } from "@/components/providers/auth-provider";
 
 
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
-
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
-
+import {
+  adminFieldInput,
+  adminListRow,
+} from "@/features/admin/lib/admin-ui";
 import { AdminPhraseConfirmDialog, AdminReadOnlyBanner } from "@/features/admin/ui";
+import { SettingsLimitsPanel } from "@/features/admin/sections/settings-limits-panel";
 
 import {
 
@@ -129,7 +132,7 @@ function FeeChangeSummary({
 
       {rows.map(({ key, label, unit }) => (
 
-        <li key={key} className="rounded-lg border border-zinc-800 bg-zinc-50 px-3 py-2">
+        <li key={key} className={cn(adminListRow(), "text-sm")}>
 
           <p className="font-medium text-zinc-200">{label}</p>
 
@@ -198,9 +201,11 @@ export function SettingsSection() {
 
   const [ruleSavingId, setRuleSavingId] = React.useState<string | null>(null);
 
-  const [ruleConfirm, setRuleConfirm] = React.useState<AdminFinancialRule | null>(null);
+  const [selectedRuleId, setSelectedRuleId] = React.useState<string | null>(null);
 
   const [ruleReason, setRuleReason] = React.useState("");
+
+  const [ruleConfirmPhrase, setRuleConfirmPhrase] = React.useState("");
 
   const canEdit = canPatchPlatformFees(user?.roles);
 
@@ -256,6 +261,7 @@ export function SettingsSection() {
 
       setRuleDrafts(Object.fromEntries(rows.map((r) => [r.id, r.value])));
 
+      setSelectedRuleId((prev) => prev ?? rows[0]?.id ?? null);
     } catch (e) {
 
       setError(localizedAdminError(e));
@@ -278,6 +284,18 @@ export function SettingsSection() {
 
 
 
+  React.useEffect(() => {
+
+    if (tab !== "limits") return;
+
+    setRuleReason("");
+
+    setRuleConfirmPhrase("");
+
+  }, [selectedRuleId, tab]);
+
+
+
   async function handleSaveRule(rule: AdminFinancialRule) {
 
     const value = ruleDrafts[rule.id]?.trim();
@@ -296,9 +314,9 @@ export function SettingsSection() {
 
       setRuleDrafts((prev) => ({ ...prev, [updated.id]: updated.value }));
 
-      setRuleConfirm(null);
-
       setRuleReason("");
+
+      setRuleConfirmPhrase("");
 
       setSaved(true);
 
@@ -404,7 +422,7 @@ export function SettingsSection() {
 
                   <Input
 
-                    className="mt-1.5 rounded-xl bg-zinc-900/80"
+                    className={cn("mt-1.5 rounded-xl", adminFieldInput)}
 
                     value={draftFees?.[key] ?? ""}
 
@@ -454,101 +472,55 @@ export function SettingsSection() {
 
         {tab === "limits" ? (
 
-          <div className={cn(ADMIN_SECTION_TILE, "space-y-4")}>
+          <div className="space-y-4">
 
-            <h2 className="text-sm font-semibold text-zinc-100">Финансовые лимиты</h2>
+            <div>
 
-            <p className="text-sm text-zinc-400">
+              <h2 className="text-sm font-semibold text-zinc-100">Финансовые лимиты</h2>
 
-              Минимальные суммы, суточные лимиты и другие правила операций. Изменения записываются в журнал действий.
+              <p className="mt-1 text-sm text-zinc-500">
 
-            </p>
+                Минимальные суммы, суточные лимиты и другие правила операций. Выберите правило слева — редактирование справа.
 
-            {rulesLoading ? <p className="text-sm text-zinc-500">Загрузка…</p> : null}
+              </p>
 
-            {!rulesLoading && rules.length === 0 ? (
+            </div>
 
-              <p className="text-sm text-zinc-500">Правила не настроены.</p>
+            <SettingsLimitsPanel
 
-            ) : null}
+              rules={rules}
 
-            <ul className="space-y-3">
+              ruleDrafts={ruleDrafts}
 
-              {rules.map((rule) => {
+              onDraftChange={(ruleId, value) =>
 
-                const draft = ruleDrafts[rule.id] ?? rule.value;
+                setRuleDrafts((prev) => ({ ...prev, [ruleId]: value }))
 
-                const changed = draft !== rule.value;
+              }
 
-                return (
+              selectedRuleId={selectedRuleId}
 
-                  <li key={rule.id} className="rounded-xl border border-zinc-800 bg-zinc-50/80 p-4">
+              onSelectRule={setSelectedRuleId}
 
-                    <p className="font-medium text-zinc-100">{rule.title}</p>
+              canEdit={canEdit}
 
-                    {rule.description ? (
+              saving={Boolean(ruleSavingId)}
 
-                      <p className="mt-1 text-xs text-zinc-500">{rule.description}</p>
+              ruleReason={ruleReason}
 
-                    ) : null}
+              onRuleReasonChange={setRuleReason}
 
-                    <p className="mt-1 font-mono text-xs text-zinc-400">{rule.code}</p>
+              confirmPhrase={ruleConfirmPhrase}
 
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+              onConfirmPhraseChange={setRuleConfirmPhrase}
 
-                      <label className="block flex-1 text-sm">
+              onSave={(rule) => void handleSaveRule(rule)}
 
-                        Значение
+              reasonPlaceholder={a.t("admin.placeholder.financialRule")}
 
-                        <Input
+              loading={rulesLoading}
 
-                          className="mt-1.5 rounded-xl bg-zinc-900/80"
-
-                          value={draft}
-
-                          disabled={!canEdit || ruleSavingId === rule.id}
-
-                          onChange={(e) =>
-
-                            setRuleDrafts((prev) => ({ ...prev, [rule.id]: e.target.value }))
-
-                          }
-
-                        />
-
-                      </label>
-
-                      {canEdit ? (
-
-                        <Button
-
-                          type="button"
-
-                          size="sm"
-
-                          className="rounded-xl"
-
-                          disabled={!changed || ruleSavingId === rule.id}
-
-                          onClick={() => setRuleConfirm(rule)}
-
-                        >
-
-                          Сохранить
-
-                        </Button>
-
-                      ) : null}
-
-                    </div>
-
-                  </li>
-
-                );
-
-              })}
-
-            </ul>
+            />
 
           </div>
 
@@ -566,11 +538,11 @@ export function SettingsSection() {
 
         {saved ? (
 
-          <p className="text-sm text-emerald-700">Сохранено — запись в журнале действий.</p>
+          <p className="text-sm text-emerald-400">Сохранено — запись в журнале действий.</p>
 
         ) : null}
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       </AdminSectionPanel>
 
@@ -603,82 +575,6 @@ export function SettingsSection() {
       >
 
         <FeeChangeSummary before={liveFees} after={draftFees} />
-
-      </AdminPhraseConfirmDialog>
-
-
-
-      <AdminPhraseConfirmDialog
-
-        open={Boolean(ruleConfirm)}
-
-        onOpenChange={(o) => {
-
-          if (!ruleSavingId) {
-
-            setRuleConfirm(o ? ruleConfirm : null);
-
-            if (!o) setRuleReason("");
-
-          }
-
-        }}
-
-        title={a.t("admin.title.updateFinancialRule")}
-
-        description={
-          ruleConfirm
-            ? `Будет изменено правило «${ruleConfirm.title}». Укажите причину для журнала аудита.`
-            : ""
-        }
-
-        confirmPhrase={DANGEROUS_ACTION_PHRASES.platformFees}
-
-        confirmLabel={ruleSavingId ? "Сохранение…" : "Сохранить"}
-
-        confirming={Boolean(ruleSavingId)}
-
-        closeOnConfirm={false}
-
-        onConfirm={() => {
-
-          if (ruleConfirm) void handleSaveRule(ruleConfirm);
-
-        }}
-
-      >
-
-        {ruleConfirm ? (
-
-          <div className="space-y-3 text-sm">
-
-            <p className="text-zinc-400">
-
-              {ruleConfirm.value} → <span className="font-semibold">{ruleDrafts[ruleConfirm.id] ?? "—"}</span>
-
-            </p>
-
-            <label className="block">
-
-              Причина изменения
-
-              <Input
-
-                className="mt-1.5"
-
-                value={ruleReason}
-
-                onChange={(e) => setRuleReason(e.target.value)}
-
-                placeholder={a.t("admin.placeholder.financialRule")}
-
-              />
-
-            </label>
-
-          </div>
-
-        ) : null}
 
       </AdminPhraseConfirmDialog>
 

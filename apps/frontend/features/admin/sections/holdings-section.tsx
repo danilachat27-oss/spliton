@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BarChart3, Info, Layers, User } from "@/lib/lucide";
+import { BarChart3, Layers, User } from "@/lib/lucide";
 
 import { AdminHoldingDrawer } from "@/features/admin/components/admin-holding-drawer";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
@@ -28,6 +28,7 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -330,13 +331,10 @@ export function HoldingsSection() {
     >
       {isReadOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("holdings")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Контроль позиций пользователей по релизам Spliton: доступные и заблокированные юниты, начисления и
-          активность на вторичном рынке. Данные из live API — без fake email в production mode.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Контроль позиций пользователей по релизам Spliton: доступные и заблокированные юниты, начисления и
+        активность на вторичном рынке. Данные из live API — без fake email в production mode.
+      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <StatTile

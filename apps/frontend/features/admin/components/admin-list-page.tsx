@@ -58,7 +58,7 @@ export function AdminListPage<T>({
       {loading ? <AdminLoadingState /> : null}
       {error ? <AdminErrorState onRetry={reload} /> : null}
       {!loading && !error ? (
-        <div className="overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/80 shadow-sm">
+        <div className="overflow-hidden rounded-2xl bg-zinc-900/45">
           <AdminDataTable
             columns={columns}
             rows={data.items}

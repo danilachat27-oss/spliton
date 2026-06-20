@@ -1,15 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Circle, HelpCircle } from "@/lib/lucide";
+import { CheckCircle2, Circle, HelpCircle, Archive, Check, Globe, Pause, Plus, Save, Send, X } from "@/lib/lucide";
 import { SplitonLoader } from "@/components/ui/spliton-loader";
 
 import {
-  AdminDrawerCancelButton,
-  AdminDrawerDangerButton,
-  AdminDrawerGhostButton,
-  AdminDrawerPrimaryButton,
-  AdminDrawerSecondaryButton,
+  AdminDrawerActionButton,
+  AdminDrawerFooterToolbar,
 } from "@/features/admin/components/admin-drawer-buttons";
 import { Input } from "@/components/ui/input";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
@@ -36,6 +33,7 @@ import {
 } from "@/features/admin/lib/admin-ui";
 import {
   AdminConfirmDialog,
+  AdminDatePicker,
   AdminDetailDrawer,
   AdminFormField,
   AdminFormFooter,
@@ -324,9 +322,14 @@ export function AdminTrackDrawer({
           readOnly ? (
             <AdminFormFooter
               right={
-                <AdminDrawerGhostButton onClick={() => onOpenChange(false)}>
-                  {a.t("admin.drawer.common.close")}
-                </AdminDrawerGhostButton>
+                <AdminDrawerFooterToolbar>
+                  <AdminDrawerActionButton
+                    icon={X}
+                    label={a.t("admin.drawer.common.close")}
+                    tone="ghost"
+                    onClick={() => onOpenChange(false)}
+                  />
+                </AdminDrawerFooterToolbar>
               }
             />
           ) : (
@@ -341,22 +344,41 @@ export function AdminTrackDrawer({
                 ) : undefined
               }
               right={
-                <>
-                  <AdminDrawerCancelButton disabled={saving} onClick={() => guardedOnOpenChange(false)}>
-                    {a.t("admin.drawer.common.cancel")}
-                  </AdminDrawerCancelButton>
-                  <AdminDrawerSecondaryButton disabled={saving} onClick={() => void save("draft")}>
-                    {saving ? a.t("admin.drawer.common.saving") : a.t("admin.drawer.track.saveDraft")}
-                  </AdminDrawerSecondaryButton>
+                <AdminDrawerFooterToolbar>
+                  <AdminDrawerActionButton
+                    icon={X}
+                    label={a.t("admin.drawer.common.cancel")}
+                    tone="cancel"
+                    disabled={saving}
+                    onClick={() => guardedOnOpenChange(false)}
+                  />
+                  <AdminDrawerActionButton
+                    icon={Save}
+                    label={a.t("admin.drawer.track.saveDraft")}
+                    tone="secondary"
+                    loading={saving}
+                    onClick={() => void save("draft")}
+                  />
                   {mode === "edit" && onSubmitReview ? (
-                    <AdminDrawerSecondaryButton disabled={saving} onClick={() => void save("review")}>
-                      {a.t("admin.drawer.track.submitReview")}
-                    </AdminDrawerSecondaryButton>
+                    <AdminDrawerActionButton
+                      icon={Send}
+                      label={a.t("admin.drawer.track.submitReview")}
+                      tone="secondary"
+                      loading={saving}
+                      onClick={() => void save("review")}
+                    />
                   ) : null}
                   {mode === "edit" && canPublish && onPublish ? (
-                    <AdminDrawerPrimaryButton
-                      disabled={saving || !publishReady}
-                      title={!publishReady ? "Заполните обязательные поля из чеклиста публикации" : undefined}
+                    <AdminDrawerActionButton
+                      icon={Globe}
+                      label={a.t("admin.drawer.track.publish")}
+                      tone="primary"
+                      disabled={!publishReady}
+                      title={
+                        !publishReady
+                          ? "Заполните обязательные поля из чеклиста публикации"
+                          : a.t("admin.drawer.track.publish")
+                      }
                       onClick={() => {
                         const errs = validateTrackForm(form, "publish");
                         if (errs.length) {
@@ -365,30 +387,44 @@ export function AdminTrackDrawer({
                         }
                         setConfirmAction("publish");
                       }}
-                    >
-                      {a.t("admin.drawer.track.publish")}
-                    </AdminDrawerPrimaryButton>
+                    />
                   ) : null}
                   {mode === "edit" && canPublish && onPause && track?.status === "active" ? (
-                    <AdminDrawerSecondaryButton disabled={saving} onClick={() => setConfirmAction("pause")}>
-                      {a.t("admin.drawer.track.pause")}
-                    </AdminDrawerSecondaryButton>
+                    <AdminDrawerActionButton
+                      icon={Pause}
+                      label={a.t("admin.drawer.track.pause")}
+                      tone="secondary"
+                      disabled={saving}
+                      onClick={() => setConfirmAction("pause")}
+                    />
                   ) : null}
                   {mode === "edit" && canPublish && onArchive && track?.status !== "archived" ? (
-                    <AdminDrawerDangerButton disabled={saving} onClick={() => setConfirmAction("archive")}>
-                      {a.t("admin.drawer.track.archive")}
-                    </AdminDrawerDangerButton>
+                    <AdminDrawerActionButton
+                      icon={Archive}
+                      label={a.t("admin.drawer.track.archive")}
+                      tone="danger"
+                      disabled={saving}
+                      onClick={() => setConfirmAction("archive")}
+                    />
                   ) : null}
                   {mode === "create" ? (
-                    <AdminDrawerPrimaryButton disabled={saving} onClick={() => void save("draft")}>
-                      {saving ? a.t("admin.drawer.track.creating") : a.t("admin.drawer.track.create")}
-                    </AdminDrawerPrimaryButton>
+                    <AdminDrawerActionButton
+                      icon={Plus}
+                      label={a.t("admin.drawer.track.create")}
+                      tone="primary"
+                      loading={saving}
+                      onClick={() => void save("draft")}
+                    />
                   ) : (
-                    <AdminDrawerPrimaryButton disabled={saving} onClick={() => void save("draft")}>
-                      {saving ? a.t("admin.drawer.common.saving") : a.t("admin.drawer.track.saveChanges")}
-                    </AdminDrawerPrimaryButton>
+                    <AdminDrawerActionButton
+                      icon={Check}
+                      label={a.t("admin.drawer.track.saveChanges")}
+                      tone="primary"
+                      loading={saving}
+                      onClick={() => void save("draft")}
+                    />
                   )}
-                </>
+                </AdminDrawerFooterToolbar>
               }
             />
           )
@@ -474,13 +510,11 @@ export function AdminTrackDrawer({
                     htmlFor="tr-date"
                     info={a.t("admin.drawer.track.info.releaseDate")}
                   >
-                    <Input
+                    <AdminDatePicker
                       id="tr-date"
-                      type="date"
-                      className={adminFieldInput}
                       value={form.releaseDate}
-                      onChange={(e) => set("releaseDate", e.target.value)}
-                      readOnly={readOnly}
+                      onChange={(releaseDate) => set("releaseDate", releaseDate)}
+                      disabled={readOnly}
                     />
                   </AdminFormField>
                   <AdminStyledSelectField

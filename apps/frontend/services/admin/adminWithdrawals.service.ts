@@ -22,7 +22,7 @@ import {
 
 } from "@/features/admin/mocks/admin-withdrawals.mock";
 
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { requireAdminLiveClient } from "./admin-service.util";
 
 
@@ -348,11 +348,12 @@ export async function patchAdminWithdrawal(
 
 
 export async function listAdminWithdrawals(client?: AdminApiClient): Promise<AdminWithdrawalListItem[]> {
-
-  const res = await listAdminWithdrawalsPaginated({ pageSize: 500 }, client);
-
-  return res.items;
-
+  if (getAdminDataSource() === "live") {
+    requireAdminLiveClient(client);
+    return fetchAllAdminPaginatedItems((query) => listAdminWithdrawalsPaginated(query, client));
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_WITHDRAWALS;
 }
 
 

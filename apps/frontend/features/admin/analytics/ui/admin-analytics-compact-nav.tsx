@@ -46,7 +46,7 @@ export function AdminAnalyticsCompactNav({ activeSection, className }: Props) {
     <nav
       aria-label={t("admin.analytics.compactNav.ariaLabel")}
       className={cn(
-        "flex gap-1 overflow-x-auto rounded-2xl border border-zinc-800/60 bg-zinc-900/50 p-1 scrollbar-thin",
+        "flex gap-1 overflow-x-auto rounded-2xl bg-zinc-900/50 p-1 scrollbar-thin",
         className,
       )}
     >
@@ -60,7 +60,7 @@ export function AdminAnalyticsCompactNav({ activeSection, className }: Props) {
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
               active
-                ? "bg-zinc-900/80 text-zinc-100 shadow-sm"
+                ? "bg-zinc-900/80 text-zinc-100"
                 : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100",
             )}
           >

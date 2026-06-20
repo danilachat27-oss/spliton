@@ -15,6 +15,8 @@ import { verifyAdminAccess } from "@/services/admin.service";
 import { AdminAccessDenied } from "./admin-access-denied";
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
+import { NotificationsUnreadProvider } from "@/components/notifications/notifications-unread-context";
+import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { adminPageBg } from "@/features/admin/lib/admin-ui";
 import { SplitonLoadingView } from "@/components/ui/spliton-loader";
 import { SystemAnnouncementBanners } from "@/components/system-announcements/system-announcement-banners";
@@ -108,23 +110,31 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
   }
 
     return (
-    <div className="admin-portal flex h-dvh min-h-0 flex-col antialiased">
-      <AdminHeader />
-      <SystemAnnouncementBanners surface="admin" />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <AdminSidebar />
-        <main className={cn("relative z-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden", adminPageBg)}>
-          {serverAccess === null ? (
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-zinc-950/95 px-4 py-2 text-center text-xs text-zinc-500 backdrop-blur-sm"
-              role="status"
-            >
-              {a.verifyingAccess}
-            </div>
-          ) : null}
-          {children}
-        </main>
+    <NotificationsUnreadProvider apiBasePath={ADMIN_API_PATHS.notifications}>
+      <div className="admin-portal flex h-dvh min-h-0 flex-col antialiased">
+        <AdminHeader />
+        <SystemAnnouncementBanners surface="admin" />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <AdminSidebar />
+          <main
+            className={cn(
+              "relative z-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden",
+              "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+              adminPageBg,
+            )}
+          >
+            {serverAccess === null ? (
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 z-20 bg-zinc-950/95 px-4 py-2 text-center text-xs text-zinc-500 backdrop-blur-sm"
+                role="status"
+              >
+                {a.verifyingAccess}
+              </div>
+            ) : null}
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </NotificationsUnreadProvider>
   );
 }

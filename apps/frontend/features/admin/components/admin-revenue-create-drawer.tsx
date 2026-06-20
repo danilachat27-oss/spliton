@@ -21,6 +21,7 @@ import type { AdminRevenuePreview } from "@/features/admin/mocks/admin-revenue.m
 import {
   AdminConfirmDialog,
   AdminDataTable,
+  AdminDatePicker,
   AdminDetailDrawer,
   AdminFormField,
   AdminFormFooter,
@@ -302,21 +303,17 @@ export function AdminRevenueCreateDrawer({
             </AdminFormField>
             <div className="grid grid-cols-2 gap-3">
               <AdminFormField label={a.t("admin.drawer.revenueCreate.periodFrom")} htmlFor="from">
-                <Input
+                <AdminDatePicker
                   id="from"
-                  type="date"
                   value={form.periodFrom}
-                  onChange={(e) => setForm({ ...form, periodFrom: e.target.value })}
-                  className={adminFieldInput}
+                  onChange={(periodFrom) => setForm({ ...form, periodFrom })}
                 />
               </AdminFormField>
               <AdminFormField label={a.t("admin.drawer.revenueCreate.periodTo")} htmlFor="to">
-                <Input
+                <AdminDatePicker
                   id="to"
-                  type="date"
                   value={form.periodTo}
-                  onChange={(e) => setForm({ ...form, periodTo: e.target.value })}
-                  className={adminFieldInput}
+                  onChange={(periodTo) => setForm({ ...form, periodTo })}
                 />
               </AdminFormField>
             </div>

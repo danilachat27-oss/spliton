@@ -6,7 +6,7 @@ import {
   MOCK_ADMIN_ROUNDS,
   type AdminRoundListItem,
 } from "@/features/admin/mocks/admin-rounds.mock";
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { assertLiveAdminClient } from "./admin-service.util";
 
 function filterMockRounds(items: AdminRoundListItem[], query?: AdminListQuery): AdminRoundListItem[] {
@@ -39,8 +39,14 @@ export async function listAdminRoundsPaginated(
 }
 
 export async function listAdminRounds(client?: AdminApiClient): Promise<AdminRoundListItem[]> {
-  const res = await listAdminRoundsPaginated({ pageSize: 500 }, client);
-  return res.items;
+  if (getAdminDataSource() === "live") {
+    assertLiveAdminClient(client);
+    return fetchAllAdminPaginatedItems((query) =>
+      client.getPaginated<AdminRoundListItem>(ADMIN_API_PATHS.rounds, query),
+    );
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_ROUNDS;
 }
 
 export async function getAdminRound(

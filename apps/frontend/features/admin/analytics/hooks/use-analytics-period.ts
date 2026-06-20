@@ -44,6 +44,36 @@ export function useAnalyticsPeriod(defaultPeriod: AnalyticsPeriodKey = "30d") {
   };
 }
 
+export function resolveAnalyticsExportDateRange(
+  period: AnalyticsPeriodKey,
+  customFrom?: string,
+  customTo?: string,
+): { dateFrom: string; dateTo: string } {
+  if (period === "custom" && customFrom && customTo) {
+    return { dateFrom: customFrom, dateTo: customTo };
+  }
+
+  const to = new Date();
+  const from = new Date(to);
+  switch (period) {
+    case "24h":
+      from.setHours(from.getHours() - 24);
+      break;
+    case "7d":
+      from.setDate(from.getDate() - 7);
+      break;
+    case "90d":
+      from.setDate(from.getDate() - 90);
+      break;
+    case "30d":
+    default:
+      from.setDate(from.getDate() - 30);
+      break;
+  }
+
+  return { dateFrom: toDateInputValue(from), dateTo: toDateInputValue(to) };
+}
+
 export function parseAnalyticsMoney(value: string): number {
   return Number(value.replace(/\s/g, "").replace(",", ".")) || 0;
 }

@@ -50,10 +50,10 @@ export function AdminAnalyticsPageShell({
       ) : null}
       <AdminPageHeader title={title} description={description} breadcrumbs={breadcrumbs} actions={actions} />
       <div className="mt-4 space-y-4">
-        {filters}
-        <AdminAnalyticsCompactNav activeSection={activeSection} />
-        <AdminAnalyticsTabs tabs={pageTabs} activeId={tab} onChange={setTab} />
-        <div className="pt-2">{children(tab)}</div>
+        {filters ? <div className="relative z-30 overflow-visible">{filters}</div> : null}
+        <AdminAnalyticsCompactNav activeSection={activeSection} className="relative z-0" />
+        <AdminAnalyticsTabs tabs={pageTabs} activeId={tab} onChange={setTab} className="relative z-0" />
+        <div className="relative z-0 pt-2">{children(tab)}</div>
       </div>
     </AdminPageShell>
   );

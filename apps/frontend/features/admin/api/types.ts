@@ -19,6 +19,9 @@ export type PaginatedResponse<T> = {
   hasMore: boolean;
 };
 
+/** Backend `AdminListQueryDto` caps pageSize at 100. */
+export const ADMIN_LIST_MAX_PAGE_SIZE = 100;
+
 export type AdminListQuery = {
   page?: number;
   pageSize?: number;

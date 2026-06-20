@@ -31,7 +31,7 @@ export function AdminAnalyticsTabs({ tabs, activeId, onChange, className }: Prop
             className={cn(
               "rounded-t-xl px-4 py-2.5 text-sm font-medium transition-colors",
               active
-                ? "border-b-2 border-zinc-900 bg-zinc-900/80 text-zinc-100"
+                ? "border-b-2 border-[#B7F500] bg-zinc-900/80 text-zinc-100"
                 : "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200",
             )}
           >

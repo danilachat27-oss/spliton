@@ -4,11 +4,14 @@ import { ChevronDown } from "@/lib/lucide";
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
@@ -16,6 +19,14 @@ import { cn } from "@/lib/utils";
 export type StyledSelectOption = {
   value: string;
   label: string;
+};
+
+type MenuPosition = {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+  placement: "below" | "above";
 };
 
 type StyledSelectProps = {
@@ -36,6 +47,22 @@ type StyledSelectProps = {
   borderless?: boolean;
   "aria-label"?: string;
 };
+
+function menuSurfaceClass(
+  tone: StyledSelectProps["tone"],
+  variant: StyledSelectProps["variant"],
+  borderless: boolean,
+) {
+  if (tone === "dark") {
+    return borderless
+      ? "border border-zinc-800/80 bg-[#1a1a1d] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.6)]"
+      : "border border-white/10 bg-zinc-900 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.6)]";
+  }
+  if (variant === "okx") {
+    return "rounded-lg border border-[#EEEEEE] bg-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.12)]";
+  }
+  return "border border-neutral-200 bg-white shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)]";
+}
 
 export function StyledSelect({
   value,
@@ -59,18 +86,71 @@ export function StyledSelect({
   const autoId = useId();
   const triggerId = id ?? autoId;
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [menuPos, setMenuPos] = useState<MenuPosition | null>(null);
   const resolvedPlaceholder = placeholder ?? t("form.selectPlaceholder");
 
   const items = useMemo(() => options, [options]);
   const currentLabel = items.find((o) => o.value === value)?.label ?? resolvedPlaceholder;
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateMenuPosition = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const gap = 6;
+    const viewportPadding = 12;
+    const preferredMax = 280;
+    const minVisible = 160;
+    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - gap;
+    const spaceAbove = rect.top - viewportPadding - gap;
+    const openAbove = spaceBelow < minVisible && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(
+      preferredMax,
+      Math.max(120, openAbove ? spaceAbove : spaceBelow),
+    );
+    const left =
+      align === "end"
+        ? Math.max(viewportPadding, rect.right - rect.width)
+        : Math.min(rect.left, window.innerWidth - rect.width - viewportPadding);
+
+    setMenuPos({
+      top: openAbove ? rect.top - gap : rect.bottom + gap,
+      left,
+      width: rect.width,
+      maxHeight,
+      placement: openAbove ? "above" : "below",
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPos(null);
+      return;
+    }
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open, align, items.length]);
+
+  useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -83,9 +163,78 @@ export function StyledSelect({
     };
   }, [open]);
 
+  const menuStyle: CSSProperties | undefined = menuPos
+    ? {
+        position: "fixed",
+        top: menuPos.top,
+        left: menuPos.left,
+        width: menuPos.width,
+        minWidth: menuPos.width,
+        zIndex: 200,
+        transform: menuPos.placement === "above" ? "translateY(-100%)" : undefined,
+      }
+    : undefined;
+
+  const menu = open && menuPos ? (
+    <div
+      ref={menuRef}
+      role="listbox"
+      aria-labelledby={triggerId}
+      style={menuStyle}
+      className={cn(
+        "overflow-hidden rounded-xl",
+        menuSurfaceClass(tone, variant, borderless),
+        menuClassName,
+      )}
+    >
+      <ul
+        style={{ maxHeight: menuPos.maxHeight }}
+        className={cn(
+          "overflow-x-hidden overflow-y-auto overscroll-contain py-1.5 pb-2",
+          tone === "dark" && "revshare-scrollbar",
+        )}
+      >
+        {items.map((item) => {
+          const selected = item.value === value;
+          return (
+            <li key={item.value || "__empty"}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(item.value);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full items-start px-3 py-2.5 text-left text-[13px] leading-snug transition whitespace-normal",
+                  selected
+                    ? tone === "dark"
+                      ? "bg-[#B7F500]/14 font-semibold text-white ring-1 ring-inset ring-[#B7F500]/25"
+                      : variant === "okx"
+                        ? "bg-[#F5F5F5] font-medium text-black"
+                        : "bg-[#B7F500]/14 font-semibold text-neutral-900 ring-1 ring-inset ring-[#B7F500]/20"
+                    : tone === "dark"
+                      ? "text-zinc-300 hover:bg-white/5"
+                      : variant === "okx"
+                        ? "text-black hover:bg-[#F5F5F5]"
+                        : "text-neutral-700 hover:bg-neutral-50",
+                )}
+              >
+                {item.label}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  ) : null;
+
   return (
-    <div ref={rootRef} className={cn("relative", fullWidth && "w-full", className)}>
+    <div ref={rootRef} className={cn("relative overflow-visible", fullWidth && "w-full", className)}>
       <button
+        ref={triggerRef}
         id={triggerId}
         type="button"
         disabled={disabled}
@@ -138,65 +287,7 @@ export function StyledSelect({
         />
       </button>
 
-      {open ? (
-        <div
-          role="listbox"
-          aria-labelledby={triggerId}
-          className={cn(
-            "absolute top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-xl border shadow-[0_16px_40px_-20px_rgba(0,0,0,0.35)]",
-            tone === "dark"
-              ? borderless
-                ? "border-0 bg-[#1a1a1a] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.6)]"
-                : "border-white/10 bg-zinc-900"
-              : variant === "okx"
-                ? "rounded-lg border border-[#EEEEEE] bg-white shadow-[0_8px_24px_-12px_rgba(0,0,0,0.12)]"
-                : "border-neutral-200 bg-white",
-            align === "end" ? "right-0" : "left-0",
-            menuClassName,
-          )}
-        >
-          <ul
-            className={cn(
-              "max-h-64 overflow-x-hidden overflow-y-auto py-1",
-              tone === "dark" && "revshare-scrollbar",
-            )}
-          >
-            {items.map((item) => {
-              const selected = item.value === value;
-              return (
-                <li key={item.value || "__empty"}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      onChange(item.value);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center px-3 py-2.5 text-left text-[13px] transition",
-                      selected
-                        ? tone === "dark"
-                          ? "bg-[#B7F500]/14 font-semibold text-white ring-1 ring-inset ring-[#B7F500]/25"
-                          : variant === "okx"
-                            ? "bg-[#F5F5F5] font-medium text-black"
-                            : "bg-[#B7F500]/14 font-semibold text-neutral-900 ring-1 ring-inset ring-[#B7F500]/20"
-                        : tone === "dark"
-                          ? "text-zinc-300 hover:bg-white/5"
-                          : variant === "okx"
-                            ? "text-black hover:bg-[#F5F5F5]"
-                            : "text-neutral-700 hover:bg-neutral-50",
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
+      {mounted && menu ? createPortal(menu, document.body) : null}
     </div>
   );
 }

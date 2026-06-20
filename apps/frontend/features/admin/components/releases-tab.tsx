@@ -14,6 +14,7 @@ import type { AdminTrackFormBody } from "@/features/admin/lib/admin-track-form";
 import { trackFormToPayload } from "@/features/admin/lib/admin-track-form";
 import { trackToReleaseCard } from "@/features/admin/lib/admin-track-release-mapper";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
+import { ADMIN_LIST_MAX_PAGE_SIZE } from "@/features/admin/api/types";
 import { adminSurface } from "@/features/admin/lib/admin-ui";
 import type { AdminTrackListItem } from "@/features/admin/mocks/admin-tracks.mock";
 import { ROUTES } from "@/constants/routes";
@@ -56,7 +57,7 @@ export function ReleasesTab() {
     setLoading(true);
     setError(null);
     void listAdminTracksPaginated(
-      { page: 1, pageSize: 200, search: query.trim() || undefined },
+      { page: 1, pageSize: ADMIN_LIST_MAX_PAGE_SIZE, search: query.trim() || undefined },
       client,
     )
       .then((page) => setRows(page.items))

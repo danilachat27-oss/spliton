@@ -32,15 +32,15 @@ function persistGuestDismissed(ids: Set<string>) {
 
 function severityStyles(severity: string, type: string) {
   if (type === "maintenance" || type === "incident" || severity === "critical") {
-    return "border-amber-500/30 bg-amber-500/10 text-amber-50";
+    return "border-amber-300 bg-amber-50 text-amber-950 [&_a]:text-amber-900 [&_a:hover]:text-amber-950";
   }
   if (type === "error" || severity === "high") {
-    return "border-red-500/30 bg-red-500/10 text-red-50";
+    return "border-rose-300 bg-rose-50 text-rose-950 [&_a]:text-rose-900 [&_a:hover]:text-rose-950";
   }
   if (type === "success") {
-    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-50";
+    return "border-emerald-300 bg-emerald-50 text-emerald-950 [&_a]:text-emerald-900 [&_a:hover]:text-emerald-950";
   }
-  return "border-blue-500/20 bg-blue-500/10 text-blue-50";
+  return "border-sky-300 bg-sky-50 text-sky-950 [&_a]:text-sky-900 [&_a:hover]:text-sky-950";
 }
 
 function BannerIcon({ type }: { type: string }) {
@@ -73,7 +73,7 @@ function AnnouncementBannerItem({
       <BannerIcon type={item.type} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{item.title}</p>
-        <p className="mt-0.5 text-[13px] leading-relaxed opacity-90">{text}</p>
+        <p className="mt-0.5 text-[13px] leading-relaxed opacity-80">{text}</p>
         {item.actionUrl ? (
           <Link
             href={item.actionUrl}
@@ -86,7 +86,7 @@ function AnnouncementBannerItem({
       {item.dismissible ? (
         <button
           type="button"
-          className="rounded-md p-1 opacity-80 transition hover:bg-white/10 hover:opacity-100"
+          className="rounded-md p-1 opacity-70 transition hover:bg-black/5 hover:opacity-100"
           aria-label={t("actions.dismiss")}
           onClick={() => onDismiss(item.id)}
         >

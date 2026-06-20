@@ -14,6 +14,8 @@ import {
 
   BadgePercent,
 
+  Bell,
+
   BookOpen,
 
   ChartColumn,
@@ -854,6 +856,16 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: Activity,
 
         roles: ["SUPER_ADMIN", "ADMIN"],
+
+      },
+
+      {
+
+        id: "notifications",
+
+        href: ROUTES.adminNotifications,
+
+        icon: Bell,
 
       },
 

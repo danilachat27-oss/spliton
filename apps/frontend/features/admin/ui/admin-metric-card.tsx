@@ -1,3 +1,5 @@
+import { AdminKpiValue } from "./admin-kpi-value";
+import { isAdminMetricEmpty } from "@/features/admin/lib/admin-format";
 import { cn } from "@/lib/utils";
 import {
   adminCard,
@@ -23,7 +25,11 @@ export function AdminMetricCard({
   return (
     <div className={cn(adminCard("p-4"), className)}>
       <p className={adminMetricLabel}>{label}</p>
-      <p className={cn(adminMetricValue, "mt-1 tabular-nums")}>{value}</p>
+      {isAdminMetricEmpty(value) ? (
+        <AdminKpiValue value={value} className="mt-1" />
+      ) : (
+        <p className={cn(adminMetricValue, "mt-1 tabular-nums")}>{value}</p>
+      )}
       {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
       {trend ? <p className="mt-2 text-xs font-medium text-emerald-400">{trend}</p> : null}
     </div>

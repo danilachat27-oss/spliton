@@ -3,8 +3,9 @@
 import * as React from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
+import { useNotificationsUnread } from "@/components/notifications/notifications-unread-context";
 import { AdminSectionGuard } from "@/features/admin/components/admin-section-guard";
-import { getAdminApiBaseUrl } from "@/features/admin/api/admin-api.config";
+import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { formatDateTime } from "@/lib/i18n/formatters";
@@ -21,8 +22,9 @@ import {
 
 export function AdminNotificationsContent() {
   const { authorizedFetch } = useAuth();
+  const notificationsUnread = useNotificationsUnread();
   const { t, locale, notificationCategoryLabel } = useAdminI18n();
-  const base = `${getAdminApiBaseUrl()}/notifications`;
+  const base = ADMIN_API_PATHS.notifications;
   const [items, setItems] = React.useState<NotificationItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -38,13 +40,14 @@ export function AdminNotificationsContent() {
         unreadOnly,
       });
       setItems(data.items);
+      void notificationsUnread?.refresh();
     } catch (e) {
       setError(localizedAdminError(e));
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [authorizedFetch, base, unreadOnly]);
+  }, [authorizedFetch, base, unreadOnly, notificationsUnread]);
 
   React.useEffect(() => {
     void load();
@@ -71,7 +74,10 @@ export function AdminNotificationsContent() {
             className="rounded-lg border border-zinc-700 px-3 py-1.5 hover:bg-zinc-800"
             onClick={() =>
               void markAllNotificationsRead(authorizedFetch, base)
-                .then(() => void load())
+                .then(() => {
+                  notificationsUnread?.setUnread(0);
+                  return load();
+                })
                 .catch((e) => setError(localizedAdminError(e)))
             }
           >
@@ -122,7 +128,10 @@ export function AdminNotificationsContent() {
                     className="text-xs text-zinc-400 hover:text-zinc-200"
                     onClick={() =>
                       void markNotificationRead(authorizedFetch, base, item.id)
-                        .then(() => void load())
+                        .then(() => {
+                          notificationsUnread?.setUnread((count) => Math.max(0, count - 1));
+                          return load();
+                        })
                         .catch((e) => setError(localizedAdminError(e)))
                     }
                   >

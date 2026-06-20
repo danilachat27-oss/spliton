@@ -22,7 +22,7 @@ export function AdminSectionForbidden({ sectionTitle }: AdminSectionForbiddenPro
 
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center px-6 py-16">
-      <div className="max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 text-center shadow-sm">
+      <div className="max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 text-center">
         <h2 className="text-lg font-semibold text-zinc-100">У вашей роли нет доступа к этому разделу</h2>
         {sectionTitle ? (
           <p className="mt-2 text-sm text-zinc-400">

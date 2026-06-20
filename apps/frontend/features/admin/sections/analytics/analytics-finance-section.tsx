@@ -19,7 +19,8 @@ import {
 } from "@/features/admin/analytics/hooks/use-analytics-period";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminMetricHours, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { AdminKpiValue } from "@/features/admin/ui/admin-kpi-value";
 import { feeCodeLabel, kpiTooltipsForLocale } from "@/features/admin/lib/admin-analytics-i18n";
 import {
   getFinanceAnalyticsCashflow,
@@ -300,17 +301,17 @@ export function AnalyticsFinanceSection() {
                 emptyVariant="finance"
               >
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-zinc-50/80 p-4">
+                  <div className="rounded-2xl bg-zinc-900/45 p-4">
                     <p className="text-xs text-zinc-500">{a.t("admin.analytics.finance.avgHours")}</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums">{processing?.averageHours ?? "—"}</p>
+                    <AdminKpiValue value={formatAdminMetricHours(processing?.averageHours ?? null)} />
                   </div>
-                  <div className="rounded-2xl bg-zinc-50/80 p-4">
+                  <div className="rounded-2xl bg-zinc-900/45 p-4">
                     <p className="text-xs text-zinc-500">{a.t("admin.analytics.finance.medianHours")}</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums">{processing?.medianHours ?? "—"}</p>
+                    <AdminKpiValue value={formatAdminMetricHours(processing?.medianHours ?? null)} />
                   </div>
-                  <div className="rounded-2xl bg-zinc-50/80 p-4">
+                  <div className="rounded-2xl bg-zinc-900/45 p-4">
                     <p className="text-xs text-zinc-500">{a.t("admin.analytics.finance.sample")}</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums">{processing?.samples ?? 0}</p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums text-zinc-100">{processing?.samples ?? 0}</p>
                   </div>
                 </div>
               </AdminChartCard>

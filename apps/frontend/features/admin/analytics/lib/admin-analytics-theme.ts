@@ -43,7 +43,10 @@ export const adminPeriodSelectorIdle =
   "text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200";
 
 export const adminAnalyticsFilterBar =
-  "flex flex-wrap items-end gap-3 rounded-2xl bg-zinc-900/40 p-4";
+  "relative z-30 flex flex-col gap-4 overflow-visible rounded-2xl bg-zinc-900/40 p-4 md:flex-row md:flex-wrap md:items-end md:gap-3";
+
+export const adminAnalyticsFilterField =
+  "w-full overflow-visible md:min-w-[148px] md:max-w-[240px] md:flex-1";
 
 export const adminChartEmptyShell =
   "flex min-h-[200px] flex-col items-center justify-center rounded-2xl bg-zinc-900/30 px-6 py-10 text-center";

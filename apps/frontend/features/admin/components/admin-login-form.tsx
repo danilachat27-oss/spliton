@@ -104,7 +104,7 @@ export function AdminLoginForm() {
 
   if (state === "denied") {
     return (
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center">
         <h2 className="text-lg font-semibold text-zinc-900">{a.t("admin.login.accessDeniedTitle")}</h2>
         <p className="mt-2 text-sm leading-relaxed text-zinc-600">{message}</p>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">

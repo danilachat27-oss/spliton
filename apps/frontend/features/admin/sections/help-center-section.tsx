@@ -4,9 +4,7 @@ import * as React from "react";
 
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
-import { Input } from "@/components/ui/input";
-import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
+import { adminBtnOutline } from "@/features/admin/lib/admin-ui";
 import {
   AdminHelpArticleDrawer,
   helpArticleFormToPayload,
@@ -35,13 +33,14 @@ import {
   canPublishHelpArticles,
   canViewHelpCenter,
 } from "@/features/admin/lib/help-center-access";
-import { ADMIN_SECTION_FILTERS } from "@/features/admin/lib/admin-section-styles";
 import {
   AdminDataTable,
+  AdminFilterBar,
   AdminLocalizedStatusBadge,
   AdminReadOnlyBanner,
   AdminConfirmDialog,
   type AdminColumn,
+  type AdminFilterField,
 } from "@/features/admin/ui";
 import { useApiErrorMessage } from "@/hooks/use-api-error-message";
 import {
@@ -58,6 +57,7 @@ import {
   type AdminHelpArticle,
   type AdminHelpCategory,
 } from "@/services/admin/adminHelpCenter.service";
+import { fetchAllAdminPaginatedItems } from "@/services/admin/admin-api.util";
 
 const HELP_TAB_KEYS = [
   { id: "overview", labelKey: "admin.helpCenter.tab.overview" },
@@ -79,6 +79,39 @@ function categoryLabel(categories: AdminHelpCategory[], id: string | null): stri
 function parentLabel(categories: AdminHelpCategory[], parentId: string | null): string {
   if (!parentId) return "—";
   return categoryLabel(categories, parentId);
+}
+
+function isInactiveFilter(value: string): boolean {
+  return value.trim() === "" || value === "all";
+}
+
+function sortHelpArticles(rows: AdminHelpArticle[], sort: string): AdminHelpArticle[] {
+  const sorted = [...rows];
+  switch (sort) {
+    case "updated_desc":
+      sorted.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      break;
+    case "updated_asc":
+      sorted.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+      break;
+    case "title_asc":
+      sorted.sort((a, b) =>
+        (a.titlePreview || a.slug).localeCompare(b.titlePreview || b.slug, undefined, { sensitivity: "base" }),
+      );
+      break;
+    case "title_desc":
+      sorted.sort((a, b) =>
+        (b.titlePreview || b.slug).localeCompare(a.titlePreview || a.slug, undefined, { sensitivity: "base" }),
+      );
+      break;
+    case "views_desc":
+      sorted.sort((a, b) => b.viewCount - a.viewCount || b.updatedAt.localeCompare(a.updatedAt));
+      break;
+    default:
+      sorted.sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
+      break;
+  }
+  return sorted;
 }
 
 export function HelpCenterSection() {
@@ -114,6 +147,8 @@ export function HelpCenterSection() {
   const [articleStatusFilter, setArticleStatusFilter] = React.useState("");
   const [articleCategoryFilter, setArticleCategoryFilter] = React.useState("");
   const [articleFlagFilter, setArticleFlagFilter] = React.useState("");
+  const [articleSort, setArticleSort] = React.useState("");
+  const [categorySearch, setCategorySearch] = React.useState("");
 
   const [categoryDrawerOpen, setCategoryDrawerOpen] = React.useState(false);
   const [categoryMode, setCategoryMode] = React.useState<"create" | "edit">("create");
@@ -143,11 +178,11 @@ export function HelpCenterSection() {
     setError(false);
     Promise.all([
       listAdminHelpCategories(client),
-      listAdminHelpArticlesPaginated({ pageSize: 500 }, client),
+      fetchAllAdminPaginatedItems((query) => listAdminHelpArticlesPaginated(query, client)),
     ])
       .then(([cats, arts]) => {
         setCategories(cats);
-        setArticles(arts.items);
+        setArticles(arts);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -156,6 +191,125 @@ export function HelpCenterSection() {
   React.useEffect(() => {
     load();
   }, [load]);
+
+  React.useEffect(() => {
+    if (tab !== "articles") setArticleStatusFilter("");
+    if (tab === "popular" || tab === "getting-started") setArticleFlagFilter("");
+  }, [tab]);
+
+  const categorySelectOptions = React.useMemo(
+    () => [
+      { value: "", label: a.t("admin.helpCenter.filter.category.all") },
+      ...categories
+        .slice()
+        .sort((x, y) => x.sortOrder - y.sortOrder)
+        .map((c) => ({ value: c.id, label: c.titlePreview || c.slug })),
+    ],
+    [categories, a],
+  );
+
+  const articleSortOptions = React.useMemo(
+    () => [
+      { value: "", label: a.t("admin.helpCenter.filter.sort.default") },
+      { value: "updated_desc", label: a.t("admin.helpCenter.filter.sort.updatedDesc") },
+      { value: "updated_asc", label: a.t("admin.helpCenter.filter.sort.updatedAsc") },
+      { value: "title_asc", label: a.t("admin.helpCenter.filter.sort.titleAsc") },
+      { value: "title_desc", label: a.t("admin.helpCenter.filter.sort.titleDesc") },
+      { value: "views_desc", label: a.t("admin.helpCenter.filter.sort.viewsDesc") },
+      { value: "order_asc", label: a.t("admin.helpCenter.filter.sort.orderAsc") },
+    ],
+    [a],
+  );
+
+  const articleFilterFields = React.useMemo((): AdminFilterField[] => {
+    const fields: AdminFilterField[] = [
+      {
+        id: "help-article-search",
+        label: a.t("admin.helpCenter.filter.search"),
+        type: "search",
+        value: articleSearch,
+        onChange: setArticleSearch,
+        placeholder: a.t("admin.helpCenter.filter.searchPlaceholder"),
+      },
+    ];
+
+    if (tab === "articles") {
+      fields.push({
+        id: "help-article-status",
+        label: a.table.status,
+        type: "select",
+        value: articleStatusFilter,
+        onChange: setArticleStatusFilter,
+        options: [
+          { value: "", label: a.actions.allStatuses },
+          { value: "draft", label: a.formatAdminStatus("draft") },
+          { value: "published", label: a.formatAdminStatus("published") },
+          { value: "archived", label: a.formatAdminStatus("archived") },
+        ],
+      });
+    }
+
+    fields.push({
+      id: "help-article-category",
+      label: a.table.category,
+      type: "select",
+      value: articleCategoryFilter,
+      onChange: setArticleCategoryFilter,
+      options: categorySelectOptions,
+    });
+
+    if (tab === "articles" || tab === "drafts") {
+      fields.push({
+        id: "help-article-flag",
+        label: a.t("admin.ui.tag"),
+        type: "select",
+        value: articleFlagFilter,
+        onChange: setArticleFlagFilter,
+        options: [
+          { value: "", label: a.t("admin.helpCenter.filter.flags.all") },
+          { value: "featured", label: a.t("admin.helpCenter.featured") },
+          { value: "popular", label: a.t("admin.helpCenter.popular") },
+          { value: "gettingStarted", label: a.t("admin.helpCenter.gettingStarted") },
+          { value: "none", label: a.t("admin.helpCenter.filter.flags.none") },
+        ],
+      });
+    }
+
+    fields.push({
+      id: "help-article-sort",
+      label: a.t("admin.helpCenter.filter.sort"),
+      type: "select",
+      value: articleSort,
+      onChange: setArticleSort,
+      options: articleSortOptions,
+    });
+
+    return fields;
+  }, [
+    a,
+    tab,
+    articleSearch,
+    articleStatusFilter,
+    articleCategoryFilter,
+    articleFlagFilter,
+    articleSort,
+    categorySelectOptions,
+    articleSortOptions,
+  ]);
+
+  const categoryFilterFields = React.useMemo(
+    (): AdminFilterField[] => [
+      {
+        id: "help-category-search",
+        label: a.t("admin.helpCenter.filter.search"),
+        type: "search",
+        value: categorySearch,
+        onChange: setCategorySearch,
+        placeholder: a.t("admin.helpCenter.filter.categorySearchPlaceholder"),
+      },
+    ],
+    [a, categorySearch],
+  );
 
   const stats = React.useMemo(() => {
     const publishedCats = categories.filter((c) => c.isPublished).length;
@@ -196,11 +350,18 @@ export function HelpCenterSection() {
     else if (tab === "drafts") rows = rows.filter((r) => r.status === "draft");
 
     if (tab === "articles" || tab === "popular" || tab === "getting-started" || tab === "drafts") {
-      if (articleStatusFilter) rows = rows.filter((r) => r.status === articleStatusFilter);
-      if (articleCategoryFilter) rows = rows.filter((r) => r.categoryId === articleCategoryFilter);
+      if (!isInactiveFilter(articleStatusFilter)) {
+        rows = rows.filter((r) => r.status === articleStatusFilter);
+      }
+      if (!isInactiveFilter(articleCategoryFilter)) {
+        rows = rows.filter((r) => r.categoryId === articleCategoryFilter);
+      }
       if (articleFlagFilter === "featured") rows = rows.filter((r) => r.isFeatured);
       else if (articleFlagFilter === "popular") rows = rows.filter((r) => r.isPopular);
       else if (articleFlagFilter === "gettingStarted") rows = rows.filter((r) => r.isGettingStarted);
+      else if (articleFlagFilter === "none") {
+        rows = rows.filter((r) => !r.isFeatured && !r.isPopular && !r.isGettingStarted);
+      }
 
       const q = articleSearch.trim().toLowerCase();
       if (q) {
@@ -213,8 +374,30 @@ export function HelpCenterSection() {
       }
     }
 
-    return rows.sort((a, b) => a.sortOrder - b.sortOrder || b.updatedAt.localeCompare(a.updatedAt));
-  }, [articles, tab, articleStatusFilter, articleCategoryFilter, articleFlagFilter, articleSearch]);
+    return sortHelpArticles(rows, articleSort);
+  }, [articles, tab, articleStatusFilter, articleCategoryFilter, articleFlagFilter, articleSearch, articleSort]);
+
+  const tabArticleTotal = React.useMemo(() => {
+    if (tab === "popular") return articles.filter((r) => r.isPopular).length;
+    if (tab === "getting-started") return articles.filter((r) => r.isGettingStarted).length;
+    if (tab === "drafts") return articles.filter((r) => r.status === "draft").length;
+    if (tab === "articles") return articles.length;
+    return 0;
+  }, [articles, tab]);
+
+  const filteredCategories = React.useMemo(() => {
+    const q = categorySearch.trim().toLowerCase();
+    let rows = [...categories];
+    if (q) {
+      rows = rows.filter(
+        (c) =>
+          c.slug.toLowerCase().includes(q) ||
+          c.titlePreview.toLowerCase().includes(q) ||
+          Object.values(c.titleTranslations).some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+    return rows.sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [categories, categorySearch]);
 
   function showFeedback(msg: string, isError = false) {
     setFeedback(isError ? msg : msg);
@@ -636,7 +819,7 @@ export function HelpCenterSection() {
               ].map((k) => (
                 <div
                   key={k.label}
-                  className="rounded-2xl border border-neutral-200/80 bg-zinc-900/50 px-4 py-4 shadow-sm"
+                  className="rounded-2xl border border-neutral-200/80 bg-zinc-900/50 px-4 py-4"
                 >
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{k.label}</p>
                   <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">{k.value}</p>
@@ -714,11 +897,20 @@ export function HelpCenterSection() {
                 </Button>
               ) : null}
             </div>
+            <AdminFilterBar
+              className="!mb-4 !rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+              fields={categoryFilterFields}
+            />
+            <p className="mb-3 text-xs text-zinc-500">
+              {a.t("admin.helpCenter.filter.results")
+                .replace("{shown}", String(filteredCategories.length))
+                .replace("{total}", String(categories.length))}
+            </p>
             <AdminSectionDataArea loading={loading} error={error} onRetry={load} loadingLabel="Загрузка категорий…">
               <AdminDataTable
                 flat
                 columns={categoryColumns}
-                rows={categories.sort((a, b) => a.sortOrder - b.sortOrder)}
+                rows={filteredCategories}
                 rowKey={(r) => r.id}
                 onRowClick={openEditCategory}
                 emptyMessage="Категории не созданы. Добавьте первую категорию для структуры Help Center."
@@ -737,58 +929,15 @@ export function HelpCenterSection() {
               ) : null}
             </div>
 
-            <div className={ADMIN_SECTION_FILTERS}>
-              <div className="sm:col-span-2">
-                <label htmlFor="help-article-search" className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                  Поиск
-                </label>
-                <Input
-                  id="help-article-search"
-                  value={articleSearch}
-                  onChange={(e) => setArticleSearch(e.target.value)}
-                  placeholder={a.t("admin.placeholder.helpCenterSlug")}
-                  className="h-10 rounded-xl border-neutral-200 bg-zinc-900/80"
-                />
-              </div>
-              {tab === "articles" ? (
-                <AdminStyledSelectField
-                  label={a.table.status}
-                  value={articleStatusFilter}
-                  onChange={setArticleStatusFilter}
-                  options={[
-                    { value: "", label: "Все статусы" },
-                    { value: "draft", label: "Черновик" },
-                    { value: "published", label: "Опубликовано" },
-                    { value: "archived", label: "Архив" },
-                  ]}
-                />
-              ) : null}
-              <AdminStyledSelectField
-                label={a.table.category}
-                value={articleCategoryFilter}
-                onChange={setArticleCategoryFilter}
-                options={[
-                  { value: "", label: "Все категории" },
-                  ...categories.map((c) => ({
-                    value: c.id,
-                    label: c.titlePreview || c.slug,
-                  })),
-                ]}
-              />
-              {tab === "articles" ? (
-                <AdminStyledSelectField
-                  label={a.t("admin.ui.tag")}
-                  value={articleFlagFilter}
-                  onChange={setArticleFlagFilter}
-                  options={[
-                    { value: "", label: "Все метки" },
-                    { value: "featured", label: a.t("admin.helpCenter.featured") },
-                    { value: "popular", label: a.t("admin.helpCenter.popular") },
-                    { value: "gettingStarted", label: a.t("admin.helpCenter.gettingStarted") },
-                  ]}
-                />
-              ) : null}
-            </div>
+            <AdminFilterBar
+              className="!mb-3 !rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+              fields={articleFilterFields}
+            />
+            <p className="mb-3 text-xs text-zinc-500">
+              {a.t("admin.helpCenter.filter.results")
+                .replace("{shown}", String(filteredArticles.length))
+                .replace("{total}", String(tabArticleTotal))}
+            </p>
 
             <AdminSectionDataArea loading={loading} error={error} onRetry={load} loadingLabel="Загрузка статей…">
               <AdminDataTable

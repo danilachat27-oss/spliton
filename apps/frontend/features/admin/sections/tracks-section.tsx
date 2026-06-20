@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Info, Music2, Plus } from "@/lib/lucide";
+import { Music2, Plus } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
 import { AdminTrackDrawer } from "@/features/admin/components/admin-track-drawer";
@@ -26,6 +26,7 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -315,13 +316,10 @@ export function TracksSection() {
         <p className={`text-sm ${feedback.includes("Ошиб") ? "text-red-600" : "text-zinc-400"}`}>{feedback}</p>
       ) : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Управление треками и релизами: параметры распределения дохода, юниты, финансовые условия
-          раунда и статус публикации. Изменения фиксируются в журнале действий.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Управление треками и релизами: параметры распределения дохода, юниты, финансовые условия
+        раунда и статус публикации. Изменения фиксируются в журнале действий.
+      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label={a.t("admin.kpi.tracks.totalReleases")} value={loading ? "…" : String(page.total)} />

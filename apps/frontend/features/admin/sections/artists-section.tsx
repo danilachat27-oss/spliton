@@ -7,6 +7,7 @@ import {
   AdminDrawerCancelButton,
   AdminDrawerDangerButton,
   AdminDrawerPrimaryButton,
+  AdminDrawerSecondaryButton,
 } from "@/features/admin/components/admin-drawer-buttons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,10 @@ import {
   AdminFilterBar,
   AdminFormField,
   AdminFormFooter,
+  AdminKpiValue,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
+  AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
 import {
@@ -39,9 +43,36 @@ import {
   listAdminArtists,
   updateAdminArtist,
   type AdminArtistListItem,
+  type AdminArtistsListQuery,
 } from "@/services/admin/adminArtists.service";
 import { formatAdminDate } from "@/features/admin/lib/admin-format";
 import { cn } from "@/lib/utils";
+
+function StatTile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "success" | "warning" | "info";
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-400"
+      : tone === "warning"
+        ? "text-amber-400"
+        : tone === "info"
+          ? "text-sky-400"
+          : undefined;
+
+  return (
+    <div className={cn(ADMIN_SECTION_TILE, "space-y-1")}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
+      <AdminKpiValue value={value} className={cn("mt-1!", valueClass)} />
+    </div>
+  );
+}
 
 export function ArtistsSection() {
   const a = useAdminI18n();
@@ -53,6 +84,9 @@ export function ArtistsSection() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
+  const [status, setStatus] = React.useState("all");
+  const [releases, setReleases] = React.useState("all");
+  const [sort, setSort] = React.useState("name_asc");
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editRow, setEditRow] = React.useState<AdminArtistListItem | null>(null);
@@ -61,6 +95,11 @@ export function ArtistsSection() {
   const [baseline, setBaseline] = React.useState({ name: "", slug: "" });
   const [saving, setSaving] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<AdminArtistListItem | null>(null);
+
+  const listQuery = React.useMemo<AdminArtistsListQuery>(
+    () => ({ search, status, releases, sort }),
+    [search, status, releases, sort],
+  );
 
   const dirty =
     drawerOpen && (name !== baseline.name || slug !== baseline.slug) && !saving;
@@ -73,15 +112,26 @@ export function ArtistsSection() {
   const load = React.useCallback(() => {
     setLoading(true);
     setError(null);
-    void listAdminArtists(search || undefined, client)
+    void listAdminArtists(listQuery, client)
       .then(setRows)
       .catch((e) => setError(localizedAdminError(e)))
       .finally(() => setLoading(false));
-  }, [client, search]);
+  }, [client, listQuery]);
 
   React.useEffect(() => {
     load();
   }, [load]);
+
+  const stats = React.useMemo(() => {
+    const active = rows.filter((r) => r.isActive !== false).length;
+    const withReleases = rows.filter((r) => r.releaseCount > 0).length;
+    return {
+      total: rows.length,
+      active,
+      withReleases,
+      withoutReleases: rows.length - withReleases,
+    };
+  }, [rows]);
 
   function openCreate() {
     setEditRow(null);
@@ -119,6 +169,17 @@ export function ArtistsSection() {
     }
   }
 
+  async function toggleActive(row: AdminArtistListItem) {
+    if (readOnly) return;
+    try {
+      await updateAdminArtist(row.id, { isActive: row.isActive === false }, client);
+      setFeedback(row.isActive === false ? a.t("admin.artists.reactivated") : a.t("admin.artists.deactivated"));
+      load();
+    } catch (e) {
+      setError(localizedAdminError(e));
+    }
+  }
+
   async function confirmDelete() {
     if (!deleteTarget) return;
     try {
@@ -132,12 +193,32 @@ export function ArtistsSection() {
   }
 
   const columns: AdminColumn<AdminArtistListItem>[] = [
-    { key: "name", header: a.t("admin.artists.col.name"), render: (r) => r.name },
-    { key: "slug", header: a.t("admin.artists.col.slug"), render: (r) => <span className="font-mono text-xs">{r.slug}</span> },
+    {
+      key: "name",
+      header: a.t("admin.artists.col.name"),
+      render: (r) => (
+        <span className={cn(r.isActive === false && "text-zinc-500 line-through")}>{r.name}</span>
+      ),
+    },
+    {
+      key: "slug",
+      header: a.t("admin.artists.col.slug"),
+      render: (r) => <span className="font-mono text-xs text-zinc-400">{r.slug}</span>,
+    },
     {
       key: "releases",
       header: a.t("admin.artists.col.releases"),
       render: (r) => <span className="tabular-nums">{r.releaseCount}</span>,
+    },
+    {
+      key: "status",
+      header: a.t("admin.artists.col.status"),
+      render: (r) => (
+        <AdminStatusBadge
+          label={r.isActive === false ? a.t("admin.artists.inactive") : a.t("admin.artists.active")}
+          tone={r.isActive === false ? "neutral" : "success"}
+        />
+      ),
     },
     {
       key: "created",
@@ -147,47 +228,115 @@ export function ArtistsSection() {
   ];
 
   return (
-    <AdminSectionShell sectionId="artists" title={a.adminSectionLabel("artists")}>
-      {readOnly ? <AdminReadOnlyBanner area="Tracks" /> : null}
+    <AdminSectionShell
+      sectionId="artists"
+      title={a.adminSectionLabel("artists")}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminSectionRefreshButton onClick={load} />
+          {!readOnly ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 gap-1.5 rounded-xl bg-[#B7F500] px-4 text-xs font-semibold text-zinc-950 hover:bg-[#a8e600]"
+              onClick={openCreate}
+            >
+              <Plus className="size-3.5" aria-hidden />
+              {a.t("admin.artists.create")}
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
+      {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("artists")} /> : null}
       {feedback ? (
-        <p className="rounded-xl border border-[#B7F500]/30 bg-[#B7F500]/10 px-4 py-2 text-sm text-[#B7F500]">{feedback}</p>
+        <p className="rounded-xl border border-[#B7F500]/30 bg-[#B7F500]/10 px-4 py-2 text-sm text-[#B7F500]">
+          {feedback}
+        </p>
       ) : null}
 
+      <AdminSectionInfoHint>{a.t("admin.artists.infoHint")}</AdminSectionInfoHint>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label={a.t("admin.artists.kpi.total")}
+          value={loading ? "…" : String(stats.total)}
+        />
+        <StatTile
+          label={a.t("admin.artists.kpi.active")}
+          value={loading ? "…" : String(stats.active)}
+          tone="success"
+        />
+        <StatTile
+          label={a.t("admin.artists.kpi.withReleases")}
+          value={loading ? "…" : String(stats.withReleases)}
+          tone="info"
+        />
+        <StatTile
+          label={a.t("admin.artists.kpi.withoutReleases")}
+          value={loading ? "…" : String(stats.withoutReleases)}
+          tone="warning"
+        />
+      </div>
+
       <AdminSectionPanel>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AdminFilterBar
-            fields={[
-              {
-                id: "search",
-                label: a.t("admin.artists.search"),
-                type: "search",
-                value: search,
-                onChange: setSearch,
-                placeholder: a.t("admin.artists.search"),
-              },
-            ]}
-          />
-          <div className="flex gap-2">
-            <AdminSectionRefreshButton onClick={load} />
-            {!readOnly ? (
-              <Button
-                type="button"
-                size="sm"
-                className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
-                onClick={openCreate}
-              >
-                <Plus className="mr-1 size-4" />
-                {a.t("admin.artists.create")}
-              </Button>
-            ) : null}
-          </div>
-        </div>
+        <AdminFilterBar
+          className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          fields={[
+            {
+              id: "artist-search",
+              label: "Поиск",
+              type: "search",
+              value: search,
+              onChange: setSearch,
+              placeholder: a.t("admin.artists.searchPlaceholder"),
+            },
+            {
+              id: "artist-status",
+              label: a.t("admin.artists.filter.status"),
+              type: "select",
+              value: status,
+              onChange: setStatus,
+              options: [
+                { value: "all", label: a.actions.allStatuses },
+                { value: "active", label: a.t("admin.artists.active") },
+                { value: "inactive", label: a.t("admin.artists.inactive") },
+              ],
+            },
+            {
+              id: "artist-releases",
+              label: a.t("admin.artists.filter.releases"),
+              type: "select",
+              value: releases,
+              onChange: setReleases,
+              options: [
+                { value: "all", label: a.t("admin.artists.filter.releases.all") },
+                { value: "with", label: a.t("admin.artists.filter.releases.with") },
+                { value: "without", label: a.t("admin.artists.filter.releases.without") },
+              ],
+            },
+            {
+              id: "artist-sort",
+              label: a.t("admin.artists.filter.sort"),
+              type: "select",
+              value: sort,
+              onChange: setSort,
+              options: [
+                { value: "name_asc", label: a.t("admin.artists.filter.sort.nameAsc") },
+                { value: "name_desc", label: a.t("admin.artists.filter.sort.nameDesc") },
+                { value: "created_desc", label: a.t("admin.artists.filter.sort.createdDesc") },
+                { value: "releases_desc", label: a.t("admin.artists.filter.sort.releasesDesc") },
+              ],
+            },
+          ]}
+        />
 
         <AdminSectionDataArea loading={loading} error={error ? true : undefined} onRetry={load}>
           {error ? (
             <p className="mb-3 rounded-lg bg-red-950/40 px-3 py-2 text-sm text-red-300">{error}</p>
           ) : null}
           <AdminDataTable
+            flat
             columns={columns}
             rows={rows}
             rowKey={(r) => r.id}
@@ -205,10 +354,19 @@ export function ArtistsSection() {
           readOnly ? null : (
             <AdminFormFooter
               left={
-                editRow && editRow.releaseCount === 0 ? (
-                  <AdminDrawerDangerButton onClick={() => setDeleteTarget(editRow)}>
-                    {a.t("admin.artists.delete")}
-                  </AdminDrawerDangerButton>
+                editRow ? (
+                  <div className="flex flex-wrap gap-2">
+                    <AdminDrawerSecondaryButton onClick={() => void toggleActive(editRow)}>
+                      {editRow.isActive === false
+                        ? a.t("admin.artists.reactivate")
+                        : a.t("admin.artists.deactivate")}
+                    </AdminDrawerSecondaryButton>
+                    {editRow.releaseCount === 0 ? (
+                      <AdminDrawerDangerButton onClick={() => setDeleteTarget(editRow)}>
+                        {a.t("admin.artists.delete")}
+                      </AdminDrawerDangerButton>
+                    ) : null}
+                  </div>
                 ) : undefined
               }
               right={

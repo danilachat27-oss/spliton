@@ -32,7 +32,7 @@ import {
   complianceEntityPath,
   formatSlaBadge,
 } from "@/features/admin/lib/admin-compliance-i18n";
-import { formatAdminDate } from "@/features/admin/lib/admin-format";
+import { formatAdminDate, formatAdminMetricHours } from "@/features/admin/lib/admin-format";
 import { complianceStatusTone } from "@/features/admin/lib/admin-status-maps";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type {
@@ -52,6 +52,7 @@ import {
   AdminPagination,
   AdminReadOnlyBanner,
   AdminRiskBadge,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -482,7 +483,7 @@ export function ComplianceSection() {
         { key: "hold", label: "На удержании", value: summary.onHoldCount, tip: COMPLIANCE_FIELD_TOOLTIPS.onHold, tab: "frozen" as const },
         { key: "blocked", label: "Заблокированные пользователи", value: summary.blockedUsersCount, tip: COMPLIANCE_FIELD_TOOLTIPS.blocked, tab: "blocked" as const },
         { key: "frozen", label: "Замороженные операции", value: summary.frozenOpsCount, tip: COMPLIANCE_FIELD_TOOLTIPS.frozenOps, tab: "frozen" as const },
-        { key: "avg", label: "Среднее время проверки", value: summary.avgReviewHours != null ? `${summary.avgReviewHours} ч` : "—", tip: COMPLIANCE_FIELD_TOOLTIPS.avgReview, tab: "history" as const },
+        { key: "avg", label: "Среднее время проверки", value: formatAdminMetricHours(summary.avgReviewHours), tip: COMPLIANCE_FIELD_TOOLTIPS.avgReview, tab: "history" as const },
         { key: "overdue", label: "Просроченные проверки", value: summary.overdueCount, tip: COMPLIANCE_FIELD_TOOLTIPS.overdue, tab: "queue" as const },
         { key: "new24", label: "Новые за 24 ч", value: summary.new24hCount, tip: COMPLIANCE_FIELD_TOOLTIPS.new24h, tab: "queue" as const },
         { key: "repeat", label: "Повторные нарушители", value: summary.repeatOffendersCount, tip: COMPLIANCE_FIELD_TOOLTIPS.repeatOffenders, tab: "users" as const },
@@ -497,18 +498,15 @@ export function ComplianceSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("compliance")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Центр мониторинга риск-сигналов, подозрительных операций, заморозок, блокировок и
-          compliance-расследований Spliton.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Центр мониторинга риск-сигналов, подозрительных операций, заморозок, блокировок и
+        compliance-расследований Spliton.
+      </AdminSectionInfoHint>
 
       {summaryLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-50")} />
+            <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-800/60")} />
           ))}
         </div>
       ) : summaryError ? (

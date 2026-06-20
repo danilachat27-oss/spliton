@@ -151,7 +151,7 @@ export function SupportSection() {
             { label: "Эскалированы", value: summary.escalated },
             { label: a.t("admin.support.highCritical"), value: summary.highPriorityOpen },
           ].map((k) => (
-            <div key={k.label} className="rounded-2xl border border-neutral-200/80 bg-zinc-900/80 px-4 py-3 shadow-sm">
+            <div key={k.label} className="rounded-2xl border border-neutral-200/80 bg-zinc-900/80 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{k.label}</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">{k.value}</p>
             </div>

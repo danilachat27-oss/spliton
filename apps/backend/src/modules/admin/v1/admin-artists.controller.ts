@@ -55,9 +55,15 @@ export class AdminArtistsController {
 
   @Get()
 
-  list(@CurrentUser() user: AuthUser, @Query('search') search?: string) {
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('releases') releases?: string,
+    @Query('sort') sort?: string,
+  ) {
 
-    return this.artists.list(user.roles, search);
+    return this.artists.list(user.roles, { search, status, releases, sort });
 
   }
 

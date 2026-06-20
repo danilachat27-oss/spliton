@@ -11,21 +11,9 @@ import {
   getVisibleAnalyticsNav,
   type AnalyticsSectionId,
 } from "@/features/admin/analytics/config/analytics-nav";
-import { AdminAnalyticsCompactNav } from "@/features/admin/analytics/ui/admin-analytics-compact-nav";
-
-type AdminAnalyticsLayoutProps = {
-  activeSection: AnalyticsSectionId;
-  children: React.ReactNode;
-};
-
 /** @deprecated Prefer AdminAnalyticsPageShell — оставлен для постепенной миграции секций */
-export function AdminAnalyticsLayout({ activeSection, children }: AdminAnalyticsLayoutProps) {
-  return (
-    <div className="space-y-5">
-      <AdminAnalyticsCompactNav activeSection={activeSection} />
-      {children}
-    </div>
-  );
+export function AdminAnalyticsLayout({ children }: { activeSection?: AnalyticsSectionId; children: React.ReactNode }) {
+  return <div className="space-y-5">{children}</div>;
 }
 
 export function AdminAnalyticsGuard({

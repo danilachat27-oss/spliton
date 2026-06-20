@@ -1,22 +1,30 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
+import { ROUTES } from "@/constants/routes";
+import { adminBtnOutline } from "@/features/admin/lib/admin-ui";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
-import { canPerformAdminAction } from "@/features/admin/lib/admin-action-permissions";
+import { canGenerateReportType } from "@/features/admin/config/admin-rbac";
+import { resolveAnalyticsExportDateRange } from "@/features/admin/analytics/hooks/use-analytics-period";
+import type { AnalyticsPeriodKey } from "@/features/admin/analytics/types";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
   generateAdminReport,
   type AdminReportType,
 } from "@/services/admin/adminReports.service";
+import { ApiError } from "@/services/auth.service";
 
 type AdminAnalyticsExportButtonProps = {
   reportType: AdminReportType;
   dateFrom?: string;
   dateTo?: string;
+  period?: AnalyticsPeriodKey;
+  customFrom?: string;
+  customTo?: string;
   label?: string;
 };
 
@@ -24,6 +32,9 @@ export function AdminAnalyticsExportButton({
   reportType,
   dateFrom,
   dateTo,
+  period = "30d",
+  customFrom,
+  customTo,
   label,
 }: AdminAnalyticsExportButtonProps) {
   const a = useAdminI18n();
@@ -31,23 +42,40 @@ export function AdminAnalyticsExportButton({
   const { user } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [jobId, setJobId] = React.useState<string | null>(null);
 
   const resolvedLabel = label ?? a.t("admin.analytics.export.defaultLabel");
-  const canExport = canPerformAdminAction(user?.roles, "Reports", "export");
+  const canExport = canGenerateReportType(user?.roles, reportType);
 
   async function handleExport() {
     if (!canExport) return;
     setLoading(true);
     setMessage(null);
+    setJobId(null);
     try {
-      const job = await generateAdminReport(reportType, dateFrom ?? "", dateTo ?? "", client);
+      const range =
+        dateFrom && dateTo
+          ? { dateFrom, dateTo }
+          : resolveAnalyticsExportDateRange(period, customFrom, customTo);
+      const job = await generateAdminReport(
+        reportType,
+        range.dateFrom,
+        range.dateTo,
+        client,
+        user?.roles,
+      );
+      setJobId(job.id);
       if (job.status === "completed") {
         setMessage(a.t("admin.analytics.export.ready"));
       } else {
         setMessage(a.t("admin.analytics.export.queued"));
       }
-    } catch {
-      setMessage(a.t("admin.analytics.export.failed"));
+    } catch (error) {
+      if (error instanceof ApiError && error.message) {
+        setMessage(error.message);
+      } else {
+        setMessage(a.t("admin.analytics.export.failed"));
+      }
     } finally {
       setLoading(false);
     }
@@ -58,14 +86,22 @@ export function AdminAnalyticsExportButton({
       <Button
         type="button"
         size="sm"
-        variant="ghost" className={adminBtnOutline}
+        variant="ghost"
+        className={adminBtnOutline}
         disabled={!canExport || loading}
         onClick={() => void handleExport()}
         title={!canExport ? a.t("admin.analytics.export.noPermission") : undefined}
       >
         {loading ? a.t("admin.analytics.export.creating") : resolvedLabel}
       </Button>
-      {message ? <span className="text-xs text-zinc-500">{message}</span> : null}
+      {message ? (
+        <span className="max-w-[220px] text-right text-xs text-zinc-500">{message}</span>
+      ) : null}
+      {jobId ? (
+        <Link href={ROUTES.adminReports} className="text-xs text-[#B7F500] hover:underline">
+          {a.t("admin.analytics.export.openReports")}
+        </Link>
+      ) : null}
     </div>
   );
 }

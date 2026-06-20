@@ -7,6 +7,7 @@ export type { IconNode, LucideIcon, LucideProps } from "lucide-react";
 export { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
 export { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
 export { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+export { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
 export { default as ArrowDown } from "lucide-react/dist/esm/icons/arrow-down.js";
 export { default as ArrowDownToLine } from "lucide-react/dist/esm/icons/arrow-down-to-line.js";
 export { default as ArrowDownUp } from "lucide-react/dist/esm/icons/arrow-down-up.js";
@@ -93,6 +94,7 @@ export { default as MoreHorizontal } from "lucide-react/dist/esm/icons/ellipsis.
 export { default as Music } from "lucide-react/dist/esm/icons/music.js";
 export { default as Music2 } from "lucide-react/dist/esm/icons/music-2.js";
 export { default as Newspaper } from "lucide-react/dist/esm/icons/newspaper.js";
+export { default as Pause } from "lucide-react/dist/esm/icons/pause.js";
 export { default as PauseCircle } from "lucide-react/dist/esm/icons/circle-pause.js";
 export { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
 export { default as PencilLine } from "lucide-react/dist/esm/icons/pencil-line.js";

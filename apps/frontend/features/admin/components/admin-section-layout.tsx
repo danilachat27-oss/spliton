@@ -94,7 +94,7 @@ export function AdminSectionTabBar({
             "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors",
             activeId === t.id
               ? "bg-[#B7F500] text-zinc-950"
-              : "border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200",
+              : "bg-zinc-900/50 text-zinc-500 hover:bg-zinc-800/55 hover:text-zinc-200",
           )}
         >
           {t.label}
@@ -112,12 +112,14 @@ export function AdminSectionRefreshButton({ onClick }: { onClick: () => void }) 
   return (
     <Button
       type="button"
-      size="sm"
-      className="h-9 gap-1.5 rounded-xl bg-[#B7F500] px-4 text-xs font-semibold text-zinc-950 hover:bg-[#a8e600]"
+      variant="outline"
+      size="icon-sm"
+      className="rounded-xl border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800 hover:text-zinc-200"
       onClick={onClick}
+      aria-label={a.portal.refresh}
+      title={a.portal.refresh}
     >
       <RefreshCw className="size-3.5" aria-hidden />
-      {a.portal.refresh}
     </Button>
   );
 }

@@ -34,6 +34,8 @@ import {
 
 } from "@/services/notifications.service";
 
+import { useNotificationsUnread } from "@/components/notifications/notifications-unread-context";
+
 
 
 type NotificationBellProps = {
@@ -84,9 +86,33 @@ export function NotificationBell({
 
   const rootRef = React.useRef<HTMLDetailsElement | null>(null);
 
+  const unreadCtx = useNotificationsUnread();
+
   const [open, setOpen] = React.useState(false);
 
-  const [unread, setUnread] = React.useState(0);
+  const [localUnread, setLocalUnread] = React.useState(0);
+
+  const unread = unreadCtx?.unread ?? localUnread;
+
+  const patchUnread = React.useCallback(
+
+    (next: number | ((current: number) => number)) => {
+
+      if (unreadCtx) {
+
+        unreadCtx.setUnread(next);
+
+      } else {
+
+        setLocalUnread(next);
+
+      }
+
+    },
+
+    [unreadCtx],
+
+  );
 
   const [items, setItems] = React.useState<NotificationItem[]>([]);
 
@@ -104,15 +130,15 @@ export function NotificationBell({
 
       const count = await fetchUnreadCount(authorizedFetch, apiBasePath);
 
-      setUnread(count);
+      patchUnread(count);
 
     } catch {
 
-      setUnread(0);
+      patchUnread(0);
 
     }
 
-  }, [apiBasePath, authorizedFetch, isAuthenticated]);
+  }, [apiBasePath, authorizedFetch, isAuthenticated, patchUnread]);
 
 
 
@@ -154,13 +180,15 @@ export function NotificationBell({
 
   React.useEffect(() => {
 
+    if (unreadCtx) return;
+
     void refreshCount();
 
     const timer = setInterval(() => void refreshCount(), 60_000);
 
     return () => clearInterval(timer);
 
-  }, [refreshCount]);
+  }, [refreshCount, unreadCtx]);
 
 
 
@@ -203,7 +231,9 @@ export function NotificationBell({
 
         await markNotificationRead(authorizedFetch, apiBasePath, item.id);
 
-        setUnread((c) => Math.max(0, c - 1));
+        patchUnread((c) => Math.max(0, c - 1));
+
+        void unreadCtx?.refresh();
 
       } catch {
 
@@ -227,7 +257,9 @@ export function NotificationBell({
 
       await markAllNotificationsRead(authorizedFetch, apiBasePath);
 
-      setUnread(0);
+      patchUnread(0);
+
+      void unreadCtx?.refresh();
 
       setItems((prev) => prev.map((i) => ({ ...i, isRead: true })));
 

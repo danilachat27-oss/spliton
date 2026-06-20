@@ -494,6 +494,9 @@ export function AnalyticsOperationsSection() {
             <AdminAnalyticsExportButton
               reportType="support_tickets"
               label={a.t("admin.analytics.common.generateReport")}
+              period={period}
+              customFrom={customFrom}
+              customTo={customTo}
             />
           </div>
           {lastUpdated ? (
@@ -507,7 +510,7 @@ export function AnalyticsOperationsSection() {
       {(tab) => (
         <>
         <AdminAnalyticsTabPanel activeTab={tab} tabId="overview">
-        <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
+        <div className={cn(ADMIN_SECTION_TILE, "p-5", healthBannerClass)}>
           <h2 className={cn("text-sm font-semibold", adminAnalyticsHealthBannerTitleClass(health.tone))}>
             {health.title}
           </h2>
@@ -516,8 +519,8 @@ export function AnalyticsOperationsSection() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_280px]">
-          <div className="space-y-6">
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] xl:items-start">
+          <div className="min-w-0 space-y-6">
             <AdminAnalyticsKpiGroup title={op("kpiGroup.queue")}>
               <AdminMetricTrendCard
                 label={op("kpi.openTickets")}
@@ -577,16 +580,19 @@ export function AnalyticsOperationsSection() {
             ) : null}
           </div>
 
-          <aside className="space-y-4">
-            <AdminAnalyticsInsightsPanel items={insights} className="xl:sticky xl:top-4 xl:self-start" />
-            <div className={cn(ADMIN_SECTION_TILE, "border p-4")}>
+          <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:self-start">
+            <AdminAnalyticsInsightsPanel items={insights} />
+            <div className={cn(ADMIN_SECTION_TILE, "p-4")}>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{op("drilldowns")}</h3>
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-3 space-y-1">
                 {drillLinks.map((l) => (
                   <li key={l.href}>
-                    <Link href={l.href} className="flex items-center justify-between text-sm text-zinc-200 hover:text-blue-600">
+                    <Link
+                      href={l.href}
+                      className="flex items-center justify-between rounded-xl px-2 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800/50 hover:text-zinc-100"
+                    >
                       {l.label}
-                      <ArrowRight className="h-3.5 w-3.5 opacity-50" />
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-50" />
                     </Link>
                   </li>
                 ))}

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 
+import { isAdminMetricEmpty } from "@/features/admin/lib/admin-format";
 import { ANALYTICS_CHART } from "@/features/admin/analytics/lib/admin-analytics-theme";
 import { adminTile } from "@/features/admin/lib/admin-ui";
+import { AdminKpiValue } from "@/features/admin/ui/admin-kpi-value";
 import { cn } from "@/lib/utils";
 import { AdminKpiTooltip } from "./admin-kpi-tooltip";
 import { buildLinePath } from "@/lib/analytics/chart-path";
@@ -18,6 +20,7 @@ type AdminMetricTrendCardProps = {
   trend?: number[];
   className?: string;
   deltaEmptyLabel?: string;
+  valueEmptyHint?: string;
 };
 
 export function AdminMetricTrendCard({
@@ -29,8 +32,10 @@ export function AdminMetricTrendCard({
   onClick,
   trend = [],
   className,
-  deltaEmptyLabel = "Нет данных для сравнения",
+  deltaEmptyLabel = "Без сравнения с прошлым периодом",
+  valueEmptyHint = "Недостаточно данных",
 }: AdminMetricTrendCardProps) {
+  const valueEmpty = isAdminMetricEmpty(value);
   const deltaLabel =
     deltaPct === null || deltaPct === undefined
       ? null
@@ -78,8 +83,10 @@ export function AdminMetricTrendCard({
           </svg>
         ) : null}
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-zinc-100">{value}</p>
-      {deltaLabel ? (
+      <AdminKpiValue value={value} />
+      {valueEmpty ? (
+        <p className="mt-1 text-xs text-zinc-600">{valueEmptyHint}</p>
+      ) : deltaLabel ? (
         <p
           className={cn(
             "mt-1 text-xs font-medium tabular-nums",
@@ -89,7 +96,7 @@ export function AdminMetricTrendCard({
           {deltaLabel}
         </p>
       ) : (
-        <p className="mt-1 text-xs text-zinc-400">{deltaEmptyLabel}</p>
+        <p className="mt-1 text-xs text-zinc-600">{deltaEmptyLabel}</p>
       )}
     </div>
   );

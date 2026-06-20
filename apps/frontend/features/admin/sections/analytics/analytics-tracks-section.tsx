@@ -411,7 +411,13 @@ export function AnalyticsTracksSection() {
               <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
                 {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
               </Button>
-              <AdminAnalyticsExportButton reportType="tracks_round_progress" label={a.t("admin.analytics.common.report")} />
+              <AdminAnalyticsExportButton
+                reportType="tracks_round_progress"
+                label={a.t("admin.analytics.common.report")}
+                period={period}
+                customFrom={customFrom}
+                customTo={customTo}
+              />
             </div>
             {lastUpdated ? (
               <p className="text-xs text-zinc-500">

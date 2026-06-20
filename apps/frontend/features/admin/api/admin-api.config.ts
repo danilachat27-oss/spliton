@@ -17,6 +17,7 @@ export const ADMIN_ACCESS_LEGACY = "/admin/access";
 export const ADMIN_API_PATHS = {
   access: `${ADMIN_API_V1_PREFIX}/access`,
   search: `${ADMIN_API_V1_PREFIX}/search`,
+  notifications: `${ADMIN_API_V1_PREFIX}/notifications`,
   dashboardSummary: `${ADMIN_API_V1_PREFIX}/dashboard/summary`,
   dashboardTasks: `${ADMIN_API_V1_PREFIX}/dashboard/tasks`,
   dashboardRiskAlerts: `${ADMIN_API_V1_PREFIX}/dashboard/risk-alerts`,

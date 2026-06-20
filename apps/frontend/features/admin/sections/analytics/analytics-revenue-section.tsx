@@ -20,7 +20,7 @@ import { AdminPeriodSelector } from "@/features/admin/analytics/components/admin
 import { parseAnalyticsMoney, useAnalyticsPeriod } from "@/features/admin/analytics/hooks/use-analytics-period";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminDateShort, formatAdminMetricUsdt, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { isBusinessAnalyst } from "@/features/admin/config/admin-rbac";
 import {
@@ -308,6 +308,9 @@ export function AnalyticsRevenueSection() {
               <AdminAnalyticsExportButton
                 reportType="revenue_distributions"
                 label={a.t("admin.analytics.common.generateReport")}
+                period={period}
+                customFrom={customFrom}
+                customTo={customTo}
               />
             </div>
             {lastUpdated ? (
@@ -347,7 +350,7 @@ export function AnalyticsRevenueSection() {
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.avgEvent")}
-                value={s.avgRevenueEventUsdt ? formatUsdtAmount(s.avgRevenueEventUsdt) : "—"}
+                value={formatAdminMetricUsdt(s.avgRevenueEventUsdt)}
                 tooltip={REVENUE_KPI_TOOLTIPS.avgEvent}
               />
               <AdminMetricTrendCard
@@ -393,12 +396,12 @@ export function AnalyticsRevenueSection() {
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.avgPayout")}
-                value={s.avgPayoutPerHolderUsdt ? formatUsdtAmount(s.avgPayoutPerHolderUsdt) : "—"}
+                value={formatAdminMetricUsdt(s.avgPayoutPerHolderUsdt)}
                 tooltip={REVENUE_KPI_TOOLTIPS.holdersCount}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.maxPayout")}
-                value={s.maxPayoutUsdt ? formatUsdtAmount(s.maxPayoutUsdt) : "—"}
+                value={formatAdminMetricUsdt(s.maxPayoutUsdt)}
               />
               <AdminMetricTrendCard label={a.t("admin.analytics.revenue.kpi.pending")} value={String(s.pendingPayouts)} tooltip={REVENUE_KPI_TOOLTIPS.pending} />
             </AdminAnalyticsKpiGroup>

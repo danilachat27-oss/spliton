@@ -48,6 +48,7 @@ import {
   AdminLocalizedStatusBadge,
   AdminPagination,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -320,13 +321,18 @@ export function ReportsSection() {
             <h3 className="font-semibold text-zinc-100">{entry.label}</h3>
             <p className="mt-1 text-xs text-zinc-500">{REPORT_DOMAIN_LABELS[entry.domain]}</p>
           </div>
-          {entry.sensitive ? <AdminStatusBadge label="sensitive" tone="warning" /> : null}
+          {entry.sensitive ? (
+            <AdminStatusBadge label={a.t("admin.reports.sensitive")} tone="warning" />
+          ) : null}
         </div>
         <p className="text-sm leading-relaxed text-zinc-400">{entry.description}</p>
         <p className="text-xs text-zinc-400">{entry.estimatedVolume}</p>
         <div className="flex flex-wrap gap-1">
           {entry.formats.map((f) => (
-            <span key={f} className="rounded bg-zinc-100 px-2 py-0.5 text-[10px] font-medium uppercase">
+            <span
+              key={f}
+              className="rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-medium uppercase text-zinc-300"
+            >
               {f}
             </span>
           ))}
@@ -391,18 +397,15 @@ export function ReportsSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area="Отчёты" /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm">
-        <FileSpreadsheet className="mt-0.5 size-4 shrink-0 text-zinc-400" />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Spliton Reports & Export Center — формирование CSV-отчётов, очередь задач, worker и
-          контроль доступа по ролям.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Spliton Reports & Export Center — формирование CSV-отчётов, очередь задач, worker и
+        контроль доступа по ролям.
+      </AdminSectionInfoHint>
 
       {summaryLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-50")} />
+            <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-900/40")} />
           ))}
         </div>
       ) : summary ? (

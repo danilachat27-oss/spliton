@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   ChevronRight,
   Headphones,
-  Info,
   Music2,
   Shield,
   Wallet,
@@ -36,6 +35,7 @@ import {
   AdminPageHeader,
   AdminRoleBadge,
   AdminSectionCard,
+  AdminSectionInfoHint,
   AdminStatusBadge,
 } from "@/features/admin/ui";
 import { AdminCopyButton } from "@/features/admin/ui/admin-copy-button";
@@ -54,41 +54,47 @@ const ROLE_CARD_META: Record<
 > = {
   SUPER_ADMIN: {
     icon: Shield,
-    accent: "border-zinc-900/15 hover:border-zinc-900/30",
-    selected: "border-zinc-900 bg-zinc-900/[0.03] ring-1 ring-zinc-900/10 shadow-sm",
-    iconBg: "bg-zinc-900 text-white",
+    accent: "hover:border-[#B7F500]/30",
+    selected: "border-[#B7F500]/40 bg-zinc-900 ring-1 ring-[#B7F500]/20",
+    iconBg: "bg-zinc-800 text-[#B7F500]",
+  },
+  ADMIN: {
+    icon: Shield,
+    accent: "hover:border-zinc-600",
+    selected: "border-zinc-500/50 bg-zinc-900 ring-1 ring-zinc-500/20",
+    iconBg: "bg-zinc-800 text-zinc-300",
   },
   ACCOUNTANT: {
     icon: Wallet,
-    accent: "border-sky-200/80 hover:border-sky-300",
-    selected: "border-sky-400 bg-sky-50/60 ring-1 ring-sky-200/80 shadow-sm",
-    iconBg: "bg-sky-100 text-sky-800",
+    accent: "hover:border-sky-700/50",
+    selected: "border-sky-500/40 bg-zinc-900 ring-1 ring-sky-500/20",
+    iconBg: "bg-sky-950 text-sky-400",
   },
   CONTENT_MANAGER: {
     icon: Music2,
-    accent: "border-violet-200/80 hover:border-violet-300",
-    selected: "border-violet-400 bg-violet-50/60 ring-1 ring-violet-200/80 shadow-sm",
-    iconBg: "bg-violet-100 text-violet-800",
+    accent: "hover:border-violet-700/50",
+    selected: "border-violet-500/40 bg-zinc-900 ring-1 ring-violet-500/20",
+    iconBg: "bg-violet-950 text-violet-400",
   },
   SUPPORT_MANAGER: {
     icon: Headphones,
-    accent: "border-slate-200 hover:border-slate-300",
-    selected: "border-slate-400 bg-slate-50 ring-1 ring-slate-200 shadow-sm",
-    iconBg: "bg-slate-200 text-slate-800",
+    accent: "hover:border-zinc-600",
+    selected: "border-zinc-400/40 bg-zinc-900 ring-1 ring-zinc-400/20",
+    iconBg: "bg-zinc-800 text-zinc-400",
   },
   COMPLIANCE: {
     icon: AlertTriangle,
-    accent: "border-amber-200/80 hover:border-amber-300",
-    selected: "border-amber-400 bg-amber-50/60 ring-1 ring-amber-200/80 shadow-sm",
-    iconBg: "bg-amber-100 text-amber-900",
+    accent: "hover:border-amber-700/50",
+    selected: "border-amber-500/40 bg-zinc-900 ring-1 ring-amber-500/20",
+    iconBg: "bg-amber-950 text-amber-400",
   },
 };
 
 const DEFAULT_CARD_META = {
   icon: Shield,
-  accent: "border-zinc-800 hover:border-zinc-300",
-  selected: "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-200 shadow-sm",
-  iconBg: "bg-zinc-100 text-zinc-300",
+  accent: "hover:border-zinc-700",
+  selected: "border-zinc-600/50 bg-zinc-900 ring-1 ring-zinc-600/20",
+  iconBg: "bg-zinc-800 text-zinc-400",
 };
 
 function RoleCard({
@@ -114,7 +120,7 @@ function RoleCard({
       className={cn(
         ADMIN_SECTION_TILE,
         "group relative flex h-full flex-col border text-left transition-all duration-200",
-        selected ? meta.selected : cn("border-transparent bg-zinc-900/80", meta.accent),
+        selected ? meta.selected : cn("border-zinc-800 bg-zinc-900/80", meta.accent),
       )}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -223,13 +229,10 @@ export function RolesSection() {
         ))}
       </div>
 
-      <div className="mb-6 flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm shadow-zinc-900/[0.03]">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" strokeWidth={2} />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Права в Spliton статичны и привязаны к роли. Отдельного редактора прав нет — доступ
-          определяется только набором ролей пользователя.
-        </p>
-      </div>
+      <AdminSectionInfoHint className="mb-6">
+        Права в Spliton статичны и привязаны к роли. Отдельного редактора прав нет — доступ
+        определяется только набором ролей пользователя.
+      </AdminSectionInfoHint>
 
       <AdminSectionCard
         title={a.t("admin.title.permissionMatrix")}
@@ -237,15 +240,15 @@ export function RolesSection() {
         className="mb-6"
         bodyClassName="p-0"
       >
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead>
-              <tr className="border-b border-zinc-800 bg-zinc-50/80">
-                <th className={cn(adminTableHead, "sticky left-0 z-10 bg-zinc-50/95 px-5 py-3")}>
+              <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                <th className={cn(adminTableHead, "sticky left-0 z-10 bg-zinc-900/95 px-5 py-3 text-zinc-400")}>
                   Раздел
                 </th>
                 {PERMISSION_MATRIX_COLUMNS.map((col) => (
-                  <th key={col.key} className={cn(adminTableHead, "px-3 py-3 text-center")}>
+                  <th key={col.key} className={cn(adminTableHead, "px-3 py-3 text-center text-zinc-400")}>
                     {col.label}
                   </th>
                 ))}
@@ -256,8 +259,8 @@ export function RolesSection() {
                 <tr
                   key={area}
                   className={cn(
-                    "border-b border-zinc-800/80 transition-colors last:border-b-0 hover:bg-zinc-800/60/50",
-                    index % 2 === 1 && "bg-zinc-50/30",
+                    "border-b border-zinc-800/80 transition-colors last:border-b-0 hover:bg-zinc-800/40",
+                    index % 2 === 1 && "bg-zinc-900/40",
                   )}
                 >
                   <td className="sticky left-0 z-10 bg-inherit px-5 py-3 font-medium text-zinc-200">
@@ -297,15 +300,15 @@ export function RolesSection() {
         {usersLoading ? (
           <AdminLoadingState label={a.t("admin.loading.users")} />
         ) : users.length === 0 ? (
-          <p className="rounded-xl bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
+          <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center text-sm text-zinc-500">
             Нет пользователей с этой ролью
           </p>
         ) : (
-          <ul className="divide-y divide-zinc-100 overflow-hidden rounded-xl border border-zinc-800">
+          <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800">
             {users.map((u) => (
               <li
                 key={u.userId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-zinc-900/80 px-4 py-3 transition-colors hover:bg-zinc-800/60/80"
+                className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-zinc-900/80 px-4 py-3 transition-colors hover:bg-zinc-800/60"
               >
                 <span className="font-medium text-zinc-100">{u.email}</span>
                 {u.displayName ? (
@@ -329,7 +332,7 @@ export function RolesSection() {
           </Link>
         ) : null}
         {canManageRoles ? (
-          <p className="mt-4 rounded-xl bg-amber-50/80 px-3 py-2.5 text-xs leading-relaxed text-amber-900/90">
+          <p className="mt-4 rounded-xl border border-amber-800/40 bg-amber-950/20 px-3 py-2.5 text-xs leading-relaxed text-amber-200/90">
             Назначение роли главного администратора требует ввода фразы подтверждения и записи в
             журнал аудита.
           </p>

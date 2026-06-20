@@ -2,15 +2,12 @@
 
 import * as React from "react";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { AlertTriangle, CheckCircle2, Circle, HelpCircle, TrendingUp } from "@/lib/lucide";
+import { AlertTriangle, Check, CheckCircle2, Circle, Globe, HelpCircle, Pause, Plus, Save, TrendingUp, X, XCircle } from "@/lib/lucide";
 import { SplitonLoader } from "@/components/ui/spliton-loader";
 
 import {
-  AdminDrawerCancelButton,
-  AdminDrawerDangerButton,
-  AdminDrawerGhostButton,
-  AdminDrawerPrimaryButton,
-  AdminDrawerSecondaryButton,
+  AdminDrawerActionButton,
+  AdminDrawerFooterToolbar,
 } from "@/features/admin/components/admin-drawer-buttons";
 import { Input } from "@/components/ui/input";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
@@ -36,6 +33,7 @@ import {
 import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import {
   AdminConfirmDialog,
+  AdminDatePicker,
   AdminDetailDrawer,
   AdminFormField,
   AdminFormFooter,
@@ -276,61 +274,79 @@ export function AdminRoundDrawer({
           readOnly ? (
             <AdminFormFooter
               right={
-                <AdminDrawerGhostButton onClick={() => guardedOnOpenChange(false)}>
-                  {a.t("admin.drawer.common.close")}
-                </AdminDrawerGhostButton>
+                <AdminDrawerFooterToolbar>
+                  <AdminDrawerActionButton
+                    icon={X}
+                    label={a.t("admin.drawer.common.close")}
+                    tone="ghost"
+                    onClick={() => guardedOnOpenChange(false)}
+                  />
+                </AdminDrawerFooterToolbar>
               }
             />
           ) : (
             <AdminFormFooter
-              left={
-                <>
+              right={
+                <AdminDrawerFooterToolbar>
                   {mode === "edit" && round && onPublish && (round.status === "draft" || round.status === "paused") ? (
-                    <AdminDrawerSecondaryButton
-                      disabled={saving || !canPublishNow}
-                      title={publishBlocked ?? undefined}
+                    <AdminDrawerActionButton
+                      icon={Globe}
+                      label={a.t("admin.rounds.publish")}
+                      tone="primary"
+                      disabled={!canPublishNow}
+                      title={publishBlocked ?? a.t("admin.rounds.publish")}
                       onClick={() => setConfirmPublish(true)}
-                    >
-                      {a.t("admin.rounds.publish")}
-                    </AdminDrawerSecondaryButton>
+                    />
                   ) : null}
                   {mode === "edit" && round && onPause && round.status === "live" ? (
-                    <AdminDrawerSecondaryButton disabled={saving} onClick={() => setConfirmPause(true)}>
-                      {a.t("admin.rounds.pause")}
-                    </AdminDrawerSecondaryButton>
+                    <AdminDrawerActionButton
+                      icon={Pause}
+                      label={a.t("admin.rounds.pause")}
+                      tone="secondary"
+                      disabled={saving}
+                      onClick={() => setConfirmPause(true)}
+                    />
                   ) : null}
                   {mode === "edit" && round && onClose && (round.status === "live" || round.status === "paused") ? (
-                    <AdminDrawerDangerButton disabled={saving} onClick={() => setConfirmClose(true)}>
-                      {a.t("admin.rounds.close")}
-                    </AdminDrawerDangerButton>
+                    <AdminDrawerActionButton
+                      icon={XCircle}
+                      label={a.t("admin.rounds.close")}
+                      tone="danger"
+                      disabled={saving}
+                      onClick={() => setConfirmClose(true)}
+                    />
                   ) : null}
-                </>
-              }
-              right={
-                <>
-                  <AdminDrawerCancelButton disabled={saving} onClick={() => guardedOnOpenChange(false)}>
-                    {a.t("admin.drawer.common.cancel")}
-                  </AdminDrawerCancelButton>
+                  <AdminDrawerActionButton
+                    icon={X}
+                    label={a.t("admin.drawer.common.cancel")}
+                    tone="cancel"
+                    disabled={saving}
+                    onClick={() => guardedOnOpenChange(false)}
+                  />
                   {mode === "create" ? (
-                    <AdminDrawerSecondaryButton
-                      disabled={saving || !hasRelease || Boolean(validationError)}
+                    <AdminDrawerActionButton
+                      icon={Save}
+                      label={a.t("admin.rounds.saveDraft")}
+                      tone="secondary"
+                      loading={saving}
+                      disabled={!hasRelease || Boolean(validationError)}
                       onClick={() => void onSubmit(form, true).then(() => setBaselineForm(form))}
-                    >
-                      {saving ? a.t("admin.drawer.common.saving") : a.t("admin.rounds.saveDraft")}
-                    </AdminDrawerSecondaryButton>
+                    />
                   ) : null}
-                  <AdminDrawerPrimaryButton
-                    disabled={saving || !hasRelease || Boolean(validationError)}
+                  <AdminDrawerActionButton
+                    icon={mode === "create" ? Plus : Check}
+                    label={
+                      mode === "create"
+                        ? a.t("admin.rounds.createBtn")
+                        : a.t("admin.rounds.saveChanges")
+                    }
+                    tone="primary"
+                    loading={saving}
+                    disabled={!hasRelease || Boolean(validationError)}
                     title={validationError ?? undefined}
                     onClick={() => void onSubmit(form, false).then(() => setBaselineForm(form))}
-                  >
-                    {saving
-                      ? a.t("admin.drawer.common.saving")
-                      : mode === "create"
-                        ? a.t("admin.rounds.createBtn")
-                        : a.t("admin.rounds.saveChanges")}
-                  </AdminDrawerPrimaryButton>
-                </>
+                  />
+                </AdminDrawerFooterToolbar>
               }
             />
           )
@@ -457,14 +473,11 @@ export function AdminRoundDrawer({
                       onChange={() => undefined}
                     />
                     <AdminFormField label={a.t("admin.rounds.startDate")} htmlFor="rnd-start" error={re("startDate")}>
-                      <Input
+                      <AdminDatePicker
                         id="rnd-start"
-                        type="date"
-                        className={adminFieldInput}
                         value={form.startDate}
                         disabled={readOnly}
-                        onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                        aria-invalid={Boolean(re("startDate"))}
+                        onChange={(startDate) => setForm((f) => ({ ...f, startDate }))}
                       />
                     </AdminFormField>
                     <AdminFormField
@@ -473,15 +486,11 @@ export function AdminRoundDrawer({
                       hint={a.t("admin.rounds.endDateHint")}
                       error={re("endDate")}
                     >
-                      <Input
+                      <AdminDatePicker
                         id="rnd-end"
-                        type="date"
-                        className={adminFieldInput}
                         value={form.endDate}
                         disabled={readOnly}
-                        min={form.startDate || undefined}
-                        onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                        aria-invalid={Boolean(re("endDate"))}
+                        onChange={(endDate) => setForm((f) => ({ ...f, endDate }))}
                       />
                     </AdminFormField>
                   </div>

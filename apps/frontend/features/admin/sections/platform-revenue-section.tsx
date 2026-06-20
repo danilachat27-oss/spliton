@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Info, Settings } from "@/lib/lucide";
+import { Settings } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
@@ -41,7 +41,7 @@ import {
   platformRevenueSourceColor,
   platformRevenueSourceLabel,
 } from "@/features/admin/lib/admin-platform-revenue-i18n";
-import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatAdminDate, formatAdminMetricUsdt, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import type {
   AdminPlatformRevenueTransaction,
   AdminPlatformRevenueTransactionDetail,
@@ -60,6 +60,7 @@ import {
   AdminPagination,
   AdminLocalizedStatusBadge,
   AdminReadOnlyBanner,
+  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -98,7 +99,7 @@ export function PlatformRevenueSection() {
   const perms = useAdminPermissions();
   const readOnly = perms.readOnly("Platform Revenue");
   const canEditFees = perms.canPatchPlatformFees();
-  const { period, setPeriod } = useAnalyticsPeriod("30d");
+  const { period, setPeriod, customFrom, customTo } = useAnalyticsPeriod("30d");
   const [tab, setTab] = useAdminSectionTab<PlatformTab>(
     TABS.map((t) => t.id),
     "overview",
@@ -345,13 +346,10 @@ export function PlatformRevenueSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("platformRevenue")} /> : null}
 
-      <div className="flex gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-4 py-3.5 shadow-sm">
-        <Info className="mt-0.5 size-4 shrink-0 text-zinc-400" />
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Финансовый центр Spliton: комиссии первичных покупок, выводов и вторичного рынка. Данные из таблицы{" "}
-          <code className="text-xs">fees</code> и wallet ledger.
-        </p>
-      </div>
+      <AdminSectionInfoHint>
+        Финансовый центр Spliton: комиссии первичных покупок, выводов и вторичного рынка. Данные из таблицы{" "}
+        <code className="text-xs">fees</code> и wallet ledger.
+      </AdminSectionInfoHint>
 
       <AdminSectionPanel>
         <AdminFilterBar
@@ -424,7 +422,7 @@ export function PlatformRevenueSection() {
                 />
                 <AdminMetricTrendCard
                   label={a.t("admin.kpi.platformRevenue.avgFee")}
-                  value={summary.avgFeeUsdt ? formatUsdtAmount(summary.avgFeeUsdt) : "—"}
+                  value={formatAdminMetricUsdt(summary.avgFeeUsdt)}
                   tooltip={PLATFORM_REVENUE_FIELD_TOOLTIPS.avgFee}
                 />
               </div>
@@ -635,8 +633,19 @@ export function PlatformRevenueSection() {
                 Экспорт через async report jobs — без синхронной нагрузки на frontend.
               </p>
               <div className="flex flex-wrap gap-2">
-                <AdminAnalyticsExportButton reportType="platform_revenue_transactions" />
-                <AdminAnalyticsExportButton reportType="platform_revenue" label={a.t("admin.ui.csvSummary")} />
+                <AdminAnalyticsExportButton
+                  reportType="platform_revenue_transactions"
+                  period={period}
+                  customFrom={customFrom}
+                  customTo={customTo}
+                />
+                <AdminAnalyticsExportButton
+                  reportType="platform_revenue"
+                  label={a.t("admin.ui.csvSummary")}
+                  period={period}
+                  customFrom={customFrom}
+                  customTo={customTo}
+                />
               </div>
               <Link href={ROUTES.adminReports} className="inline-block text-sm text-sky-700 hover:underline">
                 Открыть раздел «Отчёты» →

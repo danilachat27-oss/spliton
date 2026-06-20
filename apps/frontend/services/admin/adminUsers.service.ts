@@ -6,7 +6,7 @@ import {
   MOCK_ADMIN_USERS,
   type AdminUserListItem,
 } from "@/features/admin/mocks/admin-users.mock";
-import { adminMockDelay } from "./admin-api.util";
+import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { requireAdminLiveClient } from "./admin-service.util";
 import { ApiError } from "@/services/auth.service";
 import {
@@ -63,8 +63,14 @@ export async function listAdminUsersPaginated(
 export async function listAdminUsers(
   client?: AdminApiClient,
 ): Promise<AdminUserListItem[]> {
-  const res = await listAdminUsersPaginated({ pageSize: 500 }, client);
-  return res.items;
+  if (getAdminDataSource() === "live") {
+    requireAdminLiveClient(client);
+    return fetchAllAdminPaginatedItems((query) =>
+      client.getPaginated<AdminUserListItem>(ADMIN_API_PATHS.users, query),
+    );
+  }
+  await adminMockDelay();
+  return MOCK_ADMIN_USERS;
 }
 
 export type AdminUsersListStats = {

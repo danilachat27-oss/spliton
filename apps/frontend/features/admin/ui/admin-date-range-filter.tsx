@@ -1,4 +1,7 @@
-import { Input } from "@/components/ui/input";
+"use client";
+
+import { AdminDatePicker } from "@/features/admin/ui/admin-date-picker";
+import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { cn } from "@/lib/utils";
 
 export type AdminDateRange = {
@@ -17,28 +20,30 @@ export function AdminDateRangeFilter({
   onChange,
   className,
 }: AdminDateRangeFilterProps) {
+  const a = useAdminI18n();
+
   return (
     <div className={cn("flex flex-wrap items-end gap-3", className)}>
-      <div>
+      <div className="min-w-[160px] flex-1">
         <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-          С
+          {a.t("admin.datePicker.from")}
         </label>
-        <Input
-          type="date"
+        <AdminDatePicker
+          id="admin-date-from"
           value={value.from}
-          onChange={(e) => onChange({ ...value, from: e.target.value })}
-          className="h-9 w-[160px] bg-zinc-900/80"
+          onChange={(from) => onChange({ ...value, from })}
+          aria-label={a.t("admin.datePicker.from")}
         />
       </div>
-      <div>
+      <div className="min-w-[160px] flex-1">
         <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-          По
+          {a.t("admin.datePicker.to")}
         </label>
-        <Input
-          type="date"
+        <AdminDatePicker
+          id="admin-date-to"
           value={value.to}
-          onChange={(e) => onChange({ ...value, to: e.target.value })}
-          className="h-9 w-[160px] bg-zinc-900/80"
+          onChange={(to) => onChange({ ...value, to })}
+          aria-label={a.t("admin.datePicker.to")}
         />
       </div>
     </div>
