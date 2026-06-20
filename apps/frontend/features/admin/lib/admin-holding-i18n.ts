@@ -1,9 +1,9 @@
 import { formatTrackStatus } from "@/features/admin/lib/admin-i18n";
 
 export const HOLDING_LOCK_REASON_LABELS: Record<string, string> = {
-  active_listing: "Активный listing",
+  active_listing: "Активное объявление",
   pending_trade: "Ожидающая сделка",
-  compliance_freeze: "Compliance freeze",
+  compliance_freeze: "Заморозка комплаенса",
   settlement: "Расчёт сделки",
   unknown: "Не указана",
 };
@@ -12,23 +12,25 @@ export const HOLDING_EVENT_LABELS: Record<string, string> = {
   primary_purchase: "Первичная покупка",
   secondary_purchase: "Покупка на вторичном рынке",
   secondary_sale: "Продажа на вторичном рынке",
-  listing_lock: "Блокировка под listing",
-  listing_unlock: "Разблокировка после отмены",
+  listing_lock: "Блокировка под объявление",
+  listing_unlock: "Разблокировка после отмены объявления",
   payout_snapshot: "Снимок для начисления",
   manual_adjustment: "Ручная корректировка",
 };
 
 export const HOLDING_FIELD_TOOLTIPS = {
-  available: "Юниты, доступные для продажи или перевода. Не заблокированы listing или settlement.",
-  locked: "Юниты, временно недоступные — обычно под активный listing или расчёт сделки.",
+  available:
+    "Юниты, доступные для продажи или перевода. Не заблокированы объявлением или расчётом сделки.",
+  locked:
+    "Юниты, временно недоступные: обычно под активное объявление или расчёт сделки.",
   averagePrice: "Средняя цена входа по всем покупкам держателя по этому релизу.",
   currentValue: "Текущая оценка = всего юнитов × средняя цена входа (упрощённая модель).",
-  earned: "Сумма выплаченных начислений (PAID payouts) по релизу.",
-  ownership: "Доля держателя от total units релиза.",
+  earned: "Сумма выплаченных начислений по релизу.",
+  ownership: "Доля держателя от общего числа юнитов релиза.",
 } as const;
 
 export function formatLockReason(reason: string | null | undefined): string {
-  if (!reason) return "—";
+  if (!reason?.trim()) return "Нет блокировки";
   return HOLDING_LOCK_REASON_LABELS[reason] ?? reason;
 }
 

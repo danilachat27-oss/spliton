@@ -19,7 +19,9 @@ import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminPaginatedList } from "@/features/admin/hooks/use-admin-paginated-list";
 import { useAdminPermissions } from "@/features/admin/hooks/use-admin-permissions";
 import { formatAdminDateShort, formatUnits, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { ADMIN_ROUND_SORT_OPTIONS } from "@/features/admin/lib/admin-rounds-sort";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { adminSectionCreateButton, adminSectionToolbarActions } from "@/features/admin/lib/admin-ui";
 import type { AdminListQuery } from "@/features/admin/api/types";
 import type { AdminRoundListItem } from "@/features/admin/mocks/admin-rounds.mock";
 import type { AdminTrackListItem } from "@/features/admin/mocks/admin-tracks.mock";
@@ -27,9 +29,11 @@ import { roundFormToPayload } from "@/features/admin/lib/admin-round-form";
 import {
   AdminDataTable,
   AdminFilterBar,
+  AdminFilterPills,
+  AdminFilterResultCount,
   AdminPagination,
+  AdminRaiseProgress,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -64,31 +68,16 @@ function StatTile({
 }) {
   const valueClass =
     tone === "success"
-      ? "text-emerald-800"
+      ? "text-emerald-400"
       : tone === "warning"
-        ? "text-amber-800"
+        ? "text-amber-400"
         : tone === "info"
-          ? "text-sky-800"
+          ? "text-sky-400"
           : "text-zinc-100";
   return (
     <div className={cn(ADMIN_SECTION_TILE, "space-y-1")}>
       <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
       <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
-    </div>
-  );
-}
-
-function RaiseProgress({ pct }: { pct: number }) {
-  const safe = Math.min(100, Math.max(0, pct));
-  return (
-    <div className="min-w-[128px]">
-      <div className="h-2 overflow-hidden rounded-full bg-zinc-800/60">
-        <div
-          className="h-full rounded-full bg-neutral-900 transition-all"
-          style={{ width: `${safe}%` }}
-        />
-      </div>
-      <p className="mt-1 text-xs tabular-nums text-zinc-500">{safe}% от цели</p>
     </div>
   );
 }
@@ -130,6 +119,9 @@ export function RoundsSection() {
   const [loadingRound, setLoadingRound] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState("all");
+  const [sortBy, setSortBy] = React.useState("created_desc");
+  const [dateFrom, setDateFrom] = React.useState("");
+  const [dateTo, setDateTo] = React.useState("");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editRound, setEditRound] = React.useState<AdminRoundListItem | null>(null);
   const [mode, setMode] = React.useState<"create" | "edit">("create");
@@ -172,8 +164,20 @@ export function RoundsSection() {
       page: 1,
       search: search || undefined,
       status: status === "all" ? undefined : status,
+      sortBy,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     }));
-  }, [search, status, setQuery]);
+  }, [search, status, sortBy, dateFrom, dateTo, setQuery]);
+
+  const sortOptions = React.useMemo(
+    () =>
+      ADMIN_ROUND_SORT_OPTIONS.map((option) => ({
+        value: option.value,
+        label: a.t(option.labelKey),
+      })),
+    [a],
+  );
 
   const pageStats = React.useMemo(() => {
     const live = rows.filter((r) => r.status === "live").length;
@@ -231,7 +235,13 @@ export function RoundsSection() {
     {
       key: "progress",
       header: "Прогресс",
-      render: (r) => <RaiseProgress pct={r.progressPct} />,
+      render: (r) => (
+        <AdminRaiseProgress
+          pct={r.progressPct}
+          raised={r.raisedAmountUsdt}
+          target={r.raiseTargetUsdt}
+        />
+      ),
     },
     {
       key: "units",
@@ -273,6 +283,7 @@ export function RoundsSection() {
     setEditRound(null);
     setSelectedRelease(null);
     setSelectedTrackId("");
+    setLoadingRound(false);
     setMode("create");
     setDrawerOpen(true);
   }
@@ -322,32 +333,28 @@ export function RoundsSection() {
     <AdminSectionShell
       sectionId="rounds"
       title={a.adminSectionLabel("rounds")}
+      infoHint={a.t("admin.rounds.infoHint")}
       actions={
-        <div className="flex flex-wrap items-center gap-2">
+        <>
           <AdminSectionRefreshButton onClick={reload} />
           {canEdit ? (
             <Button
               type="button"
               size="sm"
-              className="h-9 gap-1.5 rounded-xl bg-neutral-900 px-4 text-xs font-semibold text-white hover:bg-neutral-800"
+              className={adminSectionCreateButton}
               onClick={openCreate}
             >
               <Plus className="size-3.5" aria-hidden />
-              Создать раунд
+              {a.t("admin.rounds.createBtn")}
             </Button>
           ) : null}
-        </div>
+        </>
       }
     >
       {isReadOnly || !canEdit ? <AdminReadOnlyBanner area={a.adminSectionLabel("rounds")} /> : null}
       {feedback ? (
-        <p className={`text-sm ${feedback.includes("Ошиб") ? "text-red-600" : "text-zinc-400"}`}>{feedback}</p>
+        <p className={`text-sm ${feedback.includes("Ошиб") ? "text-red-400" : "text-zinc-400"}`}>{feedback}</p>
       ) : null}
-
-      <AdminSectionInfoHint>
-        Первичные раунды Spliton — сбор юнитов и прав на долю дохода по релизам. Каждый раунд
-        привязан к релизу; цели сбора, период и статус управляются content manager.
-      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label={a.t("admin.kpi.rounds.total")} value={loading ? "…" : String(page.total)} />
@@ -371,14 +378,23 @@ export function RoundsSection() {
       <AdminSectionPanel>
         <AdminFilterBar
           className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          panelWidthClassName="w-[min(100vw-1rem,520px)]"
+          searchHint={a.t("admin.rounds.search.hint")}
+          footer={
+            <AdminFilterResultCount
+              label={a.t("admin.filters.foundCount")}
+              value={page.total}
+              className="w-full"
+            />
+          }
           fields={[
             {
               id: "search",
-              label: "Поиск",
+              label: a.t("admin.rounds.search.label"),
               type: "search",
               value: search,
               onChange: setSearch,
-              placeholder: "Релиз, ID раунда…",
+              placeholder: a.t("admin.rounds.search.placeholder"),
             },
             {
               id: "status",
@@ -388,8 +404,39 @@ export function RoundsSection() {
               onChange: setStatus,
               options: statusFilterOptions,
             },
+            {
+              id: "sort",
+              label: a.t("admin.filters.sort"),
+              type: "select",
+              value: sortBy,
+              onChange: setSortBy,
+              options: sortOptions,
+            },
+            {
+              id: "from",
+              label: a.t("admin.rounds.filters.startFrom"),
+              type: "date",
+              value: dateFrom,
+              onChange: setDateFrom,
+            },
+            {
+              id: "to",
+              label: a.t("admin.rounds.filters.startTo"),
+              type: "date",
+              value: dateTo,
+              onChange: setDateTo,
+            },
           ]}
         />
+
+        <div className="flex flex-col gap-3 rounded-2xl bg-zinc-900/25 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-3">
+          <AdminFilterPills
+            label={a.table.status}
+            value={status}
+            onChange={setStatus}
+            options={statusFilterOptions}
+          />
+        </div>
 
         <AdminSectionDataArea
           loading={loading}

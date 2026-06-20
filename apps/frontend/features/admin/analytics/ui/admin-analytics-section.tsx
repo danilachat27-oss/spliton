@@ -1,6 +1,6 @@
 "use client";
 
-import { adminCard } from "@/features/admin/lib/admin-ui";
+import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -10,14 +10,14 @@ type Props = {
   className?: string;
 };
 
-/** Мягкая секция без тяжёлых бордеров */
+/** Секция аналитики — borderless tile в стиле операторской панели. */
 export function AdminAnalyticsSection({ title, description, children, className }: Props) {
   return (
-    <section className={cn(adminCard("p-5"), className)}>
+    <section className={cn(ADMIN_SECTION_TILE, "min-w-0", className)}>
       {title ? (
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
-          {description ? <p className="mt-0.5 text-xs text-zinc-500">{description}</p> : null}
+          {description ? <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">{description}</p> : null}
         </div>
       ) : null}
       {children}

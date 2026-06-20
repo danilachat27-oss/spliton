@@ -6,6 +6,7 @@ import {
   MOCK_ADMIN_ROUNDS,
   type AdminRoundListItem,
 } from "@/features/admin/mocks/admin-rounds.mock";
+import { sortAdminRoundRows } from "@/features/admin/lib/admin-rounds-sort";
 import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { assertLiveAdminClient } from "./admin-service.util";
 
@@ -15,7 +16,9 @@ function filterMockRounds(items: AdminRoundListItem[], query?: AdminListQuery): 
     const q = query.search.trim().toLowerCase();
     rows = rows.filter(
       (r) =>
+        r.name.toLowerCase().includes(q) ||
         r.trackTitle.toLowerCase().includes(q) ||
+        r.trackArtist.toLowerCase().includes(q) ||
         r.id.toLowerCase().includes(q) ||
         r.trackId.toLowerCase().includes(q),
     );
@@ -23,6 +26,14 @@ function filterMockRounds(items: AdminRoundListItem[], query?: AdminListQuery): 
   if (query?.status && query.status !== "all") {
     rows = rows.filter((r) => r.status === query.status);
   }
+  if (query?.dateFrom) {
+    rows = rows.filter((r) => !r.startDate || r.startDate >= query.dateFrom!);
+  }
+  if (query?.dateTo) {
+    rows = rows.filter((r) => !r.startDate || r.startDate <= query.dateTo!);
+  }
+  const sortValue = query?.sortBy ?? "created_desc";
+  rows = sortAdminRoundRows(rows, sortValue);
   return rows;
 }
 

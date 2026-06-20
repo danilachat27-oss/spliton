@@ -40,7 +40,6 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -62,7 +61,7 @@ const DEPOSIT_FILTER_OPTIONS_BASE = [
   { value: "manual_review", label: "Ручная проверка" },
   { value: "high_value", labelKey: "admin.filter.highValue" as const },
   { value: "failed", label: "Ошибочные" },
-  { value: "no_tx_hash", label: "Без tx hash" },
+  { value: "no_tx_hash", label: "Без хеша транзакции" },
   { value: "with_risk", labelKey: "admin.filter.riskFlags" as const },
 ];
 
@@ -377,6 +376,12 @@ export function DepositsSection() {
     <AdminSectionShell
       sectionId="deposits"
       title={a.adminSectionLabel("deposits")}
+      infoHint={
+        <>
+          Контроль входящих USDT TRC20 платежей Spliton: подтверждения сети, ручная сверка и зачисления на кошельки
+          пользователей через wallet ledger.
+        </>
+      }
       actions={
         <AdminSectionRefreshButton
           onClick={() => {
@@ -387,11 +392,6 @@ export function DepositsSection() {
       }
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("deposits")} /> : null}
-
-      <AdminSectionInfoHint>
-        Контроль входящих USDT TRC20 платежей Spliton: подтверждения сети, ручная сверка и зачисления на кошельки
-        пользователей через wallet ledger.
-      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <StatTile

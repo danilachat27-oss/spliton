@@ -5,10 +5,12 @@ import Link from "next/link";
 import { ArrowRight } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AdminPageShell } from "@/features/admin/components/admin-page-shell";
+import { AdminAnalyticsPageError, AdminAnalyticsPageLoading } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
 import { AdminAnalyticsExportButton } from "@/features/admin/analytics/components/admin-analytics-export-button";
 import { AdminAnalyticsInsightsPanel } from "@/features/admin/analytics/components/admin-analytics-insights-panel";
 import { AdminAnalyticsKpiGroup } from "@/features/admin/analytics/components/admin-analytics-kpi-group";
@@ -21,7 +23,7 @@ import { parseAnalyticsMoney, useAnalyticsPeriod } from "@/features/admin/analyt
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_ANALYTICS_ATTENTION_ITEM, ADMIN_ANALYTICS_DRILL_LINK, ADMIN_ANALYTICS_INLINE_STAT, ADMIN_ANALYTICS_LIST_LINK, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { isBusinessAnalyst } from "@/features/admin/config/admin-rbac";
 import {
   buildTrackHealthSummary,
@@ -44,8 +46,6 @@ import {
 } from "@/services/admin/adminTrackAnalytics.service";
 import {
   AdminDataTable,
-  AdminErrorState,
-  AdminLoadingState,
   AdminPageHeader,
   AdminReadOnlyBanner,
   type AdminColumn,
@@ -113,11 +113,11 @@ function formatUnits(n: number | string, unitsLabel: string): string {
 function StatusBadge({ status, kind = "round" }: { status: string; kind?: "round" | "track" }) {
   const a = useAdminI18n();
   const map: Record<string, string> = {
-    live: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-    draft: "bg-zinc-100 text-zinc-300 ring-zinc-200",
-    paused: "bg-amber-50 text-amber-900 ring-amber-200",
-    completed: "bg-blue-50 text-blue-900 ring-blue-200",
-    closed: "bg-zinc-100 text-zinc-400 ring-zinc-200",
+    live: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25",
+    draft: "bg-zinc-800 text-zinc-400 ring-1 ring-zinc-700",
+    paused: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/25",
+    completed: "bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/25",
+    closed: "bg-zinc-800 text-zinc-500 ring-1 ring-zinc-700",
   };
   const label = kind === "track" ? a.formatTrackStatus(status) : a.formatRoundStatus(status);
   return (
@@ -191,19 +191,11 @@ export function AnalyticsTracksSection() {
   }, [load]);
 
   if (loading && !summary) {
-    return (
-      <AdminPageShell>
-        <AdminLoadingState label={a.t("admin.analytics.tracks.loading")} centered />
-      </AdminPageShell>
-    );
+    return <AdminAnalyticsPageLoading label={a.t("admin.analytics.tracks.loading")} />;
   }
 
   if (error) {
-    return (
-      <AdminPageShell>
-        <AdminErrorState onRetry={load} />
-      </AdminPageShell>
-    );
+    return <AdminAnalyticsPageError onRetry={load} />;
   }
 
   const s = pickTrackSummary(summary as Record<string, unknown> | null);
@@ -278,7 +270,7 @@ export function AnalyticsTracksSection() {
             <span className="text-zinc-400">—</span>
           ) : (
             r.warnings.map((w) => (
-              <span key={w} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-900">
+              <span key={w} className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-300">
                 {ROUND_WARNING_LABELS[w] ?? w}
               </span>
             ))
@@ -408,9 +400,7 @@ export function AnalyticsTracksSection() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex flex-wrap items-center justify-end gap-2">
               <AdminPeriodSelector value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomDatesChange={setCustomDates} />
-              <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
-                {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
-              </Button>
+              <AdminSectionRefreshButton onClick={load} loading={loading} />
               <AdminAnalyticsExportButton
                 reportType="tracks_round_progress"
                 label={a.t("admin.analytics.common.report")}
@@ -429,7 +419,7 @@ export function AnalyticsTracksSection() {
       />
 
       <AdminAnalyticsLayout activeSection="analyticsTracks">
-        <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
+        <div className={cn(ADMIN_SECTION_TILE, healthBannerClass)}>
           <h2 className={cn("text-sm font-semibold", adminAnalyticsHealthBannerTitleClass(health.tone))}>
             {health.title}
           </h2>
@@ -579,17 +569,17 @@ export function AnalyticsTracksSection() {
             drilldownHref={ROUTES.adminTracks}
           >
             <div className="mb-4 grid grid-cols-3 gap-2 text-center text-sm">
-              <div className="rounded-lg bg-emerald-50 px-2 py-3">
+              <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                 <p className="text-xs text-zinc-500">{tr("sold")}</p>
-                <p className="font-semibold tabular-nums">{formatUnitsLocalized(units?.soldUnits ?? 0)}</p>
+                <p className="font-semibold tabular-nums text-emerald-400">{formatUnitsLocalized(units?.soldUnits ?? 0)}</p>
               </div>
-              <div className="rounded-lg bg-blue-50 px-2 py-3">
+              <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                 <p className="text-xs text-zinc-500">{tr("available")}</p>
-                <p className="font-semibold tabular-nums">{formatUnitsLocalized(units?.availableUnits ?? 0)}</p>
+                <p className="font-semibold tabular-nums text-zinc-100">{formatUnitsLocalized(units?.availableUnits ?? 0)}</p>
               </div>
-              <div className="rounded-lg bg-violet-50 px-2 py-3">
+              <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                 <p className="text-xs text-zinc-500">{tr("inListings")}</p>
-                <p className="font-semibold tabular-nums">{formatUnitsLocalized(units?.lockedInListings ?? 0)}</p>
+                <p className="font-semibold tabular-nums text-violet-300">{formatUnitsLocalized(units?.lockedInListings ?? 0)}</p>
               </div>
             </div>
             <AdminBarChart
@@ -686,7 +676,7 @@ export function AnalyticsTracksSection() {
                 <li key={t.trackId}>
                   <Link
                     href={tracksFilterHref({ id: t.trackId })}
-                    className="flex justify-between rounded-lg border border-zinc-800 px-3 py-2 text-sm hover:bg-zinc-800/60"
+                    className={cn(ADMIN_ANALYTICS_LIST_LINK, "border border-zinc-800/80 hover:border-zinc-700")}
                   >
                     <span>{t.trackTitle}</span>
                     <span className="font-medium tabular-nums">{t.valueUsdt}</span>
@@ -700,7 +690,7 @@ export function AnalyticsTracksSection() {
                 <li key={`h-${t.trackId}`}>
                   <Link
                     href={`${ROUTES.adminHoldings}?releaseId=${t.trackId}`}
-                    className="flex justify-between rounded-lg bg-zinc-50 px-3 py-2 text-sm hover:bg-zinc-100"
+                    className={ADMIN_ANALYTICS_LIST_LINK}
                   >
                     <span>{t.trackTitle}</span>
                     <span className="tabular-nums">{tr("holdersShort").replace("{count}", String(t.holdersCount))}</span>
@@ -726,7 +716,7 @@ export function AnalyticsTracksSection() {
                             ? `${ROUTES.adminRounds}?releaseId=${a.trackId}`
                             : `${ROUTES.adminHoldings}?releaseId=${a.trackId}`
                       }
-                      className="flex justify-between rounded-lg border border-amber-100 bg-amber-50/50 px-3 py-2 text-sm"
+                      className={ADMIN_ANALYTICS_ATTENTION_ITEM}
                     >
                       <span>
                         {a.trackTitle} — {a.label}
@@ -747,7 +737,7 @@ export function AnalyticsTracksSection() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="flex items-center justify-between rounded-lg border border-zinc-800 px-3 py-2.5 text-sm hover:bg-zinc-800/60"
+                className={ADMIN_ANALYTICS_DRILL_LINK}
               >
                 {link.label}
                 <ArrowRight className="size-4 text-zinc-400" />

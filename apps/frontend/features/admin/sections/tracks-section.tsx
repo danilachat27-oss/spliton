@@ -17,16 +17,24 @@ import {
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminPaginatedList } from "@/features/admin/hooks/use-admin-paginated-list";
 import { useAdminPermissions } from "@/features/admin/hooks/use-admin-permissions";
-import { formatAdminDate, formatUnits, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import {
+  ADMIN_METRIC_NA_LABEL,
+  formatAdminDate,
+  formatAdminMetricUsdt,
+  formatAdminOptionalText,
+  formatUnits,
+  isAdminMetricEmpty,
+} from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { adminBtnGhost } from "@/features/admin/lib/admin-ui";
 import type { AdminListQuery } from "@/features/admin/api/types";
 import type { AdminTrackListItem } from "@/features/admin/mocks/admin-tracks.mock";
 import {
   AdminDataTable,
   AdminFilterBar,
+  AdminFilterResultCount,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -43,6 +51,7 @@ import {
   uploadTrackCover,
 } from "@/services/admin/adminTracks.service";
 import { listAdminReleaseGenres } from "@/services/admin/adminReleaseGenres.service";
+import { ADMIN_TRACK_SORT_OPTIONS, resolveTrackSort } from "@/features/admin/lib/admin-tracks-sort";
 import { cn } from "@/lib/utils";
 
 const TRACK_STATUS_TONE: Record<string, "neutral" | "success" | "warning" | "pending"> = {
@@ -80,20 +89,86 @@ function StatTile({
   );
 }
 
+function isTrackPoolUnset(row: AdminTrackListItem): boolean {
+  return [row.holderSharePct, row.artistSharePct, row.platformSharePct].every(
+    (value) => isAdminMetricEmpty(value) || Number(value) === 0,
+  );
+}
+
+function formatTrackPool(row: AdminTrackListItem): string {
+  if (isTrackPoolUnset(row)) return ADMIN_METRIC_NA_LABEL;
+  const pct = row.revenueSharePoolPct || row.holderSharePct;
+  if (isAdminMetricEmpty(pct)) return ADMIN_METRIC_NA_LABEL;
+  return `${Number(pct).toLocaleString("ru-RU", { maximumFractionDigits: 0 })}%`;
+}
+
+function formatTrackRaiseTarget(value: string): string {
+  if (isAdminMetricEmpty(value)) return ADMIN_METRIC_NA_LABEL;
+  const n = Number(String(value).replace(/[^\d.-]/g, ""));
+  if (Number.isNaN(n) || n === 0) return ADMIN_METRIC_NA_LABEL;
+  return formatAdminMetricUsdt(value);
+}
+
+function unitsProgressTone(pct: number): {
+  fill: string;
+  glow: string;
+  label: string;
+} {
+  if (pct >= 75) {
+    return {
+      fill: "bg-[#B7F500]",
+      glow: "shadow-[0_0_10px_rgba(183,245,0,0.45)]",
+      label: "text-[#B7F500]",
+    };
+  }
+  if (pct >= 40) {
+    return {
+      fill: "bg-amber-400",
+      glow: "shadow-[0_0_10px_rgba(251,191,36,0.35)]",
+      label: "text-amber-400",
+    };
+  }
+  if (pct > 0) {
+    return {
+      fill: "bg-red-500",
+      glow: "shadow-[0_0_10px_rgba(239,68,68,0.35)]",
+      label: "text-red-400",
+    };
+  }
+  return {
+    fill: "bg-zinc-600",
+    glow: "",
+    label: "text-zinc-500",
+  };
+}
+
 function UnitsProgress({ sold, total }: { sold: string; total: string }) {
   const soldN = Number(String(sold).replace(/[^\d.-]/g, ""));
   const totalN = Number(String(total).replace(/[^\d.-]/g, ""));
-  const pct = totalN > 0 ? Math.min(100, Math.round((soldN / totalN) * 100)) : 0;
+  if (Number.isNaN(totalN) || totalN <= 0) {
+    return <span className="text-xs text-zinc-500">{ADMIN_METRIC_NA_LABEL}</span>;
+  }
+  const pct = Math.min(100, Math.max(0, Math.round((soldN / totalN) * 100)));
+  const fillWidth = pct === 0 ? 0 : Math.max(pct, 6);
+  const tone = unitsProgressTone(pct);
+
   return (
-    <div className="min-w-[128px]">
-      <div className="h-2 overflow-hidden rounded-full bg-zinc-800/60">
+    <div className="min-w-[140px]">
+      <div
+        className="h-2.5 overflow-hidden rounded-full bg-black/50 ring-1 ring-inset ring-zinc-700/90"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
-          className="h-full rounded-full bg-neutral-900 transition-all"
-          style={{ width: `${pct}%` }}
+          className={cn("h-full min-w-[6px] rounded-full transition-all", tone.fill, tone.glow)}
+          style={{ width: `${fillWidth}%` }}
         />
       </div>
-      <p className="mt-1 text-xs tabular-nums text-zinc-500">
-        {formatUnits(sold)} / {formatUnits(total)} · {pct}%
+      <p className="mt-1.5 text-xs tabular-nums text-zinc-400">
+        {formatUnits(sold)} / {formatUnits(total)}
+        <span className={cn("ml-1.5 font-semibold", tone.label)}>· {pct}%</span>
       </p>
     </div>
   );
@@ -130,6 +205,9 @@ export function TracksSection() {
   const [search, setSearch] = React.useState("");
   const [status, setStatus] = React.useState("all");
   const [genre, setGenre] = React.useState("all");
+  const [sortBy, setSortBy] = React.useState("all");
+  const [dateFrom, setDateFrom] = React.useState("");
+  const [dateTo, setDateTo] = React.useState("");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editTrack, setEditTrack] = React.useState<AdminTrackListItem | null>(null);
   const [mode, setMode] = React.useState<"create" | "edit">("create");
@@ -145,25 +223,44 @@ export function TracksSection() {
   const [genreOptions, setGenreOptions] = React.useState<string[]>([]);
 
   React.useEffect(() => {
-    void listAdminReleaseGenres(undefined, client, { activeOnly: true })
+    void listAdminReleaseGenres({ status: "active" }, client)
       .then((items) => setGenreOptions(items.map((g) => g.name).sort()))
       .catch(() => undefined);
   }, [client]);
 
   const genres = React.useMemo(() => {
-    const set = new Set([...genreOptions, ...rows.map((t) => t.genre).filter(Boolean)]);
+    const set = new Set(
+      [
+        ...genreOptions,
+        ...rows.map((t) => t.genre).filter((g) => g && !isAdminMetricEmpty(g)),
+      ],
+    );
     return ["all", ...Array.from(set).sort()];
   }, [genreOptions, rows]);
 
+  const sortOptions = React.useMemo(
+    () =>
+      ADMIN_TRACK_SORT_OPTIONS.map((option) => ({
+        value: option.value,
+        label: a.t(option.labelKey),
+      })),
+    [a],
+  );
+
   React.useEffect(() => {
+    const { sortBy: resolvedSortBy, sortDir } = resolveTrackSort(sortBy);
     setQuery((q) => ({
       ...q,
       page: 1,
       search: search || undefined,
       status: status === "all" ? undefined : status,
       genre: genre === "all" ? undefined : genre,
+      sortBy: resolvedSortBy,
+      sortDir,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     }));
-  }, [search, status, genre, setQuery]);
+  }, [search, status, genre, sortBy, dateFrom, dateTo, setQuery]);
 
   const pageStats = React.useMemo(() => {
     const active = rows.filter((t) => t.status === "active").length;
@@ -184,9 +281,16 @@ export function TracksSection() {
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800/60 text-zinc-400">
             <Music2 className="size-4" strokeWidth={2.25} />
           </div>
-          <div>
-            <p className="font-medium text-zinc-100">{r.title}</p>
-            <p className="text-xs text-zinc-500">{r.artist}</p>
+          <div className="min-w-0">
+            <p className="truncate font-medium text-zinc-100">{r.title}</p>
+            <p
+              className={cn(
+                "truncate text-xs",
+                isAdminMetricEmpty(r.artist) ? "text-zinc-600" : "text-zinc-500",
+              )}
+            >
+              {formatAdminOptionalText(r.artist)}
+            </p>
           </div>
         </div>
       ),
@@ -194,7 +298,12 @@ export function TracksSection() {
     {
       key: "genre",
       header: "Жанр",
-      render: (r) => <AdminStatusBadge label={r.genre} tone="neutral" />,
+      render: (r) =>
+        isAdminMetricEmpty(r.genre) ? (
+          <span className="text-sm text-zinc-500">{ADMIN_METRIC_NA_LABEL}</span>
+        ) : (
+          <AdminStatusBadge label={r.genre} tone="neutral" />
+        ),
     },
     {
       key: "status",
@@ -214,16 +323,36 @@ export function TracksSection() {
     {
       key: "pool",
       header: "Пул дохода",
-      render: (r) => <span className="tabular-nums text-zinc-200">{r.revenueSharePoolPct}%</span>,
+      render: (r) => {
+        const label = formatTrackPool(r);
+        return (
+          <span
+            className={cn(
+              "tabular-nums",
+              label === ADMIN_METRIC_NA_LABEL ? "text-zinc-500" : "text-zinc-200",
+            )}
+          >
+            {label}
+          </span>
+        );
+      },
     },
     {
       key: "raise",
       header: "Цель раунда",
-      render: (r) => (
-        <span className="whitespace-nowrap tabular-nums text-zinc-200">
-          {formatUsdtAmount(r.raiseTargetUsdt)}
-        </span>
-      ),
+      render: (r) => {
+        const label = formatTrackRaiseTarget(r.raiseTargetUsdt);
+        return (
+          <span
+            className={cn(
+              "whitespace-nowrap tabular-nums",
+              label === ADMIN_METRIC_NA_LABEL ? "text-zinc-500" : "text-zinc-200",
+            )}
+          >
+            {label}
+          </span>
+        );
+      },
     },
     {
       key: "created",
@@ -240,7 +369,10 @@ export function TracksSection() {
       render: (r) => (
         <button
           type="button"
-          className="inline-flex h-8 items-center rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800/60"
+          className={cn(
+            adminBtnGhost,
+            "h-8 rounded-lg px-2.5 text-xs font-semibold text-zinc-400 hover:text-zinc-100",
+          )}
           onClick={(e) => {
             e.stopPropagation();
             openEdit(r);
@@ -294,8 +426,14 @@ export function TracksSection() {
     <AdminSectionShell
       sectionId="tracks"
       title={a.adminSectionLabel("tracks")}
+      infoHint={
+        <>
+          Управление треками и релизами: параметры распределения дохода, юниты, финансовые условия раунда и статус
+          публикации. Изменения фиксируются в журнале действий.
+        </>
+      }
       actions={
-        <div className="flex flex-wrap items-center gap-2">
+        <>
           <AdminSectionRefreshButton onClick={reload} />
           {canEdit ? (
             <Button
@@ -308,18 +446,13 @@ export function TracksSection() {
               Создать релиз
             </Button>
           ) : null}
-        </div>
+        </>
       }
     >
       {isReadOnly || !canEdit ? <AdminReadOnlyBanner area={a.adminSectionLabel("tracks")} /> : null}
       {feedback ? (
         <p className={`text-sm ${feedback.includes("Ошиб") ? "text-red-600" : "text-zinc-400"}`}>{feedback}</p>
       ) : null}
-
-      <AdminSectionInfoHint>
-        Управление треками и релизами: параметры распределения дохода, юниты, финансовые условия
-        раунда и статус публикации. Изменения фиксируются в журнале действий.
-      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label={a.t("admin.kpi.tracks.totalReleases")} value={loading ? "…" : String(page.total)} />
@@ -343,14 +476,23 @@ export function TracksSection() {
       <AdminSectionPanel>
         <AdminFilterBar
           className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          panelWidthClassName="w-[min(100vw-1rem,520px)]"
+          searchHint={a.t("admin.tracks.search.hint")}
+          footer={
+            <AdminFilterResultCount
+              label={a.t("admin.filters.foundCount")}
+              value={page.total}
+              className="w-full"
+            />
+          }
           fields={[
             {
               id: "search",
-              label: "Поиск",
+              label: a.t("admin.tracks.search.label"),
               type: "search",
               value: search,
               onChange: setSearch,
-              placeholder: "Название, артист, ID…",
+              placeholder: a.t("admin.tracks.search.placeholder"),
             },
             {
               id: "status",
@@ -362,7 +504,7 @@ export function TracksSection() {
             },
             {
               id: "genre",
-              label: "Жанр",
+              label: a.t("admin.tracks.filters.genre"),
               type: "select",
               value: genre,
               onChange: setGenre,
@@ -370,6 +512,28 @@ export function TracksSection() {
                 value: g,
                 label: g === "all" ? a.actions.all : g,
               })),
+            },
+            {
+              id: "sort",
+              label: a.t("admin.filters.sort"),
+              type: "select",
+              value: sortBy,
+              onChange: setSortBy,
+              options: sortOptions,
+            },
+            {
+              id: "from",
+              label: a.t("admin.tracks.filters.createdFrom"),
+              type: "date",
+              value: dateFrom,
+              onChange: setDateFrom,
+            },
+            {
+              id: "to",
+              label: a.t("admin.tracks.filters.createdTo"),
+              type: "date",
+              value: dateTo,
+              onChange: setDateTo,
             },
           ]}
         />

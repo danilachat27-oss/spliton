@@ -12,6 +12,8 @@ type AdminLoadingStateProps = {
   variant?: "light" | "dark";
   /** Вертикально центрировать в области страницы (секции), не в drawer */
   centered?: boolean;
+  /** Отступ сверху и слева внутри карточки (страница профиля и т.п.) */
+  inset?: boolean;
 };
 
 export function AdminLoadingState({
@@ -19,6 +21,7 @@ export function AdminLoadingState({
   className,
   variant = "dark",
   centered = false,
+  inset = false,
 }: AdminLoadingStateProps) {
   const a = useAdminI18n();
   const displayLabel = label ?? a.empty.loading;
@@ -26,8 +29,11 @@ export function AdminLoadingState({
   return (
     <div
       className={cn(
-        adminCard("flex flex-col items-center justify-center gap-3 px-6 py-16"),
-        centered && "min-h-[min(60vh,520px)]",
+        adminCard("flex flex-col gap-3 px-6 py-16"),
+        inset
+          ? "min-h-[min(50vh,440px)] items-start justify-start px-6 py-10 sm:px-8 sm:py-12"
+          : "items-center justify-center",
+        centered && !inset && "min-h-[min(60vh,520px)]",
         className,
       )}
       role="status"

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronRight } from "@/lib/lucide";
+import { ArrowRight, ChevronRight } from "@/lib/lucide";
 
 import {
   AdminSectionDataArea,
@@ -13,10 +13,17 @@ import {
 import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
+import {
+  ADMIN_METRIC_NA_LABEL,
+  formatUsdtAmount,
+  isAdminMetricEmpty,
+} from "@/features/admin/lib/admin-format";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
-import { adminListRow } from "@/features/admin/lib/admin-ui";
+import {
+  ADMIN_SECTION_KPI_GRID,
+  ADMIN_SECTION_NOTICE,
+  ADMIN_SECTION_TILE,
+} from "@/features/admin/lib/admin-section-styles";
 import { AdminDepositNetworkSettingsPanel } from "@/features/admin/sections/admin-deposit-network-settings-panel";
 import { AdminDepositAddressPoolPanel } from "@/features/admin/sections/admin-deposit-address-pool-panel";
 import {
@@ -25,7 +32,7 @@ import {
   AdminTreasuryReconciliationPanel,
   AdminTreasurySafetyPanel,
 } from "@/features/admin/sections/admin-treasury-operations-panels";
-import { AdminDetailDrawer, AdminSectionInfoHint } from "@/features/admin/ui";
+import { AdminDetailDrawer } from "@/features/admin/ui";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -76,31 +83,80 @@ const TREASURY_MODULES = [
 
 type TreasuryModuleId = (typeof TREASURY_MODULES)[number]["id"];
 
+function StatTile({
+  label,
+  value,
+  tone = "neutral",
+  href,
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "success" | "warning" | "danger" | "info";
+  href?: string;
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-400"
+      : tone === "warning"
+        ? "text-amber-400"
+        : tone === "danger"
+          ? "text-rose-400"
+          : tone === "info"
+            ? "text-sky-400"
+            : "text-zinc-100";
+  const empty = isAdminMetricEmpty(value);
+
+  const body = (
+    <div className={cn(ADMIN_SECTION_TILE, "flex min-h-[5.5rem] flex-col justify-between gap-2")}>
+      <p className="text-[11px] font-semibold uppercase leading-snug tracking-wide text-zinc-500">{label}</p>
+      <p
+        className={cn(
+          "tabular-nums tracking-tight",
+          empty ? "text-base font-medium text-zinc-500" : cn("text-2xl font-semibold", valueClass),
+        )}
+      >
+        {empty ? ADMIN_METRIC_NA_LABEL : value}
+      </p>
+    </div>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className="block transition-opacity hover:opacity-90">
+        {body}
+      </Link>
+    );
+  }
+
+  return body;
+}
+
 export function AdminTreasurySection() {
   const a = useAdminI18n();
   const client = useAdminApi();
 
   const [data, setData] = React.useState<TreasuryConsole | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [hotCheckMessage, setHotCheckMessage] = React.useState<string | null>(null);
   const [activeModule, setActiveModule] = React.useState<TreasuryModuleId | null>(null);
 
-  const load = React.useCallback(() => {
+  const load = React.useCallback(async () => {
     setLoading(true);
-    setError(false);
-    void client
-      .get<TreasuryConsole>(`${ADMIN_API_PATHS.treasury}/console`)
-      .catch(() => {
-        setError(true);
-        return null;
-      })
-      .then((r) => setData(r))
-      .finally(() => setLoading(false));
+    setError(null);
+    try {
+      const consoleData = await client.get<TreasuryConsole>(`${ADMIN_API_PATHS.treasury}/console`);
+      setData(consoleData);
+    } catch (e) {
+      setError(localizedAdminError(e));
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
   }, [client]);
 
   React.useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const checkHotWallet = () => {
@@ -116,115 +172,190 @@ export function AdminTreasurySection() {
   };
 
   const activeModuleMeta = TREASURY_MODULES.find((m) => m.id === activeModule);
+  const wideDrawer =
+    activeModule === "deposit-network" || activeModule === "accounts" || activeModule === "address-pool";
 
   return (
     <AdminSectionShell
       sectionId="treasury"
       title={a.t("admin.treasury.title")}
-      actions={<AdminSectionRefreshButton onClick={load} />}
+      infoHint={a.t("admin.treasury.subtitle")}
+      actions={<AdminSectionRefreshButton onClick={() => void load()} loading={loading} />}
     >
-      <AdminSectionInfoHint>{a.t("admin.treasury.subtitle")}</AdminSectionInfoHint>
+      <AdminSectionPanel className="min-w-0 space-y-5">
+        {data && !loading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            <StatTile
+              label={a.t("admin.treasury.pendingWithdrawalsLabel")}
+              value={String(data.pendingWithdrawals)}
+              tone={data.pendingWithdrawals > 0 ? "warning" : "neutral"}
+              href={ROUTES.adminWithdrawals}
+            />
+            <StatTile
+              label={a.t("admin.treasury.approvalQueue")}
+              value={String(data.approvalQueue)}
+              tone={data.approvalQueue > 0 ? "warning" : "neutral"}
+            />
+            <StatTile
+              label={a.t("admin.treasury.dailyOutflow")}
+              value={formatUsdtAmount(data.dailyOutflowUsdt)}
+              tone="info"
+            />
+            <StatTile
+              label={a.t("admin.treasury.openDiscrepancies")}
+              value={String(data.openDiscrepancyCount)}
+              tone={data.openDiscrepancyCount > 0 ? "danger" : "success"}
+            />
+          </div>
+        ) : loading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-800/50")} />
+            ))}
+          </div>
+        ) : null}
 
-      <AdminSectionPanel>
-        <p className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          {a.t("admin.treasury.rehearsalNote")}
-        </p>
+        {data ? (
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-zinc-900/40 px-4 py-3 text-sm">
+            <Link
+              href={ROUTES.adminWithdrawals}
+              className="inline-flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-[#B7F500]"
+            >
+              {a.t("admin.section.withdrawals")}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
+            <Link
+              href={ROUTES.adminDeposits}
+              className="inline-flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-[#B7F500]"
+            >
+              {a.t("admin.section.deposits")}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
+            <Link
+              href={ROUTES.adminOperatorTasks}
+              className="inline-flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-[#B7F500]"
+            >
+              {a.t("admin.section.operatorTasks")}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
+          </div>
+        ) : null}
 
-        <AdminSectionDataArea loading={loading} error={error} onRetry={load}>
+        <AdminSectionDataArea
+          loading={loading && !data}
+          error={error}
+          onRetry={() => void load()}
+          loadingLabel={a.t("admin.empty.loading")}
+        >
           {data ? (
             <div className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className={cn(ADMIN_SECTION_TILE, "text-sm")}>
-                  <p className="font-semibold text-zinc-100">{a.t("admin.treasury.hotWallet")}</p>
-                  <p className="mt-1 break-all font-mono text-[10px] text-zinc-400">
+              <div className="grid gap-3 lg:grid-cols-3">
+                <div className={cn(ADMIN_SECTION_TILE, "space-y-2 text-sm")}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.treasury.hotWallet")}
+                  </p>
+                  <p className="break-all font-mono text-[11px] text-zinc-400">
                     {data.hotWallet?.configured
                       ? data.hotWallet.address
-                      : a.t("admin.treasury.notConfiguredBoot")}
+                      : a.t("admin.treasury.notConfigured")}
                   </p>
-                  <p className="mt-2 tabular-nums text-zinc-200">
-                    {a.t("admin.table.expected")}: {data.hotWallet?.balanceExpected ?? ADMIN_METRIC_NA_LABEL} ·{" "}
-                    {a.t("admin.table.observed")}: {data.hotWallet?.balanceObserved ?? ADMIN_METRIC_NA_LABEL}
-                  </p>
+                  <div className="space-y-1 text-xs text-zinc-500">
+                    <p>
+                      {a.t("admin.table.expected")}:{" "}
+                      <span className="tabular-nums text-emerald-400">
+                        {data.hotWallet?.balanceExpected
+                          ? formatUsdtAmount(data.hotWallet.balanceExpected)
+                          : ADMIN_METRIC_NA_LABEL}
+                      </span>
+                    </p>
+                    <p>
+                      {a.t("admin.table.observed")}:{" "}
+                      <span className="tabular-nums text-zinc-300">
+                        {data.hotWallet?.balanceObserved
+                          ? formatUsdtAmount(data.hotWallet.balanceObserved)
+                          : ADMIN_METRIC_NA_LABEL}
+                      </span>
+                    </p>
+                  </div>
                   {data.hotWallet?.minThreshold ? (
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500">
                       {a
                         .t("admin.treasury.minMax")
-                        .replace("{min}", data.hotWallet.minThreshold)
-                        .replace("{max}", data.hotWallet.maxThreshold ?? ADMIN_METRIC_NA_LABEL)}
+                        .replace("{min}", formatUsdtAmount(data.hotWallet.minThreshold))
+                        .replace(
+                          "{max}",
+                          data.hotWallet.maxThreshold
+                            ? formatUsdtAmount(data.hotWallet.maxThreshold)
+                            : ADMIN_METRIC_NA_LABEL,
+                        )}
                     </p>
                   ) : null}
                 </div>
 
-                <div className={cn(ADMIN_SECTION_TILE, "text-sm")}>
-                  <p className="font-semibold text-zinc-100">{a.t("admin.treasury.coldWallet")}</p>
-                  <p className="mt-1 break-all font-mono text-[10px] text-zinc-400">
+                <div className={cn(ADMIN_SECTION_TILE, "space-y-2 text-sm")}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.treasury.coldWallet")}
+                  </p>
+                  <p className="break-all font-mono text-[11px] text-zinc-400">
                     {data.coldWallet?.configured
                       ? data.coldWallet.address
                       : a.t("admin.treasury.notConfigured")}
                   </p>
-                  <p className="mt-2 text-xs text-zinc-500">
+                  <p className="text-xs leading-relaxed text-zinc-500">
                     {data.coldWallet?.note || a.t("admin.treasury.coldWalletManual")}
                   </p>
                 </div>
 
-                <div className={cn(ADMIN_SECTION_TILE, "text-sm")}>
-                  <p className="font-semibold text-zinc-100">{a.t("admin.treasury.queues")}</p>
-                  <ul className="mt-2 space-y-1 text-zinc-300">
-                    <li>
-                      {a.t("admin.treasury.pendingWithdrawalsLabel")}:{" "}
-                      <Link href={ROUTES.adminWithdrawals} className="underline">
-                        {data.pendingWithdrawals}
-                      </Link>
-                    </li>
-                    <li>
-                      {a.t("admin.treasury.approvalQueue")}: {data.approvalQueue}
-                    </li>
-                    <li>
-                      {a.t("admin.treasury.dailyOutflow")}: {data.dailyOutflowUsdt}
-                    </li>
-                    <li>
-                      {a.t("admin.treasury.openDiscrepancies")}: {data.openDiscrepancyCount}
-                    </li>
-                  </ul>
+                <div className={cn(ADMIN_SECTION_TILE, "space-y-2 text-sm")}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.systemStatus.depositIngestion")}
+                  </p>
                   {data.depositIngestion ? (
-                    <p className="mt-2 text-xs text-zinc-500">
-                      {a.t("admin.systemStatus.depositIngestion")}: {data.depositIngestion.status}
-                      {data.depositIngestion.lastRunAt
-                        ? ` · ${new Date(data.depositIngestion.lastRunAt).toLocaleString("ru-RU")}`
-                        : ""}
-                    </p>
-                  ) : null}
+                    <>
+                      <p className="text-sm font-medium text-zinc-200">{data.depositIngestion.status}</p>
+                      <p className="text-xs text-zinc-500">
+                        {data.depositIngestion.lastRunAt
+                          ? new Date(data.depositIngestion.lastRunAt).toLocaleString(a.locale)
+                          : ADMIN_METRIC_NA_LABEL}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-zinc-500">{ADMIN_METRIC_NA_LABEL}</p>
+                  )}
                 </div>
               </div>
 
-              {hotCheckMessage ? <p className="text-xs text-zinc-400">{hotCheckMessage}</p> : null}
+              {hotCheckMessage ? (
+                <div className={cn(ADMIN_SECTION_NOTICE, "text-xs text-zinc-400")}>{hotCheckMessage}</div>
+              ) : null}
 
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
                   {a.t("admin.treasury.manage")}
                 </p>
-                <ul className="space-y-1.5">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {TREASURY_MODULES.map((module) => (
-                    <li key={module.id}>
-                      <button
-                        type="button"
-                        className={cn(
-                          adminListRow(),
-                          "flex w-full items-center gap-3 text-left transition-all hover:ring-1 hover:ring-zinc-700",
-                        )}
-                        onClick={() => setActiveModule(module.id)}
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-zinc-100">
-                            {a.t(module.titleKey)}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-zinc-500">{a.t(module.descKey)}</span>
+                    <button
+                      key={module.id}
+                      type="button"
+                      className={cn(
+                        ADMIN_SECTION_TILE,
+                        "flex w-full items-start gap-3 text-left transition-colors hover:bg-zinc-900/70",
+                      )}
+                      onClick={() => setActiveModule(module.id)}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-zinc-100">
+                          {a.t(module.titleKey)}
                         </span>
-                        <ChevronRight className="size-4 shrink-0 text-zinc-500" aria-hidden />
-                      </button>
-                    </li>
+                        <span className="mt-1 block text-xs leading-relaxed text-zinc-500">
+                          {a.t(module.descKey)}
+                        </span>
+                      </span>
+                      <ChevronRight className="mt-0.5 size-4 shrink-0 text-zinc-500" aria-hidden />
+                    </button>
                   ))}
-                </ul>
+                </div>
               </div>
             </div>
           ) : null}
@@ -236,7 +367,9 @@ export function AdminTreasurySection() {
         onOpenChange={(open) => {
           if (!open) setActiveModule(null);
         }}
-        wide={activeModule === "deposit-network" || activeModule === "accounts" || activeModule === "address-pool"}
+        borderless
+        wide={wideDrawer}
+        widthClassName={wideDrawer ? "w-[min(920px,100vw)]" : undefined}
         title={activeModuleMeta ? a.t(activeModuleMeta.titleKey) : a.t("admin.treasury.title")}
         subtitle={activeModuleMeta ? a.t(activeModuleMeta.descKey) : undefined}
       >
@@ -246,7 +379,7 @@ export function AdminTreasurySection() {
         {activeModule === "reconciliation" ? (
           <AdminTreasuryReconciliationPanel
             openDiscrepancyCount={data?.openDiscrepancyCount ?? 0}
-            onRefreshConsole={load}
+            onRefreshConsole={() => void load()}
           />
         ) : null}
         {activeModule === "accounts" ? <AdminTreasuryAccountsPanel embedded /> : null}

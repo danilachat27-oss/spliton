@@ -17,7 +17,8 @@ import {
   formatWalletUserStatus,
   WALLET_FIELD_TOOLTIPS,
 } from "@/features/admin/lib/admin-wallet-i18n";
-import { formatAdminDate, formatUsdtAmount, ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
+import { formatAdminDate, formatUsdtAmount, isAdminMetricEmpty, ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
+import { adminDrawerTab, adminMetricLabel } from "@/features/admin/lib/admin-ui";
 import { AdminDataTable, AdminDetailDrawer, AdminFormFooter, AdminLoadingState, AdminPagination, AdminStatusBadge, type AdminColumn } from "@/features/admin/ui";
 import { listAdminWalletTransactions } from "@/services/admin/adminWallets.service";
 import { AdminCopyButton } from "@/features/admin/ui/admin-copy-button";
@@ -34,23 +35,81 @@ type AdminWalletDrawerProps = {
   canViewAudit?: boolean;
 };
 
+const drawerPanel = "rounded-2xl bg-zinc-900/40 p-4";
+const drawerLink =
+  "inline-flex items-center gap-1 text-xs font-medium text-zinc-300 transition-colors hover:text-[#B7F500]";
+const drawerListItem = "rounded-2xl bg-zinc-900/40 p-3";
+
 function FieldHint({ text }: { text: string }) {
   return (
-    <p className="mt-0.5 flex items-start gap-1 text-[11px] leading-relaxed text-zinc-500">
-      <HelpCircle className="mt-0.5 size-3 shrink-0" />
+    <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-zinc-500">
+      <HelpCircle className="mt-0.5 size-3 shrink-0 text-zinc-600" />
       {text}
     </p>
   );
 }
 
-function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
+type MetricTone = "neutral" | "success" | "warning" | "info" | "muted";
+
+function usdtPositive(value: string): boolean {
+  const n = Number(String(value).replace(/[^\d.-]/g, ""));
+  return !Number.isNaN(n) && n > 0;
+}
+
+function metricValueClass(tone: MetricTone, value: string): string {
+  const compact = value.replace(/\s/g, "").length > 14;
+  const medium = value.replace(/\s/g, "").length > 10;
+  const size = compact ? "text-base leading-snug" : medium ? "text-lg" : "text-xl sm:text-2xl";
+  const toneClass: Record<MetricTone, string> = {
+    neutral: "text-zinc-100",
+    success: "text-emerald-400",
+    warning: "text-amber-400",
+    info: "text-sky-400",
+    muted: "text-zinc-500",
+  };
+  return cn(
+    "mt-1 font-semibold tabular-nums tracking-tight break-words",
+    tone === "muted" ? "text-sm font-medium" : size,
+    toneClass[tone],
+  );
+}
+
+function Metric({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: MetricTone;
+}) {
+  const resolvedTone =
+    tone === "neutral" && isAdminMetricEmpty(value) ? "muted" : tone;
+
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">{label}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-zinc-100">{value}</p>
+    <div className="flex min-h-[7.25rem] min-w-0 flex-col rounded-2xl bg-zinc-900/40 p-3.5">
+      <p className={adminMetricLabel}>{label}</p>
+      <p className={metricValueClass(resolvedTone, value)} title={value}>
+        {value}
+      </p>
       {hint ? <FieldHint text={hint} /> : null}
     </div>
   );
+}
+
+function userStatusTone(status: string): "success" | "warning" | "danger" | "neutral" {
+  if (status === "active") return "success";
+  if (status === "suspended" || status === "pending") return "warning";
+  if (status === "banned") return "danger";
+  return "neutral";
+}
+
+function walletStatusTone(status: string): "success" | "warning" | "danger" | "neutral" {
+  if (status === "active") return "success";
+  if (status === "blocked") return "danger";
+  return "neutral";
 }
 
 function EmptyTab({ message }: { message: string }) {
@@ -104,7 +163,7 @@ export function AdminWalletDrawer({
       })
       .catch((e) => {
         if (!cancelled) {
-          setLedgerError(e instanceof Error ? e.message : "Не удалось загрузить ledger");
+          setLedgerError(e instanceof Error ? e.message : "Не удалось загрузить журнал проводок");
           setLedgerRows([]);
           setLedgerTotal(0);
         }
@@ -172,6 +231,7 @@ export function AdminWalletDrawer({
       open={open}
       onOpenChange={onOpenChange}
       wide
+      borderless
       widthClassName="w-[min(960px,100vw)]"
       title={wallet ? wallet.userEmail : a.t("admin.drawer.wallet.title")}
       subtitle={wallet ? `${wallet.assetCode} · ${wallet.network}` : undefined}
@@ -194,18 +254,18 @@ export function AdminWalletDrawer({
             <AdminCopyButton value={wallet.id} />
           </p>
 
-          <div className="flex flex-wrap gap-1 border-b border-zinc-800 pb-1">
+          <div className="flex flex-wrap gap-1 pb-1">
             {visibleTabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  tab === t.id ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-100",
-                )}
+                className={adminDrawerTab(tab === t.id)}
               >
                 {t.label}
+                {t.id === "risk" && wallet.hasRiskFlag ? (
+                  <ShieldAlert className="ml-1 inline size-3 text-amber-400" />
+                ) : null}
               </button>
             ))}
           </div>
@@ -213,37 +273,37 @@ export function AdminWalletDrawer({
           {tab === "overview" ? (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <Link
-                  href={ROUTES.adminUserDetail(wallet.userId)}
-                  className="inline-flex items-center gap-1 text-sm text-zinc-300 hover:underline"
-                >
-                  {a.t("admin.drawer.common.user")} <ExternalLink className="size-3.5" />
+                <Link href={ROUTES.adminUserDetail(wallet.userId)} className={drawerLink}>
+                  {a.t("admin.drawer.common.user")} <ExternalLink className="size-3" />
                 </Link>
-                <Link href={ROUTES.adminWithdrawals} className="text-sm text-zinc-400 hover:underline">
+                <Link href={ROUTES.adminWithdrawals} className={drawerLink}>
                   {a.t("admin.drawer.wallet.withdrawals")}
                 </Link>
-                <Link href={ROUTES.adminDeposits} className="text-sm text-zinc-400 hover:underline">
+                <Link href={ROUTES.adminDeposits} className={drawerLink}>
                   {a.t("admin.drawer.wallet.deposits")}
                 </Link>
-                <Link href={ROUTES.adminHoldings} className="text-sm text-zinc-400 hover:underline">
+                <Link href={ROUTES.adminHoldings} className={drawerLink}>
                   {a.t("admin.drawer.wallet.holdings")}
                 </Link>
-                <Link href={ROUTES.adminAudit} className="text-sm text-zinc-400 hover:underline">
+                <Link href={ROUTES.adminAudit} className={drawerLink}>
                   {a.t("admin.drawer.common.audit")}
                 </Link>
               </div>
 
-              <div className="rounded-xl border border-zinc-800 bg-zinc-50/50 p-4">
+              <div className={drawerPanel}>
                 <p className="font-medium text-zinc-100">{wallet.userDisplayName ?? wallet.userEmail}</p>
                 <p className="text-sm text-zinc-500">{wallet.userEmail}</p>
-                <p className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-zinc-400">
+                <p className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-zinc-500">
                   {wallet.userId}
                   <AdminCopyButton value={wallet.userId} />
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <AdminStatusBadge label={formatWalletUserStatus(wallet.userStatus)} tone="neutral" />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <AdminStatusBadge
+                    label={formatWalletUserStatus(wallet.userStatus)}
+                    tone={userStatusTone(wallet.userStatus)}
+                  />
                   {wallet.userRoles.map((r) => (
-                    <AdminStatusBadge key={r} label={a.adminRoleLabel(r) ?? r} tone="neutral" />
+                    <AdminStatusBadge key={r} label={a.adminRoleLabel(r) ?? r} tone="info" />
                   ))}
                   {wallet.hasRiskFlag ? (
                     <AdminStatusBadge label={wallet.riskSeverity ?? "risk"} tone="danger" />
@@ -251,61 +311,89 @@ export function AdminWalletDrawer({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Metric
-                  label={a.t("admin.drawer.wallet.available")}
-                  value={formatUsdtAmount(wallet.availableUsdt)}
-                  hint={WALLET_FIELD_TOOLTIPS.available}
-                />
-                <Metric
-                  label={a.t("admin.drawer.wallet.locked")}
-                  value={formatUsdtAmount(wallet.lockedUsdt)}
-                  hint={WALLET_FIELD_TOOLTIPS.locked}
-                />
-                <Metric
-                  label={a.t("admin.drawer.wallet.pending")}
-                  value={formatUsdtAmount(wallet.pendingUsdt)}
-                  hint={WALLET_FIELD_TOOLTIPS.pending}
-                />
-                <Metric
-                  label={a.t("admin.drawer.wallet.earned")}
-                  value={formatUsdtAmount(wallet.earnedTotalUsdt)}
-                  hint={WALLET_FIELD_TOOLTIPS.earned}
-                />
-                <Metric
-                  label={a.t("admin.drawer.wallet.withdrawn")}
-                  value={formatUsdtAmount(wallet.withdrawnTotalUsdt)}
-                  hint={WALLET_FIELD_TOOLTIPS.withdrawn}
-                />
-                <Metric
-                  label={a.t("admin.drawer.wallet.deposited")}
-                  value={formatUsdtAmount(wallet.depositsTotalUsdt)}
-                  hint={WALLET_FIELD_TOOLTIPS.deposits}
-                />
+              <div className="space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Баланс</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <Metric
+                    label={a.t("admin.drawer.wallet.available")}
+                    value={formatUsdtAmount(wallet.availableUsdt)}
+                    hint={WALLET_FIELD_TOOLTIPS.available}
+                    tone="success"
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.wallet.locked")}
+                    value={formatUsdtAmount(wallet.lockedUsdt)}
+                    hint={WALLET_FIELD_TOOLTIPS.locked}
+                    tone={usdtPositive(wallet.lockedUsdt) ? "warning" : "muted"}
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.wallet.pending")}
+                    value={formatUsdtAmount(wallet.pendingUsdt)}
+                    hint={WALLET_FIELD_TOOLTIPS.pending}
+                    tone={usdtPositive(wallet.pendingUsdt) ? "warning" : "muted"}
+                  />
+                </div>
               </div>
 
-              <dl className="grid gap-2 text-sm sm:grid-cols-2">
+              <div className="space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">История</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <Metric
+                    label={a.t("admin.drawer.wallet.earned")}
+                    value={formatUsdtAmount(wallet.earnedTotalUsdt)}
+                    hint={WALLET_FIELD_TOOLTIPS.earned}
+                    tone={usdtPositive(wallet.earnedTotalUsdt) ? "success" : "muted"}
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.wallet.withdrawn")}
+                    value={formatUsdtAmount(wallet.withdrawnTotalUsdt)}
+                    hint={WALLET_FIELD_TOOLTIPS.withdrawn}
+                    tone={usdtPositive(wallet.withdrawnTotalUsdt) ? "info" : "muted"}
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.wallet.deposited")}
+                    value={formatUsdtAmount(wallet.depositsTotalUsdt)}
+                    hint={WALLET_FIELD_TOOLTIPS.deposits}
+                    tone={usdtPositive(wallet.depositsTotalUsdt) ? "info" : "muted"}
+                  />
+                </div>
+              </div>
+
+              <div className={cn(drawerPanel, "grid gap-3 text-sm sm:grid-cols-2")}>
                 <div>
-                  <dt className="text-zinc-500">{a.t("admin.drawer.wallet.assetNetwork")}</dt>
-                  <dd>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.drawer.wallet.assetNetwork")}
+                  </p>
+                  <p className="mt-1 font-medium text-zinc-100">
                     {wallet.assetCode} · {wallet.network}
-                  </dd>
+                  </p>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{a.t("admin.drawer.wallet.walletStatus")}</dt>
-                  <dd>{formatWalletStatus(wallet.walletStatus)}</dd>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.drawer.wallet.walletStatus")}
+                  </p>
+                  <div className="mt-1">
+                    <AdminStatusBadge
+                      label={formatWalletStatus(wallet.walletStatus)}
+                      tone={walletStatusTone(wallet.walletStatus)}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{a.t("admin.drawer.wallet.lastActivity")}</dt>
-                  <dd>{formatAdminDate(wallet.lastTransactionAt)}</dd>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.drawer.wallet.lastActivity")}
+                  </p>
+                  <p className="mt-1 tabular-nums text-zinc-300">{formatAdminDate(wallet.lastTransactionAt)}</p>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{a.t("admin.drawer.wallet.createdUpdated")}</dt>
-                  <dd>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+                    {a.t("admin.drawer.wallet.createdUpdated")}
+                  </p>
+                  <p className="mt-1 tabular-nums text-zinc-300">
                     {formatAdminDate(wallet.createdAt)} · {formatAdminDate(wallet.updatedAt)}
-                  </dd>
+                  </p>
                 </div>
-              </dl>
+              </div>
             </div>
           ) : null}
 
@@ -316,7 +404,7 @@ export function AdminWalletDrawer({
               <p className="py-6 text-center text-sm text-red-400">{ledgerError}</p>
             ) : ledgerRows.length ? (
               <>
-                <AdminDataTable flat columns={ledgerCols} rows={ledgerRows} rowKey={(r) => r.id} />
+                <AdminDataTable flat borderless columns={ledgerCols} rows={ledgerRows} rowKey={(r) => r.id} />
                 <AdminPagination
                   page={ledgerPage}
                   pageSize={ledgerPageSize}
@@ -333,10 +421,13 @@ export function AdminWalletDrawer({
             wallet.deposits?.length ? (
               <ul className="space-y-2 text-sm">
                 {wallet.deposits.map((d) => (
-                  <li key={d.id} className="rounded-xl border border-zinc-800 p-3">
+                  <li key={d.id} className={drawerListItem}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{formatUsdtAmount(d.amountUsdt)}</span>
-                      <AdminStatusBadge label={a.formatAdminStatus(d.status)} tone="pending" />
+                      <AdminStatusBadge
+                        label={a.formatAdminStatus(d.status)}
+                        tone={d.status === "completed" ? "success" : "pending"}
+                      />
                     </div>
                     <p className="mt-1 text-xs text-zinc-500">
                       {d.network} · {formatAdminDate(d.createdAt)}
@@ -357,7 +448,7 @@ export function AdminWalletDrawer({
             wallet.withdrawals?.length ? (
               <ul className="space-y-2 text-sm">
                 {wallet.withdrawals.map((w) => (
-                  <li key={w.id} className="rounded-xl border border-zinc-800 p-3">
+                  <li key={w.id} className={drawerListItem}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">
                         {formatUsdtAmount(w.netAmountUsdt)} {a.t("admin.drawer.wallet.netShort")}
@@ -387,7 +478,7 @@ export function AdminWalletDrawer({
             wallet.market?.length ? (
               <ul className="space-y-2 text-sm">
                 {wallet.market.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between gap-2 rounded-xl border border-zinc-800 p-3">
+                  <li key={m.id} className={cn(drawerListItem, "flex items-center justify-between gap-2")}>
                     <div>
                       <p className="font-medium">{formatMarketKind(m.kind)}</p>
                       <p className="text-xs text-zinc-500">{m.releaseTitle ?? ADMIN_METRIC_NA_LABEL}</p>
@@ -408,12 +499,12 @@ export function AdminWalletDrawer({
             wallet.risk?.length ? (
               <ul className="space-y-2">
                 {wallet.risk.map((f) => (
-                  <li key={f.id} className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50/50 p-3 text-sm">
-                    <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                  <li key={f.id} className="rounded-2xl bg-amber-500/10 p-3 text-sm">
+                    <ShieldAlert className="mb-2 size-4 text-amber-400" />
                     <div>
-                      <p className="font-medium">{f.flagCode}</p>
-                      <p className="text-xs text-zinc-400">{f.note ?? ADMIN_METRIC_NA_LABEL}</p>
-                      <AdminStatusBadge label={f.severity} tone="danger" />
+                      <p className="font-medium text-zinc-100">{f.flagCode}</p>
+                      <p className="mt-1 text-xs text-zinc-400">{f.note ?? ADMIN_METRIC_NA_LABEL}</p>
+                      <AdminStatusBadge label={f.severity} tone="warning" />
                     </div>
                   </li>
                 ))}
@@ -427,7 +518,7 @@ export function AdminWalletDrawer({
             wallet.audit?.length ? (
               <ul className="space-y-2 text-sm">
                 {wallet.audit.map((entry) => (
-                  <li key={entry.id} className="rounded-xl border border-zinc-800 p-3">
+                  <li key={entry.id} className={drawerListItem}>
                     <p className="font-medium">{a.formatAuditAction(entry.action)}</p>
                     <p className="text-xs text-zinc-500">
                       {entry.actorEmail ?? "system"} · {formatAdminDate(entry.createdAt)}

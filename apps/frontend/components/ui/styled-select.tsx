@@ -38,6 +38,10 @@ type StyledSelectProps = {
   disabled?: boolean;
   className?: string;
   menuClassName?: string;
+  /** Минимальная ширина выпадающего списка (может быть шире триггера). */
+  menuMinWidth?: number;
+  /** Максимальная ширина выпадающего списка. */
+  menuMaxWidth?: number;
   placeholder?: string;
   size?: "sm" | "md";
   variant?: "default" | "soft" | "okx";
@@ -73,6 +77,8 @@ export function StyledSelect({
   disabled = false,
   className,
   menuClassName,
+  menuMinWidth,
+  menuMaxWidth = 360,
   placeholder,
   size = "md",
   variant = "default",
@@ -116,15 +122,23 @@ export function StyledSelect({
       preferredMax,
       Math.max(120, openAbove ? spaceAbove : spaceBelow),
     );
+    const labelWidthEstimate = items.reduce(
+      (max, item) => Math.max(max, item.label.length * 7.2 + 28),
+      0,
+    );
+    const menuWidth = Math.min(
+      menuMaxWidth,
+      Math.max(rect.width, menuMinWidth ?? 0, labelWidthEstimate, tone === "dark" ? 240 : 200),
+    );
     const left =
       align === "end"
-        ? Math.max(viewportPadding, rect.right - rect.width)
-        : Math.min(rect.left, window.innerWidth - rect.width - viewportPadding);
+        ? Math.max(viewportPadding, rect.right - menuWidth)
+        : Math.min(rect.left, window.innerWidth - menuWidth - viewportPadding);
 
     setMenuPos({
       top: openAbove ? rect.top - gap : rect.bottom + gap,
       left,
-      width: rect.width,
+      width: menuWidth,
       maxHeight,
       placement: openAbove ? "above" : "below",
     });
@@ -142,7 +156,7 @@ export function StyledSelect({
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [open, align, items.length]);
+  }, [open, align, items, menuMinWidth, menuMaxWidth, tone]);
 
   useEffect(() => {
     if (!open) return;
@@ -170,7 +184,7 @@ export function StyledSelect({
         left: menuPos.left,
         width: menuPos.width,
         minWidth: menuPos.width,
-        zIndex: 200,
+        zIndex: 1100,
         transform: menuPos.placement === "above" ? "translateY(-100%)" : undefined,
       }
     : undefined;
@@ -190,8 +204,8 @@ export function StyledSelect({
       <ul
         style={{ maxHeight: menuPos.maxHeight }}
         className={cn(
-          "overflow-x-hidden overflow-y-auto overscroll-contain py-1.5 pb-2",
-          tone === "dark" && "revshare-scrollbar",
+          "overflow-x-hidden overflow-y-auto overscroll-contain py-1.5",
+          tone === "dark" ? "admin-select-menu-scroll" : undefined,
         )}
       >
         {items.map((item) => {
@@ -208,15 +222,16 @@ export function StyledSelect({
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex w-full items-start px-3 py-2.5 text-left text-[13px] leading-snug transition whitespace-normal",
+                  "flex w-full items-center px-3.5 text-left transition",
+                  tone === "dark" ? "py-2 text-[13px] leading-snug whitespace-nowrap" : "py-2.5 text-sm leading-snug",
                   selected
                     ? tone === "dark"
-                      ? "bg-[#B7F500]/14 font-semibold text-white ring-1 ring-inset ring-[#B7F500]/25"
+                      ? "bg-[#B7F500]/10 font-medium text-zinc-100"
                       : variant === "okx"
                         ? "bg-[#F5F5F5] font-medium text-black"
                         : "bg-[#B7F500]/14 font-semibold text-neutral-900 ring-1 ring-inset ring-[#B7F500]/20"
                     : tone === "dark"
-                      ? "text-zinc-300 hover:bg-white/5"
+                      ? "text-zinc-300 hover:bg-zinc-800/80"
                       : variant === "okx"
                         ? "text-black hover:bg-[#F5F5F5]"
                         : "text-neutral-700 hover:bg-neutral-50",

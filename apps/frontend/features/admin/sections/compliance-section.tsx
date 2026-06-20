@@ -7,13 +7,14 @@ import { BarChart3, Info, ShieldAlert } from "@/lib/lucide";
 import { Button } from "@/components/ui/button";
 import { AdminBarChart } from "@/features/admin/analytics/components/admin-charts.lazy";
 import { AdminChartCard } from "@/features/admin/analytics/components/admin-chart-card";
-import { AdminMetricTrendCard } from "@/features/admin/analytics/components/admin-metric-trend-card";
+import { AdminMetricTrendCard, type AdminMetricActiveTone } from "@/features/admin/analytics/components/admin-metric-trend-card";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import {
   AdminComplianceDrawer,
   type CompliancePendingAction,
 } from "@/features/admin/components/admin-compliance-drawer";
 import {
+  AdminSectionDataArea,
   AdminSectionPanel,
   AdminSectionRefreshButton,
   AdminSectionShell,
@@ -34,7 +35,12 @@ import {
 } from "@/features/admin/lib/admin-compliance-i18n";
 import { formatAdminDate, formatAdminMetricHours } from "@/features/admin/lib/admin-format";
 import { complianceStatusTone } from "@/features/admin/lib/admin-status-maps";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import {
+  ADMIN_SECTION_KPI_GRID,
+  ADMIN_SECTION_NOTICE,
+  ADMIN_SECTION_TILE,
+} from "@/features/admin/lib/admin-section-styles";
+import { adminBtnGhost } from "@/features/admin/lib/admin-ui";
 import type {
   AdminComplianceDetail,
   AdminComplianceHistoryItem,
@@ -47,12 +53,12 @@ import {
   AdminDataTable,
   AdminErrorState,
   AdminFilterBar,
-  AdminLoadingState,
+  AdminFilterNumberField,
+  AdminFilterResultCount,
   AdminLocalizedStatusBadge,
   AdminPagination,
   AdminReadOnlyBanner,
   AdminRiskBadge,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -105,6 +111,9 @@ const TAB_CONFIG: Array<{
   { id: "rules", label: "Правила риска" },
   { id: "history", label: "История решений" },
 ];
+
+const complianceTableClass = "[&_table]:min-w-[1280px]";
+const complianceChartCardClass = "rounded-2xl bg-zinc-900/50 shadow-none ring-0";
 
 function SeverityBadge({ severity }: { severity?: string }) {
   const a = useAdminI18n();
@@ -347,13 +356,13 @@ export function ComplianceSection() {
             <Link
               href={`${ROUTES.adminUsers}/${r.userId}`}
               onClick={(e) => e.stopPropagation()}
-              className="max-w-[160px] truncate text-sm hover:underline"
+              className="max-w-[160px] truncate text-sm font-medium text-zinc-100 transition-colors hover:text-[#B7F500]"
               title={r.userEmail}
             >
               {r.userEmail ?? r.userId.slice(0, 8)}
             </Link>
             {r.userStatus === "suspended" ? (
-              <AdminStatusBadge label="blocked" tone="danger" className="mt-1" />
+              <AdminStatusBadge label={a.formatAdminStatus("blocked")} tone="danger" className="mt-1" />
             ) : null}
           </div>
         ) : (
@@ -465,7 +474,10 @@ export function ComplianceSection() {
       key: "enabled",
       header: "Статус",
       render: (r) => (
-        <AdminStatusBadge label={r.enabled ? "enabled" : "disabled"} tone={r.enabled ? "success" : "neutral"} />
+        <AdminStatusBadge
+          label={r.enabled ? "Включено" : "Отключено"}
+          tone={r.enabled ? "success" : "neutral"}
+        />
       ),
     },
     {
@@ -477,16 +489,16 @@ export function ComplianceSection() {
 
   const kpiCards = summary
     ? [
-        { key: "open", label: "Открытые риск-сигналы", value: summary.openCount, tip: COMPLIANCE_FIELD_TOOLTIPS.openSignals, tab: "queue" as const },
-        { key: "critical", label: "Критические риски", value: summary.criticalCount, tip: COMPLIANCE_FIELD_TOOLTIPS.critical, tab: "queue" as const, severity: "critical" },
-        { key: "high", label: "Высокие риски", value: summary.highCount, tip: COMPLIANCE_FIELD_TOOLTIPS.high, tab: "queue" as const, severity: "high" },
-        { key: "hold", label: "На удержании", value: summary.onHoldCount, tip: COMPLIANCE_FIELD_TOOLTIPS.onHold, tab: "frozen" as const },
-        { key: "blocked", label: "Заблокированные пользователи", value: summary.blockedUsersCount, tip: COMPLIANCE_FIELD_TOOLTIPS.blocked, tab: "blocked" as const },
-        { key: "frozen", label: "Замороженные операции", value: summary.frozenOpsCount, tip: COMPLIANCE_FIELD_TOOLTIPS.frozenOps, tab: "frozen" as const },
-        { key: "avg", label: "Среднее время проверки", value: formatAdminMetricHours(summary.avgReviewHours), tip: COMPLIANCE_FIELD_TOOLTIPS.avgReview, tab: "history" as const },
-        { key: "overdue", label: "Просроченные проверки", value: summary.overdueCount, tip: COMPLIANCE_FIELD_TOOLTIPS.overdue, tab: "queue" as const },
-        { key: "new24", label: "Новые за 24 ч", value: summary.new24hCount, tip: COMPLIANCE_FIELD_TOOLTIPS.new24h, tab: "queue" as const },
-        { key: "repeat", label: "Повторные нарушители", value: summary.repeatOffendersCount, tip: COMPLIANCE_FIELD_TOOLTIPS.repeatOffenders, tab: "users" as const },
+        { key: "open", label: "Открытые риск-сигналы", value: summary.openCount, tip: COMPLIANCE_FIELD_TOOLTIPS.openSignals, tab: "queue" as const, activeTone: "warning" as AdminMetricActiveTone },
+        { key: "critical", label: "Критические риски", value: summary.criticalCount, tip: COMPLIANCE_FIELD_TOOLTIPS.critical, tab: "queue" as const, severity: "critical", activeTone: "danger" as AdminMetricActiveTone },
+        { key: "high", label: "Высокие риски", value: summary.highCount, tip: COMPLIANCE_FIELD_TOOLTIPS.high, tab: "queue" as const, severity: "high", activeTone: "warning" as AdminMetricActiveTone },
+        { key: "hold", label: "На удержании", value: summary.onHoldCount, tip: COMPLIANCE_FIELD_TOOLTIPS.onHold, tab: "frozen" as const, activeTone: "warning" as AdminMetricActiveTone },
+        { key: "blocked", label: "Заблокированные пользователи", value: summary.blockedUsersCount, tip: COMPLIANCE_FIELD_TOOLTIPS.blocked, tab: "blocked" as const, activeTone: "danger" as AdminMetricActiveTone },
+        { key: "frozen", label: "Замороженные операции", value: summary.frozenOpsCount, tip: COMPLIANCE_FIELD_TOOLTIPS.frozenOps, tab: "frozen" as const, activeTone: "warning" as AdminMetricActiveTone },
+        { key: "avg", label: "Среднее время проверки", value: formatAdminMetricHours(summary.avgReviewHours), tip: COMPLIANCE_FIELD_TOOLTIPS.avgReview, tab: "history" as const, activeTone: "neutral" as AdminMetricActiveTone },
+        { key: "overdue", label: "Просроченные проверки", value: summary.overdueCount, tip: COMPLIANCE_FIELD_TOOLTIPS.overdue, tab: "queue" as const, activeTone: "danger" as AdminMetricActiveTone },
+        { key: "new24", label: "Новые за 24 ч", value: summary.new24hCount, tip: COMPLIANCE_FIELD_TOOLTIPS.new24h, tab: "queue" as const, activeTone: "info" as AdminMetricActiveTone },
+        { key: "repeat", label: "Повторные нарушители", value: summary.repeatOffendersCount, tip: COMPLIANCE_FIELD_TOOLTIPS.repeatOffenders, tab: "users" as const, activeTone: "warning" as AdminMetricActiveTone },
       ]
     : [];
 
@@ -494,53 +506,58 @@ export function ComplianceSection() {
     <AdminSectionShell
       sectionId="compliance"
       title={a.t("admin.title.compliance")}
-      actions={<AdminSectionRefreshButton onClick={refreshAll} />}
+      infoHint={
+        <>
+          Центр мониторинга риск-сигналов, подозрительных операций, заморозок, блокировок и compliance-расследований
+          Spliton.
+        </>
+      }
+      actions={<AdminSectionRefreshButton onClick={refreshAll} loading={summaryLoading} />}
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("compliance")} /> : null}
 
-      <AdminSectionInfoHint>
-        Центр мониторинга риск-сигналов, подозрительных операций, заморозок, блокировок и
-        compliance-расследований Spliton.
-      </AdminSectionInfoHint>
+      <AdminSectionPanel className="min-w-0">
+        {summaryLoading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={cn(ADMIN_SECTION_TILE, "h-28 animate-pulse bg-zinc-800/50")} />
+            ))}
+          </div>
+        ) : summaryError ? (
+          <div className={cn(ADMIN_SECTION_TILE, "space-y-3")}>
+            <p className="text-sm text-rose-300">Не удалось загрузить KPI. Попробуйте обновить.</p>
+            <Button size="sm" variant="ghost" className={adminBtnGhost} onClick={() => void loadSummary()}>
+              Повторить
+            </Button>
+          </div>
+        ) : summary ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {kpiCards.map((k) => (
+              <AdminMetricTrendCard
+                key={k.key}
+                label={k.label}
+                value={String(k.value)}
+                tooltip={k.tip}
+                activeTone={k.activeTone}
+                onClick={() => {
+                  setTab(k.tab);
+                  if ("severity" in k && k.severity) setSeverityFilter(k.severity);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
 
-      {summaryLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-800/60")} />
-          ))}
+        <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-zinc-900/25 px-4 py-3 text-sm">
+          <Link
+            href={ROUTES.adminAnalyticsRisk}
+            className="inline-flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-[#B7F500]"
+          >
+            <BarChart3 className="size-3.5 shrink-0" />
+            Открыть риск-аналитику
+          </Link>
         </div>
-      ) : summaryError ? (
-        <AdminSectionPanel>
-          <AdminErrorState onRetry={() => void loadSummary()} />
-        </AdminSectionPanel>
-      ) : summary ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {kpiCards.map((k) => (
-            <AdminMetricTrendCard
-              key={k.key}
-              label={k.label}
-              value={String(k.value)}
-              tooltip={k.tip}
-              onClick={() => {
-                setTab(k.tab);
-                if ("severity" in k && k.severity) setSeverityFilter(k.severity);
-              }}
-            />
-          ))}
-        </div>
-      ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href={ROUTES.adminAnalyticsRisk}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-300 hover:text-zinc-100"
-        >
-          <BarChart3 className="size-4" />
-          Открыть риск-аналитику
-        </Link>
-      </div>
-
-      <AdminSectionPanel>
         <AdminSectionTabBar
           tabs={TAB_CONFIG.map((t) => ({
             id: t.id,
@@ -556,16 +573,16 @@ export function ComplianceSection() {
         />
 
         {tab === "overview" ? (
-          <div className="space-y-6 pt-4">
-            <div className="grid gap-4 lg:grid-cols-2">
-              <AdminChartCard title="По severity">
+          <div className="space-y-5">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+              <AdminChartCard title="По критичности" className={complianceChartCardClass}>
                 {severityChart.length ? (
                   <AdminBarChart items={severityChart} />
                 ) : (
                   <p className="py-8 text-center text-sm text-zinc-500">Активных риск-сигналов нет</p>
                 )}
               </AdminChartCard>
-              <AdminChartCard title={a.t("admin.title.complianceByEntity")}>
+              <AdminChartCard title={a.t("admin.title.complianceByEntity")} className={complianceChartCardClass}>
                 {entityChart.length ? (
                   <AdminBarChart items={entityChart} />
                 ) : (
@@ -573,34 +590,43 @@ export function ComplianceSection() {
                 )}
               </AdminChartCard>
             </div>
-            <div className="flex gap-3 rounded-xl border border-zinc-800 bg-zinc-50/80 px-4 py-3 text-sm text-zinc-400">
-              <Info className="mt-0.5 size-4 shrink-0" />
-              Очередь проверки — открытые флаги, отсортированные по severity и SLA. Перейдите на вкладку «Очередь проверки» для работы с кейсами.
+            <div className={cn(ADMIN_SECTION_NOTICE, "text-sm text-zinc-400")}>
+              <Info className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+              <p>
+                Очередь проверки — открытые флаги, отсортированные по severity и SLA. Перейдите на вкладку «Очередь
+                проверки» для работы с кейсами.
+              </p>
             </div>
           </div>
         ) : null}
 
         {tab === "rules" ? (
-          rulesLoading ? (
-            <AdminLoadingState label={a.t("admin.loading.rules")} />
-          ) : (
-            <>
-              <p className="mb-4 text-sm text-zinc-500">
-                Read-only каталог правил Spliton. Dynamic rules engine — TODO.
-              </p>
-              <AdminDataTable flat columns={ruleColumns} rows={rules} rowKey={(r) => r.code} />
-            </>
-          )
+          <AdminSectionDataArea loading={rulesLoading} loadingLabel={a.t("admin.loading.rules")}>
+            <p className="mb-4 text-sm text-zinc-500">
+              Read-only каталог правил Spliton. Dynamic rules engine — TODO.
+            </p>
+            <AdminDataTable
+              flat
+              borderless
+              className={complianceTableClass}
+              columns={ruleColumns}
+              rows={rules}
+              rowKey={(r) => r.code}
+              emptyMessage="Правила риска не загружены"
+            />
+          </AdminSectionDataArea>
         ) : null}
 
         {tab === "history" ? (
-          <>
-            {historyList.loading ? <AdminLoadingState label={a.t("admin.loading.history")} /> : null}
-            {historyList.error ? <AdminErrorState onRetry={historyList.reload} /> : null}
-            {!historyList.loading && !historyList.error ? (
-              <>
+          <AdminSectionDataArea loading={historyList.loading} loadingLabel={a.t("admin.loading.history")}>
+            {historyList.error ? (
+              <AdminErrorState onRetry={historyList.reload} />
+            ) : (
+              <div className="space-y-4">
                 <AdminDataTable
                   flat
+                  borderless
+                  className={complianceTableClass}
                   columns={historyColumns}
                   rows={historyList.data.items}
                   rowKey={(r) => r.id}
@@ -612,23 +638,26 @@ export function ComplianceSection() {
                   total={historyList.data.total}
                   onPageChange={(page) => historyList.setQuery((q) => ({ ...q, page }))}
                 />
-              </>
-            ) : null}
-          </>
+              </div>
+            )}
+          </AdminSectionDataArea>
         ) : null}
 
         {isListTab ? (
           <>
             <AdminFilterBar
               className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+              inlineFrom="lg"
+              panelWidthClassName="w-[min(100vw-1rem,520px)]"
+              searchHint={a.t("admin.compliance.search.hint")}
               fields={[
                 {
                   id: "search",
-                  label: "Поиск",
+                  label: a.t("admin.compliance.search.label"),
                   type: "search",
                   value: search,
                   onChange: setSearch,
-                  placeholder: "Email, user id, risk id, object id, rule code…",
+                  placeholder: a.t("admin.compliance.search.placeholder"),
                 },
                 {
                   id: "status",
@@ -648,76 +677,78 @@ export function ComplianceSection() {
                 },
                 {
                   id: "sort",
-                  label: "Сортировка",
+                  label: a.t("admin.filters.sort"),
                   type: "select",
                   value: sortBy,
                   onChange: setSortBy,
                   options: COMPLIANCE_SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
                 },
               ]}
-              actions={
-                <div className="flex flex-wrap items-center gap-3">
-                  <label className="flex items-center gap-2 text-xs text-zinc-400">
-                    Risk min
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
+              extraActiveCount={(minRisk ? 1 : 0) + (maxRisk ? 1 : 0)}
+              onReset={() => {
+                setMinRisk("");
+                setMaxRisk("");
+              }}
+              footer={
+                <div className="flex w-full flex-col items-center gap-3">
+                  <div className="flex flex-wrap items-end justify-center gap-x-6 gap-y-3 sm:gap-x-8">
+                    <AdminFilterNumberField
+                      id="compliance-risk-min"
+                      label={a.t("admin.compliance.filters.riskMin")}
                       value={minRisk}
-                      onChange={(e) => setMinRisk(e.target.value)}
-                      className="h-8 w-16 rounded-md border border-neutral-200 px-2 text-sm"
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-zinc-400">
-                    Risk max
-                    <input
-                      type="number"
+                      onChange={setMinRisk}
                       min={0}
                       max={100}
-                      value={maxRisk}
-                      onChange={(e) => setMaxRisk(e.target.value)}
-                      className="h-8 w-16 rounded-md border border-neutral-200 px-2 text-sm"
                     />
-                  </label>
-                  <p className="text-xs text-zinc-500">
-                    Найдено:{" "}
-                    <span className="font-semibold tabular-nums text-zinc-200">{flags.data.total}</span>
-                  </p>
+                    <AdminFilterNumberField
+                      id="compliance-risk-max"
+                      label={a.t("admin.compliance.filters.riskMax")}
+                      value={maxRisk}
+                      onChange={setMaxRisk}
+                      min={0}
+                      max={100}
+                    />
+                  </div>
+                  <AdminFilterResultCount
+                    label={a.t("admin.filters.foundCount", "Найдено")}
+                    value={flags.data.total}
+                  />
                 </div>
               }
             />
 
-            {flags.loading ? <AdminLoadingState label={a.t("admin.loading.riskFlags")} /> : null}
-            {flags.error ? <AdminErrorState onRetry={flags.reload} /> : null}
-
-            {!flags.loading && !flags.error ? (
-              <>
-                <AdminDataTable
-                  flat
-                  columns={columns}
-                  rows={flags.data.items}
-                  rowKey={(r) => r.id}
-                  onRowClick={openRow}
-                  emptyMessage="Активных риск-сигналов нет"
-                />
-                <AdminPagination
-                  page={flags.data.page}
-                  pageSize={flags.data.pageSize}
-                  total={flags.data.total}
-                  onPageChange={(page) => flags.setQuery((q) => ({ ...q, page }))}
-                />
-              </>
-            ) : null}
+            <AdminSectionDataArea loading={flags.loading} loadingLabel={a.t("admin.loading.riskFlags")}>
+              {flags.error ? (
+                <AdminErrorState onRetry={flags.reload} />
+              ) : (
+                <div className="space-y-4">
+                  <AdminDataTable
+                    flat
+                    borderless
+                    className={complianceTableClass}
+                    columns={columns}
+                    rows={flags.data.items}
+                    rowKey={(r) => r.id}
+                    onRowClick={openRow}
+                    emptyMessage="Активных риск-сигналов нет"
+                  />
+                  <AdminPagination
+                    page={flags.data.page}
+                    pageSize={flags.data.pageSize}
+                    total={flags.data.total}
+                    onPageChange={(page) => flags.setQuery((q) => ({ ...q, page }))}
+                  />
+                </div>
+              )}
+            </AdminSectionDataArea>
           </>
         ) : null}
-      </AdminSectionPanel>
 
-      <AdminSectionPanel>
-        <div className="flex gap-3 text-sm text-zinc-400">
+        <div className={cn(ADMIN_SECTION_NOTICE, "text-sm text-zinc-400")}>
           <ShieldAlert className="size-5 shrink-0 text-zinc-500" aria-hidden />
           <p>
             Spliton Compliance Control Center — все действия фиксируются в{" "}
-            <Link href={ROUTES.adminAudit} className="font-semibold text-zinc-200 hover:underline">
+            <Link href={ROUTES.adminAudit} className="font-semibold text-[#B7F500] hover:text-[#a8e600]">
               журнале операторов
             </Link>
             .
@@ -726,7 +757,7 @@ export function ComplianceSection() {
       </AdminSectionPanel>
 
       {actionError ? (
-        <p className="mb-4 text-sm text-red-600" role="alert">
+        <p className="text-sm text-rose-400" role="alert">
           {actionError}
         </p>
       ) : null}

@@ -39,8 +39,8 @@ type AuthContextValue = {
   register: (payload: EmailSignUpPayload) => Promise<{ requiresEmailVerification: true }>;
   verifyEmail: (token: string) => Promise<void>;
   resendEmail: (email: string) => Promise<void>;
-  login: (payload: EmailSignInPayload) => Promise<"authenticated" | "2fa_required">;
-  verify2fa: (payload: TwoFactorVerifyPayload) => Promise<void>;
+  login: (payload: EmailSignInPayload) => Promise<"2fa_required" | string>;
+  verify2fa: (payload: TwoFactorVerifyPayload) => Promise<string>;
   refreshSession: () => Promise<string | null>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = React.useCallback(
     async (
       payload: EmailSignInPayload,
-    ): Promise<"authenticated" | "2fa_required"> => {
+    ): Promise<"2fa_required" | string> => {
       const result = await signInWithEmail(payload);
       if ("requires2fa" in result) {
         setPendingTwoFactorChallenge({
@@ -161,15 +161,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return "2fa_required";
       }
       handleAuthSuccess(result.user, result.tokens.accessToken);
-      return "authenticated";
+      return result.tokens.accessToken;
     },
     [handleAuthSuccess],
   );
 
   const verify2fa = React.useCallback(
-    async (payload: TwoFactorVerifyPayload): Promise<void> => {
+    async (payload: TwoFactorVerifyPayload): Promise<string> => {
       const result = await verifyTwoFactor(payload);
       handleAuthSuccess(result.user, result.tokens.accessToken);
+      return result.tokens.accessToken;
     },
     [handleAuthSuccess],
   );

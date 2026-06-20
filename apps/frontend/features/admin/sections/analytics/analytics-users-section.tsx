@@ -5,13 +5,14 @@ import Link from "next/link";
 import { ArrowRight } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { AdminAnalyticsExportButton } from "@/features/admin/analytics/components/admin-analytics-export-button";
 import { AdminAnalyticsInsightsPanel } from "@/features/admin/analytics/components/admin-analytics-insights-panel";
 import { AdminAnalyticsKpiGroup } from "@/features/admin/analytics/components/admin-analytics-kpi-group";
 import { ANALYTICS_USERS_TABS } from "@/features/admin/analytics/config/analytics-page-tabs";
-import { AdminAnalyticsPageShell } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
+import { AdminAnalyticsPageShell, AdminAnalyticsPageError, AdminAnalyticsPageLoading } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
 import { AdminAnalyticsTabPanel } from "@/features/admin/analytics/ui/admin-analytics-tab-panel";
 import { AdminChartCard } from "@/features/admin/analytics/components/admin-chart-card";
 import {
@@ -33,7 +34,7 @@ import {
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_ANALYTICS_DRILL_LINK, ADMIN_ANALYTICS_LIST_LINK, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   buildUserHealthSummary,
   buildUserInsights,
@@ -53,8 +54,6 @@ import {
 } from "@/services/admin/adminUserAnalytics.service";
 import {
   AdminDataTable,
-  AdminErrorState,
-  AdminLoadingState,
   type AdminColumn,
 } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
@@ -172,11 +171,11 @@ export function AnalyticsUsersSection() {
   }, [load]);
 
   if (loading && !summary) {
-    return <AdminLoadingState label={a.t("admin.analytics.users.loading")} centered />;
+    return <AdminAnalyticsPageLoading label={a.t("admin.analytics.users.loading")} />;
   }
 
   if (error) {
-    return <AdminErrorState onRetry={load} />;
+    return <AdminAnalyticsPageError onRetry={load} />;
   }
 
   const s = pickSummary(summary as Record<string, unknown> | null);
@@ -266,7 +265,7 @@ export function AnalyticsUsersSection() {
       key: "severity",
       header: a.t("admin.table.severity"),
       render: (r) => (
-        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium uppercase text-amber-900">
+        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium uppercase text-amber-300">
           {a.complianceSeverityLabel(r.severity)}
         </span>
       ),
@@ -301,14 +300,14 @@ export function AnalyticsUsersSection() {
   const healthBannerClass = adminAnalyticsHealthBannerSurface(health.tone);
 
   const overviewKpiGroup = (
-    <AdminAnalyticsKpiGroup title={a.t("admin.analytics.users.baseOverview")} description={a.t("admin.analytics.users.baseOverviewDesc")}>
-      <AdminMetricTrendCard label={a.t("admin.analytics.metric.totalUsers")} value={String(s.totalUsers)} tooltip={USER_KPI_TOOLTIPS.totalUsers} href={ROUTES.adminUsers} />
-      <AdminMetricTrendCard label={a.t("admin.analytics.filters.user.segment.new")} value={String(s.newUsers)} deltaPct={s.deltas.newUsersPct} tooltip={USER_KPI_TOOLTIPS.newUsers} href={usersFilterHref({ segment: "new" })} />
-      <AdminMetricTrendCard label={a.t("admin.analytics.metric.active")} value={String(s.activeInPeriod)} deltaPct={s.deltas.activeInPeriodPct} tooltip={USER_KPI_TOOLTIPS.activeInPeriod} />
-      <AdminMetricTrendCard label={a.t("admin.analytics.users.kpi.firstDeposit")} value={String(s.withFirstDeposit)} tooltip={USER_KPI_TOOLTIPS.firstDeposit} href={usersFilterHref({ segment: "deposited" })} />
-      <AdminMetricTrendCard label={a.t("admin.analytics.metric.firstPurchase")} value={String(s.withFirstPurchase)} tooltip={USER_KPI_TOOLTIPS.firstPurchase} href={usersFilterHref({ segment: "holders" })} />
-      <AdminMetricTrendCard label={a.t("admin.analytics.users.kpi.dormant")} value={String(s.dormantUsers)} tooltip={USER_KPI_TOOLTIPS.dormant} href={usersFilterHref({ segment: "dormant" })} />
-      <AdminMetricTrendCard label={a.t("admin.analytics.metric.openRiskSignals")} value={String(s.usersWithRiskFlags)} tooltip={USER_KPI_TOOLTIPS.riskFlags} href={ROUTES.adminCompliance} />
+    <AdminAnalyticsKpiGroup title={a.t("admin.analytics.users.baseOverview")} description={a.t("admin.analytics.users.baseOverviewDesc")} gridClassName="xl:grid-cols-3">
+      <AdminMetricTrendCard label={a.t("admin.analytics.metric.totalUsers")} value={String(s.totalUsers)} tooltip={USER_KPI_TOOLTIPS.totalUsers} href={ROUTES.adminUsers} activeTone={s.totalUsers > 0 ? "success" : "neutral"} />
+      <AdminMetricTrendCard label={a.t("admin.analytics.filters.user.segment.new")} value={String(s.newUsers)} deltaPct={s.deltas.newUsersPct} tooltip={USER_KPI_TOOLTIPS.newUsers} href={usersFilterHref({ segment: "new" })} activeTone={s.newUsers > 0 ? "success" : "neutral"} />
+      <AdminMetricTrendCard label={a.t("admin.analytics.metric.active")} value={String(s.activeInPeriod)} deltaPct={s.deltas.activeInPeriodPct} tooltip={USER_KPI_TOOLTIPS.activeInPeriod} activeTone={s.activeInPeriod > 0 ? "info" : "neutral"} />
+      <AdminMetricTrendCard label={a.t("admin.analytics.users.kpi.firstDeposit")} value={String(s.withFirstDeposit)} tooltip={USER_KPI_TOOLTIPS.firstDeposit} href={usersFilterHref({ segment: "deposited" })} activeTone={s.withFirstDeposit > 0 ? "success" : "neutral"} />
+      <AdminMetricTrendCard label={a.t("admin.analytics.metric.firstPurchase")} value={String(s.withFirstPurchase)} tooltip={USER_KPI_TOOLTIPS.firstPurchase} href={usersFilterHref({ segment: "holders" })} activeTone={s.withFirstPurchase > 0 ? "success" : "neutral"} />
+      <AdminMetricTrendCard label={a.t("admin.analytics.users.kpi.dormant")} value={String(s.dormantUsers)} tooltip={USER_KPI_TOOLTIPS.dormant} href={usersFilterHref({ segment: "dormant" })} activeTone={s.dormantUsers > 0 ? "warning" : "neutral"} />
+      <AdminMetricTrendCard label={a.t("admin.analytics.metric.openRiskSignals")} value={String(s.usersWithRiskFlags)} tooltip={USER_KPI_TOOLTIPS.riskFlags} href={ROUTES.adminCompliance} activeTone={s.usersWithRiskFlags > 0 ? "warning" : "neutral"} />
     </AdminAnalyticsKpiGroup>
   );
 
@@ -324,9 +323,7 @@ export function AnalyticsUsersSection() {
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap items-center justify-end gap-2">
             <AdminPeriodSelector value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomDatesChange={setCustomDates} />
-            <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
-              {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
-            </Button>
+            <AdminSectionRefreshButton onClick={load} loading={loading} />
             <AdminAnalyticsExportButton
               reportType="users_funnel"
               label={a.t("admin.analytics.common.export")}
@@ -344,7 +341,7 @@ export function AnalyticsUsersSection() {
       {(tab) => (
         <>
           <AdminAnalyticsTabPanel activeTab={tab} tabId="overview">
-            <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
+            <div className={cn(ADMIN_SECTION_TILE, healthBannerClass)}>
               <p
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wider",
@@ -424,7 +421,7 @@ export function AnalyticsUsersSection() {
               </p>
               <div className="mt-4">
                 {!funnel?.steps?.length ? (
-                  <div className="rounded-2xl bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
+                  <div className="rounded-2xl bg-zinc-900/45 px-4 py-8 text-center text-sm text-zinc-500">
                     <p className="font-medium text-zinc-200">{USER_CHART_EMPTY.funnel.title}</p>
                     <p className="mt-1">{USER_CHART_EMPTY.funnel.description}</p>
                   </div>
@@ -481,7 +478,7 @@ export function AnalyticsUsersSection() {
                     <Link
                       key={seg.key}
                       href={usersFilterHref({ segment: seg.key })}
-                      className="flex justify-between rounded-xl bg-zinc-50 px-3 py-2 text-sm hover:bg-zinc-900/80"
+                      className={ADMIN_ANALYTICS_LIST_LINK}
                     >
                       <span>{seg.label}</span>
                       <span className="tabular-nums text-zinc-400">
@@ -500,7 +497,7 @@ export function AnalyticsUsersSection() {
                 <AdminBarChart items={(financial?.buckets ?? []).map((b) => ({ label: b.label, value: b.count }))} />
                 <div className="mt-4 space-y-2">
                   {(financial?.cohorts ?? []).map((c) => (
-                    <Link key={c.key} href={ROUTES.adminUsers} className="flex justify-between rounded-xl bg-zinc-50 px-3 py-2 text-sm">
+                    <Link key={c.key} href={ROUTES.adminUsers} className={ADMIN_ANALYTICS_LIST_LINK}>
                       <span>{c.label}</span>
                       <span className="font-medium tabular-nums">{c.count}</span>
                     </Link>
@@ -576,7 +573,7 @@ export function AnalyticsUsersSection() {
               <h2 className="text-sm font-semibold text-zinc-100">Переходы</h2>
               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {DRILL_LINKS.map((link) => (
-                  <Link key={link.href} href={link.href} className="group flex items-center justify-between rounded-2xl bg-zinc-50 px-4 py-3 text-sm font-medium hover:bg-zinc-900/80">
+                  <Link key={link.href} href={link.href} className={cn(ADMIN_ANALYTICS_DRILL_LINK, "group")}>
                     {link.label}
                     <ArrowRight className="size-4 opacity-0 group-hover:opacity-100" />
                   </Link>

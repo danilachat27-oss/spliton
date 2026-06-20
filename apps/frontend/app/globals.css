@@ -572,6 +572,29 @@
     background: linear-gradient(180deg, rgb(183 245 0 / 0.88), rgb(183 245 0 / 0.62));
   }
 
+  /* Компактный скролл для выпадающих списков админки */
+  .admin-select-menu-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(113 113 122 / 0.45) transparent;
+  }
+
+  .admin-select-menu-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .admin-select-menu-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-select-menu-scroll::-webkit-scrollbar-thumb {
+    background: rgb(113 113 122 / 0.45);
+    border-radius: 9999px;
+  }
+
+  .admin-select-menu-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(161 161 170 / 0.65);
+  }
+
   /* Operator portal: тёмная тема без рамок, lime primary */
   .admin-portal {
     --background: oklch(0.09 0 0);

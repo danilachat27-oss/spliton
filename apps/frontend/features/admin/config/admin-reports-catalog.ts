@@ -240,7 +240,7 @@ export const REPORT_CATALOG: ReportCatalogEntry[] = [
 
     longDescription:
 
-      "Revenue events, distributions, начисления держателям, статусы и связанные wallet ledger операции.",
+      "События дохода, распределения, начисления держателям, статусы и связанные проводки кошелька.",
 
     domain: "finance",
 

@@ -15,7 +15,7 @@ import { useAdminDrawerUnsavedGuard } from "@/features/admin/hooks/use-admin-dra
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { useAdminPermissions } from "@/features/admin/hooks/use-admin-permissions";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
-import { adminFieldInput } from "@/features/admin/lib/admin-ui";
+import { adminFieldInput, adminSectionCreateButton, adminSectionToolbarActions } from "@/features/admin/lib/admin-ui";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   AdminSectionDataArea,
@@ -27,6 +27,8 @@ import {
   AdminDataTable,
   AdminDetailDrawer,
   AdminFilterBar,
+  AdminFilterPills,
+  AdminFilterResultCount,
   AdminFormField,
   AdminFormFooter,
   AdminReadOnlyBanner,
@@ -51,6 +53,9 @@ export function GenresSection() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
+  const [status, setStatus] = React.useState("all");
+  const [releases, setReleases] = React.useState("all");
+  const [sort, setSort] = React.useState("name_asc");
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editRow, setEditRow] = React.useState<AdminReleaseGenreListItem | null>(null);
@@ -67,14 +72,19 @@ export function GenresSection() {
     onOpenChange: setDrawerOpen,
   });
 
+  const listQuery = React.useMemo(
+    () => ({ search, status, releases, sort }),
+    [search, status, releases, sort],
+  );
+
   const load = React.useCallback(() => {
     setLoading(true);
     setError(null);
-    void listAdminReleaseGenres(search || undefined, client)
+    void listAdminReleaseGenres(listQuery, client)
       .then(setRows)
       .catch((e) => setError(localizedAdminError(e)))
       .finally(() => setLoading(false));
-  }, [client, search]);
+  }, [client, listQuery]);
 
   React.useEffect(() => {
     load();
@@ -166,7 +176,21 @@ export function GenresSection() {
   ];
 
   return (
-    <AdminSectionShell sectionId="genres" title={a.adminSectionLabel("genres")}>
+    <AdminSectionShell
+      sectionId="genres"
+      title={a.adminSectionLabel("genres")}
+      actions={
+        <div className={adminSectionToolbarActions}>
+          <AdminSectionRefreshButton onClick={load} />
+          {!readOnly ? (
+            <Button type="button" size="sm" className={adminSectionCreateButton} onClick={openCreate}>
+              <Plus className="size-3.5" aria-hidden />
+              {a.t("admin.genres.create")}
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
       {readOnly ? <AdminReadOnlyBanner area="Tracks" /> : null}
       {feedback ? (
         <p className="rounded-xl border border-[#B7F500]/30 bg-[#B7F500]/10 px-4 py-2 text-sm text-[#B7F500]">
@@ -175,33 +199,87 @@ export function GenresSection() {
       ) : null}
 
       <AdminSectionPanel>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AdminFilterBar
-            fields={[
-              {
-                id: "search",
-                label: a.t("admin.genres.search"),
-                type: "search",
-                value: search,
-                onChange: setSearch,
-                placeholder: a.t("admin.genres.search"),
-              },
+        <AdminFilterBar
+          className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          panelWidthClassName="w-[min(100vw-1rem,520px)]"
+          searchHint={a.t("admin.genres.searchHint")}
+          footer={
+            <AdminFilterResultCount
+              label={a.t("admin.filters.foundCount")}
+              value={rows.length}
+              className="w-full"
+            />
+          }
+          fields={[
+            {
+              id: "genre-search",
+              label: a.t("admin.genres.search"),
+              type: "search",
+              value: search,
+              onChange: setSearch,
+              placeholder: a.t("admin.genres.search"),
+            },
+            {
+              id: "genre-status",
+              label: a.t("admin.genres.filter.status"),
+              type: "select",
+              value: status,
+              onChange: setStatus,
+              options: [
+                { value: "all", label: a.actions.allStatuses },
+                { value: "active", label: a.t("admin.genres.active") },
+                { value: "inactive", label: a.t("admin.genres.inactive") },
+              ],
+            },
+            {
+              id: "genre-releases",
+              label: a.t("admin.genres.filter.releases"),
+              type: "select",
+              value: releases,
+              onChange: setReleases,
+              options: [
+                { value: "all", label: a.t("admin.genres.filter.releases.all") },
+                { value: "with", label: a.t("admin.genres.filter.releases.with") },
+                { value: "without", label: a.t("admin.genres.filter.releases.without") },
+              ],
+            },
+            {
+              id: "genre-sort",
+              label: a.t("admin.genres.filter.sort"),
+              type: "select",
+              value: sort,
+              onChange: setSort,
+              options: [
+                { value: "name_asc", label: a.t("admin.genres.filter.sort.nameAsc") },
+                { value: "name_desc", label: a.t("admin.genres.filter.sort.nameDesc") },
+                { value: "created_desc", label: a.t("admin.genres.filter.sort.createdDesc") },
+                { value: "releases_desc", label: a.t("admin.genres.filter.sort.releasesDesc") },
+              ],
+            },
+          ]}
+        />
+
+        <div className="flex flex-col gap-3 rounded-2xl bg-zinc-900/25 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-3">
+          <AdminFilterPills
+            label={a.t("admin.genres.filter.status")}
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: "all", label: a.actions.allStatuses },
+              { value: "active", label: a.t("admin.genres.active") },
+              { value: "inactive", label: a.t("admin.genres.inactive") },
             ]}
           />
-          <div className="flex gap-2">
-            <AdminSectionRefreshButton onClick={load} />
-            {!readOnly ? (
-              <Button
-                type="button"
-                size="sm"
-                className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
-                onClick={openCreate}
-              >
-                <Plus className="mr-1 size-4" />
-                {a.t("admin.genres.create")}
-              </Button>
-            ) : null}
-          </div>
+          <AdminFilterPills
+            label={a.t("admin.genres.filter.releases")}
+            value={releases}
+            onChange={setReleases}
+            options={[
+              { value: "all", label: a.t("admin.genres.filter.releases.all") },
+              { value: "with", label: a.t("admin.genres.filter.releases.with") },
+              { value: "without", label: a.t("admin.genres.filter.releases.without") },
+            ]}
+          />
         </div>
 
         <AdminSectionDataArea loading={loading} error={error ? true : undefined} onRetry={load}>

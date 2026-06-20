@@ -5,7 +5,12 @@ import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { adminCard } from "@/features/admin/lib/admin-ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { adminBtnOutline, adminFieldInput, adminFieldTextarea } from "@/features/admin/lib/admin-ui";
+import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
+import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { AdminFormField } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
 
 type Settings = {
@@ -72,10 +77,10 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
         maintenanceMessageEn: data.maintenanceMessageEn ?? "",
         maintenanceMessageKa: data.maintenanceMessageKa ?? "",
       });
-      setMessage("Сохранено");
+      setMessage(a.t("admin.treasury.limits.saved"));
       load();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Ошибка сохранения");
+      setMessage(localizedAdminError(e));
     } finally {
       setSaving(false);
     }
@@ -86,7 +91,7 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
   }
 
   return (
-    <div className={cn("space-y-4 text-sm", !embedded && adminCard("border border-zinc-800 p-4"))}>
+    <div className={cn("space-y-4 text-sm", !embedded && ADMIN_SECTION_TILE)}>
       {!embedded ? (
         <p className="font-semibold text-zinc-100">{a.t("admin.treasury.depositNetwork.title")}</p>
       ) : null}
@@ -94,39 +99,39 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
         Provider: <span className="font-mono">{data.providerMode}</span>
         {data.providerName ? ` · ${data.providerName}` : null}
       </p>
-      <label className="block">
-        <span className="text-zinc-400">Контракт USDT</span>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 font-mono text-xs"
+      <AdminFormField label="Контракт USDT" htmlFor="deposit-token-contract">
+        <Input
+          id="deposit-token-contract"
+          className={cn(adminFieldInput, "font-mono text-xs")}
           value={data.tokenContractAddress ?? ""}
           onChange={(e) => setData({ ...data, tokenContractAddress: e.target.value })}
         />
-      </label>
+      </AdminFormField>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-zinc-400">Мин. депозит (USDT)</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5"
+        <AdminFormField label="Мин. депозит (USDT)" htmlFor="deposit-min-amount">
+          <Input
+            id="deposit-min-amount"
+            className={adminFieldInput}
             value={data.minDepositAmount}
             onChange={(e) => setData({ ...data, minDepositAmount: e.target.value })}
           />
-        </label>
-        <label className="block">
-          <span className="text-zinc-400">Подтверждения</span>
-          <input
+        </AdminFormField>
+        <AdminFormField label="Подтверждения" htmlFor="deposit-min-confirmations">
+          <Input
+            id="deposit-min-confirmations"
             type="number"
-            className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5"
+            className={adminFieldInput}
             value={data.minConfirmations}
             onChange={(e) =>
               setData({ ...data, minConfirmations: Number(e.target.value) || 0 })
             }
           />
-        </label>
-        <label className="block">
-          <span className="text-zinc-400">Зачисление (мин)</span>
-          <input
+        </AdminFormField>
+        <AdminFormField label="Зачисление (мин)" htmlFor="deposit-credit-minutes">
+          <Input
+            id="deposit-credit-minutes"
             type="number"
-            className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5"
+            className={adminFieldInput}
             value={data.estimatedCreditTimeMinutes}
             onChange={(e) =>
               setData({
@@ -135,12 +140,12 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
               })
             }
           />
-        </label>
-        <label className="block">
-          <span className="text-zinc-400">Вывод доступен через (мин)</span>
-          <input
+        </AdminFormField>
+        <AdminFormField label="Вывод доступен через (мин)" htmlFor="deposit-withdraw-minutes">
+          <Input
+            id="deposit-withdraw-minutes"
             type="number"
-            className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5"
+            className={adminFieldInput}
             value={data.withdrawAvailableAfterMinutes}
             onChange={(e) =>
               setData({
@@ -149,24 +154,28 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
               })
             }
           />
+        </AdminFormField>
+      </div>
+      <div className="flex flex-wrap gap-4">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            className="size-4 rounded border-zinc-700 bg-zinc-900 accent-[#B7F500]"
+            checked={data.depositEnabled}
+            onChange={(e) => setData({ ...data, depositEnabled: e.target.checked })}
+          />
+          Пополнения включены
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            className="size-4 rounded border-zinc-700 bg-zinc-900 accent-[#B7F500]"
+            checked={data.withdrawalEnabled}
+            onChange={(e) => setData({ ...data, withdrawalEnabled: e.target.checked })}
+          />
+          Выводы включены
         </label>
       </div>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={data.depositEnabled}
-          onChange={(e) => setData({ ...data, depositEnabled: e.target.checked })}
-        />
-        Пополнения включены
-      </label>
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={data.withdrawalEnabled}
-          onChange={(e) => setData({ ...data, withdrawalEnabled: e.target.checked })}
-        />
-        Выводы включены
-      </label>
       <AdminStyledSelectField
         label={a.t("admin.treasury.providerMode")}
         className="text-zinc-400"
@@ -179,79 +188,83 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
         onChange={(providerMode) => setData({ ...data, providerMode })}
       />
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-zinc-400">{a.t("admin.treasury.explorerTemplate")}</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 font-mono text-[10px]"
+        <AdminFormField label={a.t("admin.treasury.explorerTemplate")} htmlFor="deposit-explorer-address">
+          <Input
+            id="deposit-explorer-address"
+            className={cn(adminFieldInput, "font-mono text-[10px]")}
             placeholder="https://tronscan.org/#/address/{address}"
             value={data.explorerAddressUrlTemplate ?? ""}
             onChange={(e) =>
               setData({ ...data, explorerAddressUrlTemplate: e.target.value })
             }
           />
-        </label>
-        <label className="block">
-          <span className="text-zinc-400">{a.t("admin.treasury.depositNetwork.explorerToken")}</span>
-          <input
-            className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 font-mono text-[10px]"
+        </AdminFormField>
+        <AdminFormField
+          label={a.t("admin.treasury.depositNetwork.explorerToken")}
+          htmlFor="deposit-explorer-token"
+        >
+          <Input
+            id="deposit-explorer-token"
+            className={cn(adminFieldInput, "font-mono text-[10px]")}
             placeholder="https://tronscan.org/#/token20/{contract}"
             value={data.explorerTokenUrlTemplate ?? ""}
             onChange={(e) =>
               setData({ ...data, explorerTokenUrlTemplate: e.target.value })
             }
           />
-        </label>
+        </AdminFormField>
       </div>
-      <label className="block">
-        <span className="text-zinc-400">{a.t("admin.treasury.depositNetwork.warningsRu")}</span>
+      <AdminFormField label={a.t("admin.treasury.depositNetwork.warningsRu")} htmlFor="deposit-warn-ru">
         <textarea
-          className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 text-xs"
+          id="deposit-warn-ru"
+          className={adminFieldTextarea}
           rows={3}
           value={data.userWarningRu ?? ""}
           onChange={(e) => setData({ ...data, userWarningRu: e.target.value })}
         />
-      </label>
-      <label className="block">
-        <span className="text-zinc-400">{a.t("admin.treasury.depositNetwork.warningsEn")}</span>
+      </AdminFormField>
+      <AdminFormField label={a.t("admin.treasury.depositNetwork.warningsEn")} htmlFor="deposit-warn-en">
         <textarea
-          className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 text-xs"
+          id="deposit-warn-en"
+          className={adminFieldTextarea}
           rows={2}
           value={data.userWarningEn ?? ""}
           onChange={(e) => setData({ ...data, userWarningEn: e.target.value })}
         />
-      </label>
-      <label className="block">
-        <span className="text-zinc-400">{a.t("admin.treasury.depositNetwork.maintenanceRu")}</span>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 text-xs"
+      </AdminFormField>
+      <AdminFormField label={a.t("admin.treasury.depositNetwork.maintenanceRu")} htmlFor="deposit-maint-ru">
+        <Input
+          id="deposit-maint-ru"
+          className={adminFieldInput}
           value={data.maintenanceMessageRu ?? ""}
           onChange={(e) => setData({ ...data, maintenanceMessageRu: e.target.value })}
         />
-      </label>
-      <label className="block">
-        <span className="text-zinc-400">{a.t("admin.treasury.maintenanceEn")}</span>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5 text-xs"
+      </AdminFormField>
+      <AdminFormField label={a.t("admin.treasury.maintenanceEn")} htmlFor="deposit-maint-en">
+        <Input
+          id="deposit-maint-en"
+          className={adminFieldInput}
           value={data.maintenanceMessageEn ?? ""}
           onChange={(e) => setData({ ...data, maintenanceMessageEn: e.target.value })}
         />
-      </label>
-      <label className="block">
-        <span className="text-zinc-400">{a.t("admin.treasury.depositNetwork.changeReason")}</span>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-800 px-2 py-1.5"
+      </AdminFormField>
+      <AdminFormField label={a.t("admin.treasury.depositNetwork.changeReason")} htmlFor="deposit-change-reason">
+        <Input
+          id="deposit-change-reason"
+          className={adminFieldInput}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
-      </label>
-      <button
+      </AdminFormField>
+      <Button
         type="button"
+        size="sm"
         disabled={saving}
+        className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
         onClick={() => void save()}
-        className="rounded-lg bg-[#B7F500] px-3 py-2 text-xs font-semibold text-zinc-950 disabled:opacity-50"
       >
         {saving ? "Сохранение…" : "Сохранить настройки"}
-      </button>
+      </Button>
       {message ? <p className="text-xs text-zinc-400">{message}</p> : null}
     </div>
   );

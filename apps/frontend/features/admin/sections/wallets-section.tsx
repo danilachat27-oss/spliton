@@ -28,7 +28,6 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -61,8 +60,8 @@ const USER_STATUS_OPTIONS_BASE = [
 
 const SORT_OPTIONS = [
   { value: "last_activity", label: "Последняя активность" },
-  { value: "available", label: "Больше available" },
-  { value: "locked", label: "Больше locked" },
+  { value: "available", label: "Больше доступно" },
+  { value: "locked", label: "Больше заблокировано" },
 ];
 
 function parseUsdtNumber(value: string): number {
@@ -364,6 +363,12 @@ export function WalletsSection() {
     <AdminSectionShell
       sectionId="wallets"
       title={a.adminSectionLabel("wallets")}
+      infoHint={
+        <>
+          Контроль пользовательских балансов Spliton: доступные и заблокированные средства, начисления, выводы и
+          ledger-операции. Live mode — только данные из API.
+        </>
+      }
       actions={
         <AdminSectionRefreshButton
           onClick={() => {
@@ -374,11 +379,6 @@ export function WalletsSection() {
       }
     >
       {isReadOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("wallets")} /> : null}
-
-      <AdminSectionInfoHint>
-        Контроль пользовательских балансов Spliton: доступные и заблокированные средства, начисления, выводы и
-        ledger-операции. Live mode — только данные из API.
-      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatTile

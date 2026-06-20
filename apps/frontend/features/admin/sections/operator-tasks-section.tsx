@@ -8,12 +8,12 @@ import {
   ArrowUpRight,
   Banknote,
   ChevronRight,
+  ChevronDown,
   ClipboardList,
   FileBarChart,
   Headphones,
   Layers,
   Music2,
-  RefreshCw,
   ShieldAlert,
   TrendingUp,
   Wallet,
@@ -22,7 +22,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants/routes";
 import { AdminPageShell } from "@/features/admin/components/admin-page-shell";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
+import { ANALYTICS_CHART } from "@/features/admin/analytics/lib/admin-analytics-theme";
+import { buildLinePath } from "@/lib/analytics/chart-path";
 import {
   OPERATOR_TASK_CATEGORY_LABELS,
   OPERATOR_TASK_CATEGORY_ORDER,
@@ -59,7 +62,6 @@ import {
   adminTile,
   adminEyebrow,
   adminBtnGhost,
-  adminAccentBg,
 } from "@/features/admin/lib/admin-ui";
 import { cn } from "@/lib/utils";
 
@@ -108,30 +110,81 @@ function groupTasksByCategory(tasks: AdminOperatorTask[]) {
   })).filter((g) => g.items.length > 0);
 }
 
-function SummaryCard({
+function buildSparkSeries(values: number[]): number[] {
+  if (values.length >= 2) return values;
+  const peak = values[0] ?? 0;
+  if (peak <= 0) return [0, 0];
+  return [0, peak];
+}
+
+function OperatorTaskKpiCard({
   label,
   value,
   hint,
-  tone = "neutral",
+  activeTone = "warning",
+  trend = [],
+  href,
 }: {
   label: string;
-  value: string;
+  value: number;
   hint: string;
-  tone?: "neutral" | "warning" | "danger";
+  activeTone?: "warning" | "danger" | "info";
+  trend?: number[];
+  href?: string;
 }) {
-  const valueClass =
-    tone === "danger"
+  const hasAttention = value > 0;
+  const valueTone = !hasAttention
+    ? "text-zinc-100"
+    : activeTone === "danger"
       ? "text-rose-400"
-      : tone === "warning"
-        ? "text-amber-400"
-        : "text-zinc-100";
-  return (
-    <div className={cn(TILE, "space-y-1")}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
-      <p className="text-xs text-zinc-500">{hint}</p>
+      : activeTone === "info"
+        ? "text-sky-400"
+        : "text-amber-400";
+
+  const sparkColor = !hasAttention
+    ? ANALYTICS_CHART.neutral
+    : activeTone === "danger"
+      ? ANALYTICS_CHART.negative
+      : activeTone === "info"
+        ? "#38bdf8"
+        : "#fbbf24";
+
+  const series = buildSparkSeries(trend.length > 0 ? trend : [value]);
+  const spark = buildLinePath(series, 64, 24, 0, 2, {
+    min: Math.min(...series),
+    max: Math.max(...series),
+  });
+
+  const inner = (
+    <div className={cn(TILE, "flex h-full flex-col", href && "transition-colors hover:bg-zinc-800/50")}>
+      <div className="flex min-h-10 items-start justify-between gap-2">
+        <p className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">{label}</p>
+        <svg viewBox="0 0 64 24" className="h-6 w-16 shrink-0 opacity-70" aria-hidden>
+          <polyline
+            points={spark}
+            fill="none"
+            stroke={sparkColor}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+      <p className={cn("mt-3 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl", valueTone)}>
+        {value}
+      </p>
+      <p className="mt-2 text-xs text-zinc-500">{hint}</p>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block h-full rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B7F500]/25">
+        {inner}
+      </Link>
+    );
+  }
+
+  return inner;
 }
 
 function TaskRow({ task }: { task: AdminOperatorTask }) {
@@ -180,6 +233,119 @@ function TaskRow({ task }: { task: AdminOperatorTask }) {
         </span>
       </Link>
     </li>
+  );
+}
+
+const CATEGORY_ACCENT: Record<
+  OperatorTaskCategory,
+  { iconActive: string; titleActive: string }
+> = {
+  finance: {
+    iconActive: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/25",
+    titleActive: "text-amber-50",
+  },
+  compliance: {
+    iconActive: "bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/25",
+    titleActive: "text-rose-50",
+  },
+  support: {
+    iconActive: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/25",
+    titleActive: "text-sky-50",
+  },
+  content: {
+    iconActive: "bg-violet-500/15 text-violet-300 ring-1 ring-violet-500/25",
+    titleActive: "text-violet-50",
+  },
+  market: {
+    iconActive: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/25",
+    titleActive: "text-emerald-50",
+  },
+  operations: {
+    iconActive: "bg-zinc-500/15 text-zinc-200 ring-1 ring-zinc-500/25",
+    titleActive: "text-zinc-50",
+  },
+};
+
+function TaskCategorySection({
+  group,
+  defaultExpanded,
+  expandLabel,
+  collapseLabel,
+}: {
+  group: {
+    category: OperatorTaskCategory;
+    label: string;
+    items: AdminOperatorTask[];
+  };
+  defaultExpanded: boolean;
+  expandLabel: string;
+  collapseLabel: string;
+}) {
+  const [expanded, setExpanded] = React.useState(defaultExpanded);
+  const GroupIcon = CATEGORY_ICONS[group.category] ?? Layers;
+  const accent = CATEGORY_ACCENT[group.category];
+  const groupActive = group.items.filter((i) => i.count > 0).length;
+  const groupTotal = group.items.reduce((s, i) => s + i.count, 0);
+  const hasWork = groupTotal > 0;
+
+  return (
+    <section
+      className={cn(
+        "overflow-hidden rounded-2xl bg-zinc-900/45 sm:rounded-3xl",
+        expanded ? "space-y-0" : "",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        aria-expanded={expanded}
+        aria-label={expanded ? collapseLabel : expandLabel}
+        className={cn(
+          "flex w-full flex-wrap items-start justify-between gap-3 px-4 py-5 text-left transition-colors hover:bg-zinc-800/30 sm:px-8 sm:py-6",
+          expanded ? "pb-3 sm:pb-4" : "pb-6 sm:pb-8",
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={cn(
+              "size-11 shrink-0",
+              hasWork ? cn(adminIconTile, accent.iconActive) : adminIconTile,
+            )}
+          >
+            <GroupIcon className="size-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <h2
+              className={cn(
+                "text-xl font-semibold tracking-tight sm:text-[1.35rem]",
+                hasWork ? accent.titleActive : "text-zinc-100",
+              )}
+            >
+              {group.label}
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              {groupActive > 0
+                ? `${groupTotal} позиций требуют внимания`
+                : "Активных позиций нет — раздел в норме"}
+            </p>
+          </div>
+        </div>
+        <span className="flex shrink-0 items-center gap-2 self-center">
+          {groupTotal > 0 ? <span className={adminCountBadgeActive}>{groupTotal}</span> : null}
+          <ChevronDown
+            className={cn("size-4 text-zinc-500 transition-transform", expanded && "rotate-180")}
+            aria-hidden
+          />
+        </span>
+      </button>
+      {expanded ? (
+        <ul className="space-y-2 px-4 pb-6 sm:px-8 sm:pb-8">
+          {group.items.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 
@@ -258,6 +424,10 @@ export function OperatorTasksSection() {
     .reduce((s, t) => s + t.count, 0);
   const grouped = groupTasksByCategory(tasks);
   const title = a.adminSectionLabel("operatorTasks");
+  const queueTrend = activeTasks.map((t) => t.count);
+  const urgentTrend = activeTasks.filter((t) => t.priority === "high").map((t) => t.count);
+  const financeTrend = tasks.filter((t) => t.category === "finance").map((t) => t.count);
+  const supportTrend = tasks.filter((t) => t.category === "support").map((t) => t.count);
 
   if (loading) {
     return (
@@ -295,15 +465,7 @@ export function OperatorTasksSection() {
                 К обзору
               </Button>
             </Link>
-            <Button
-              type="button"
-              size="sm"
-              className={cn("h-9 gap-1.5 rounded-xl px-4 text-xs font-semibold", adminAccentBg)}
-              onClick={load}
-            >
-              <RefreshCw className="size-3.5" aria-hidden />
-              {a.portal.refresh}
-            </Button>
+            <AdminSectionRefreshButton onClick={load} variant="primary" />
           </div>
         </header>
 
@@ -334,67 +496,52 @@ export function OperatorTasksSection() {
           </div>
         ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
+        <section className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <OperatorTaskKpiCard
             label={a.t("admin.kpi.operatorTasks.totalQueued")}
-            value={String(taskTotal)}
+            value={taskTotal}
             hint={`${activeTasks.length} ${pluralTasks(activeTasks.length)} с ненулевым счётчиком`}
-            tone={taskTotal > 0 ? "warning" : "neutral"}
+            activeTone="warning"
+            trend={queueTrend}
+            href={ROUTES.adminOperatorTasks}
           />
-          <SummaryCard
+          <OperatorTaskKpiCard
             label={a.t("admin.kpi.operatorTasks.urgent")}
-            value={String(highPriority)}
+            value={highPriority}
             hint={a.t("admin.kpi.operatorTasks.urgentHint")}
-            tone={highPriority > 0 ? "danger" : "neutral"}
+            activeTone="danger"
+            trend={urgentTrend}
+            href={ROUTES.adminOperatorTasks}
           />
-          <SummaryCard
+          <OperatorTaskKpiCard
             label={a.t("admin.kpi.operatorTasks.treasury")}
-            value={String(financeTotal)}
+            value={financeTotal}
             hint={a.t("admin.kpi.operatorTasks.treasuryHint")}
-            tone={financeTotal > 0 ? "warning" : "neutral"}
+            activeTone="warning"
+            trend={financeTrend}
+            href={ROUTES.adminDeposits}
           />
-          <SummaryCard
+          <OperatorTaskKpiCard
             label={a.t("admin.kpi.operatorTasks.support")}
-            value={String(supportTotal)}
+            value={supportTotal}
             hint={a.t("admin.kpi.operatorTasks.supportHint")}
-            tone={supportTotal > 0 ? "warning" : "neutral"}
+            activeTone="info"
+            trend={supportTrend}
+            href={ROUTES.adminSupport}
           />
         </section>
 
         {grouped.map((group) => {
-          const GroupIcon = CATEGORY_ICONS[group.category] ?? Layers;
-          const groupActive = group.items.filter((i) => i.count > 0).length;
           const groupTotal = group.items.reduce((s, i) => s + i.count, 0);
 
           return (
-            <section key={group.category} className={cn(PANEL, "space-y-4")}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <span className={cn("size-11", adminIconTile)}>
-                    <GroupIcon className="size-5" aria-hidden />
-                  </span>
-                  <div>
-                    <p className={adminEyebrow}>{group.label}</p>
-                    <h2 className="text-lg font-semibold tracking-tight text-zinc-100">
-                      Очереди раздела
-                    </h2>
-                    <p className="mt-0.5 text-xs text-zinc-500">
-                      {groupActive > 0
-                        ? `${groupTotal} позиций требуют внимания`
-                        : "Активных позиций нет — раздел в норме"}
-                    </p>
-                  </div>
-                </div>
-                {groupTotal > 0 ? (
-                  <span className={adminCountBadgeActive}>{groupTotal}</span>
-                ) : null}
-              </div>
-              <ul className="space-y-2">
-                {group.items.map((task) => (
-                  <TaskRow key={task.id} task={task} />
-                ))}
-              </ul>
-            </section>
+            <TaskCategorySection
+              key={group.category}
+              group={group}
+              defaultExpanded={groupTotal > 0}
+              expandLabel={a.t("admin.operatorTasks.category.expand")}
+              collapseLabel={a.t("admin.operatorTasks.category.collapse")}
+            />
           );
         })}
 

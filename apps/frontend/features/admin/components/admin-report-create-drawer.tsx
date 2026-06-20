@@ -18,11 +18,10 @@ import {
 import { canGenerateReportType } from "@/features/admin/config/admin-rbac";
 import {
   REPORT_PERIOD_PRESETS,
-  XLSX_DISABLED_MESSAGE,
 } from "@/features/admin/lib/admin-reports-i18n";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
-import { adminCard } from "@/features/admin/lib/admin-ui";
+import { ADMIN_SECTION_NOTICE, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { AdminDetailDrawer, AdminDatePicker, AdminFormField, AdminFormFooter, AdminStatusBadge } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
 import type { AdminReportType } from "@/services/admin/adminReports.service";
@@ -88,20 +87,20 @@ function reportDomainChip(active: boolean) {
 
 function reportTypeCard(active: boolean, disabled: boolean) {
   return cn(
-    "h-full w-full rounded-xl border p-3 text-left text-sm transition-colors",
-    active
-      ? "border-[#B7F500]/50 bg-zinc-900/80"
-      : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700",
+    ADMIN_SECTION_TILE,
+    "h-full w-full p-3 text-left text-sm transition-colors",
+    active && "ring-1 ring-[#B7F500]/40",
+    !active && "hover:bg-zinc-900/70",
     disabled && "cursor-not-allowed opacity-50",
   );
 }
 
 function reportFormatCard(active: boolean, disabled: boolean) {
   return cn(
-    "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors",
-    active && !disabled
-      ? "border-[#B7F500]/50 bg-zinc-900/80"
-      : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700",
+    ADMIN_SECTION_TILE,
+    "flex w-full items-center justify-between px-4 py-3 text-sm transition-colors",
+    active && !disabled && "ring-1 ring-[#B7F500]/40",
+    !active && !disabled && "hover:bg-zinc-900/70",
     disabled && "cursor-not-allowed opacity-50",
   );
 }
@@ -170,6 +169,8 @@ export function AdminReportCreateDrawer({
       open={open}
       onOpenChange={onOpenChange}
       wide
+      borderless
+      widthClassName="w-[min(720px,100vw)]"
       title={a.t("admin.drawer.reportCreate.title")}
       subtitle={a.t("admin.reports.exportCenter")}
       footer={
@@ -198,7 +199,7 @@ export function AdminReportCreateDrawer({
         />
       }
     >
-      <p className="mb-4 text-xs text-zinc-500">Шаг {step} из 5</p>
+      <p className={cn(ADMIN_SECTION_NOTICE, "mb-4 text-xs text-zinc-500")}>Шаг {step} из 5</p>
 
       {step === 1 ? (
         <div className="space-y-4">
@@ -247,7 +248,7 @@ export function AdminReportCreateDrawer({
             })}
           </ul>
           {entry ? (
-            <div className={cn(adminCard("space-y-2 border border-zinc-800 p-3 text-xs"))}>
+            <div className={cn(ADMIN_SECTION_TILE, "space-y-2 text-xs")}>
               <p className="font-medium text-zinc-200">{entry.longDescription}</p>
               <p className="text-zinc-500">Поля: {entry.fields.join(", ")}</p>
               <p className="text-zinc-500">Роли: {entry.roles.join(", ")}</p>
@@ -338,7 +339,7 @@ export function AdminReportCreateDrawer({
           <div>
             <dt className="text-zinc-500">Период</dt>
             <dd className="text-zinc-200">
-              {range.from || ADMIN_METRIC_NA_LABEL} — {range.to || ADMIN_METRIC_NA_LABEL}
+              {range.from || ADMIN_METRIC_NA_LABEL} · {range.to || ADMIN_METRIC_NA_LABEL}
             </dd>
           </div>
           <div>

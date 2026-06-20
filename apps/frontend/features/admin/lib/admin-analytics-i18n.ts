@@ -247,15 +247,15 @@ export function buildAnalyticsAttentionItems(
     });
   }
   for (const t of input.tasks ?? []) {
-    if ((t.count ?? 0) > 0 && !items.some((i) => i.href === t.href)) {
-      items.push({
-        id: t.id,
-        label: t.label,
-        count: t.count,
-        href: t.href,
-        priority: t.priority === "high" ? "high" : "medium",
-      });
-    }
+    if ((t.count ?? 0) <= 0) continue;
+    if (items.some((i) => i.id === t.id)) continue;
+    items.push({
+      id: t.id,
+      label: t.label,
+      count: t.count,
+      href: t.href,
+      priority: t.priority === "high" ? "high" : "medium",
+    });
   }
   return items;
 }

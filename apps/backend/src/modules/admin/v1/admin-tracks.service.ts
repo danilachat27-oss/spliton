@@ -31,6 +31,7 @@ import {
 } from './utils/admin-track.validation';
 import { AdminReleaseGenresService } from './admin-release-genres.service';
 import { AdminLabelsService } from './admin-labels.service';
+import { resolveAdminTracksListOrderBy } from './utils/admin-tracks-list-order';
 
 type TrackBody = Record<string, unknown>;
 
@@ -78,6 +79,23 @@ export class AdminTracksService {
     if (query.status && query.status !== 'all') {
       where.status = apiReleaseStatusToDb(query.status);
     }
+    if (query.genre && query.genre !== 'all') {
+      where.genre = { equals: query.genre, mode: 'insensitive' };
+    }
+    if (query.dateFrom?.trim()) {
+      where.createdAt = {
+        ...(typeof where.createdAt === 'object' ? where.createdAt : {}),
+        gte: new Date(`${query.dateFrom.trim()}T00:00:00.000Z`),
+      };
+    }
+    if (query.dateTo?.trim()) {
+      where.createdAt = {
+        ...(typeof where.createdAt === 'object' ? where.createdAt : {}),
+        lte: new Date(`${query.dateTo.trim()}T23:59:59.999Z`),
+      };
+    }
+
+    const orderBy = resolveAdminTracksListOrderBy(query.sortBy, query.sortDir ?? 'desc');
 
     const [total, rows] = await Promise.all([
       this.prisma.release.count({ where }),
@@ -85,7 +103,7 @@ export class AdminTracksService {
         where,
         skip,
         take: pageSize,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: this.include(),
       }),
     ]);

@@ -21,14 +21,16 @@ import {
   releaseStatusLabel,
 } from "@/features/admin/lib/admin-holding-i18n";
 import { formatAdminDate, formatUnits, formatUsdtAmount } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_SECTION_KPI_GRID, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { adminBtnGhost } from "@/features/admin/lib/admin-ui";
 import type { AdminHoldingDetail, AdminHoldingListItem } from "@/features/admin/mocks/admin-holdings.mock";
 import {
   AdminDataTable,
   AdminFilterBar,
+  AdminFilterPills,
+  AdminFilterResultCount,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -45,7 +47,7 @@ import { cn } from "@/lib/utils";
 const HOLDING_FILTER_OPTIONS_BASE = [
   { value: "all", label: "Все владения" },
   { value: "locked", label: "Есть заблокированные" },
-  { value: "listing", label: "Активный listing" },
+  { value: "listing", label: "Активное объявление" },
   { value: "earned", label: "Есть начисления" },
   { value: "risk", labelKey: "admin.filter.riskFlags" as const },
 ];
@@ -58,6 +60,42 @@ const SORT_OPTIONS = [
   { value: "current_value", label: "Текущая стоимость" },
 ];
 
+const adminTableLink =
+  "text-sm font-medium text-zinc-100 transition-colors hover:text-[#B7F500]";
+
+function ReleaseCoverThumb({ coverUrl }: { coverUrl: string | null }) {
+  const [failed, setFailed] = React.useState(false);
+  const showPlaceholder = !coverUrl?.trim() || failed;
+
+  if (showPlaceholder) {
+    return (
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800/60 text-zinc-500">
+        <Layers className="size-4" strokeWidth={2} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="size-9 shrink-0 overflow-hidden rounded-lg bg-zinc-800/60">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={coverUrl!.trim()}
+        alt=""
+        className="size-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+function statValueSize(value: string): string {
+  if (value === "…") return "text-2xl";
+  const len = value.replace(/\s/g, "").length;
+  if (len > 16) return "text-base leading-snug sm:text-lg";
+  if (len > 11) return "text-lg sm:text-xl";
+  return "text-2xl";
+}
+
 function StatTile({
   label,
   value,
@@ -69,16 +107,21 @@ function StatTile({
 }) {
   const valueClass =
     tone === "success"
-      ? "text-emerald-800"
+      ? "text-emerald-400"
       : tone === "warning"
-        ? "text-amber-800"
+        ? "text-amber-400"
         : tone === "info"
-          ? "text-sky-800"
+          ? "text-sky-400"
           : "text-zinc-100";
   return (
-    <div className={cn(ADMIN_SECTION_TILE, "space-y-1")}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
+    <div className={cn(ADMIN_SECTION_TILE, "flex min-h-[5.5rem] min-w-0 flex-col justify-between gap-2")}>
+      <p className="text-[11px] font-semibold uppercase leading-snug tracking-wide text-zinc-500">{label}</p>
+      <p
+        className={cn("font-semibold tabular-nums tracking-tight break-words", statValueSize(value), valueClass)}
+        title={value}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -140,6 +183,22 @@ export function HoldingsSection() {
     void loadSummary();
   }, [loadSummary]);
 
+  const sortOptions = React.useMemo(
+    () =>
+      SORT_OPTIONS.map((opt) => ({
+        value: opt.value,
+        label: opt.label,
+      })),
+    [],
+  );
+
+  const activeUnitFilters = (minUnits ? 1 : 0) + (maxUnits ? 1 : 0);
+
+  const resetExtraFilters = React.useCallback(() => {
+    setMinUnits("");
+    setMaxUnits("");
+  }, []);
+
   React.useEffect(() => {
     setQuery((q) => ({
       ...q,
@@ -175,24 +234,24 @@ export function HoldingsSection() {
       key: "holder",
       header: a.table.holder,
       render: (r) => (
-        <div className="min-w-[180px]">
-          <div className="flex items-center gap-1">
-            <Link
-              href={ROUTES.adminUserDetail(r.userId)}
-              className="text-sm font-medium text-zinc-100 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {r.userEmail}
-            </Link>
-          </div>
-          {r.userDisplayName ? <p className="text-xs text-zinc-500">{r.userDisplayName}</p> : null}
-          <div className="mt-1 flex items-center gap-1">
+        <div className="min-w-[168px]">
+          <Link
+            href={ROUTES.adminUserDetail(r.userId)}
+            className={adminTableLink}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {r.userEmail}
+          </Link>
+          {r.userDisplayName ? (
+            <p className="mt-0.5 truncate text-xs text-zinc-500">{r.userDisplayName}</p>
+          ) : null}
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <AdminStatusBadge label={r.userStatus} tone={r.userStatus === "active" ? "success" : "neutral"} />
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-zinc-500">
+              {r.userId.slice(0, 8)}…
+              <AdminCopyButton value={r.userId} />
+            </span>
           </div>
-          <p className="mt-0.5 inline-flex items-center gap-1 font-mono text-[10px] text-zinc-400">
-            {r.userId.slice(0, 8)}…
-            <AdminCopyButton value={r.userId} />
-          </p>
         </div>
       ),
     },
@@ -200,21 +259,14 @@ export function HoldingsSection() {
       key: "release",
       header: "Релиз",
       render: (r) => (
-        <div className="flex min-w-[160px] items-center gap-2">
-          <div className="size-9 shrink-0 overflow-hidden rounded-lg bg-zinc-800/60">
-            {r.trackCoverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={r.trackCoverUrl} alt="" className="size-full object-cover" />
-            ) : (
-              <div className="flex size-full items-center justify-center text-zinc-500">
-                <Layers className="size-4" />
-              </div>
-            )}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-zinc-100">{r.trackTitle}</p>
-            <p className="text-xs text-zinc-500">{r.trackArtist}</p>
-            <AdminStatusBadge label={releaseStatusLabel(r.trackStatus)} tone="neutral" />
+        <div className="flex min-w-[156px] items-center gap-2.5">
+          <ReleaseCoverThumb coverUrl={r.trackCoverUrl} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-zinc-100">{r.trackTitle}</p>
+            <p className="truncate text-xs text-zinc-500">{r.trackArtist}</p>
+            <div className="mt-1">
+              <AdminStatusBadge label={releaseStatusLabel(r.trackStatus)} tone="neutral" />
+            </div>
           </div>
         </div>
       ),
@@ -223,11 +275,9 @@ export function HoldingsSection() {
       key: "units",
       header: "Юниты",
       render: (r) => (
-        <div className="tabular-nums text-sm text-zinc-300">
-          <p>{formatUnitsWithLabel(r.totalUnits)}</p>
-          <p className="text-xs text-zinc-500">
-            {formatUnits(r.availableUnits)} доступно
-          </p>
+        <div className="tabular-nums">
+          <p className="text-sm font-medium text-zinc-100">{formatUnits(r.totalUnits)}</p>
+          <p className="text-xs text-zinc-500">{formatUnits(r.availableUnits)} доступно</p>
         </div>
       ),
     },
@@ -237,14 +287,14 @@ export function HoldingsSection() {
       render: (r) => {
         const locked = Number(r.lockedUnits);
         return (
-          <div>
+          <div className="min-w-[72px]">
             {locked > 0 ? (
               <AdminStatusBadge label={formatUnits(r.lockedUnits)} tone="warning" />
             ) : (
-              <span className="text-sm text-zinc-500">0</span>
+              <span className="text-sm tabular-nums text-zinc-500">0</span>
             )}
             {r.lockReason ? (
-              <p className="mt-1 text-[11px] text-zinc-500">{formatLockReason(r.lockReason)}</p>
+              <p className="mt-1 text-[11px] leading-snug text-zinc-500">{formatLockReason(r.lockReason)}</p>
             ) : null}
           </div>
         );
@@ -254,8 +304,8 @@ export function HoldingsSection() {
       key: "value",
       header: "Оценка",
       render: (r) => (
-        <div className="tabular-nums">
-          <p className="font-medium text-zinc-100">{formatUsdtAmount(r.currentValueUsdt)}</p>
+        <div className="min-w-[96px] tabular-nums">
+          <p className="text-sm font-medium text-zinc-100">{formatUsdtAmount(r.currentValueUsdt)}</p>
           <p className="text-xs text-zinc-500">ср. {formatUsdtAmount(r.averagePriceUsdt)}</p>
         </div>
       ),
@@ -263,18 +313,29 @@ export function HoldingsSection() {
     {
       key: "earned",
       header: "Начислено",
-      render: (r) => (
-        <span className="tabular-nums font-medium text-zinc-200">{formatUsdtAmount(r.earnedTotalUsdt)}</span>
-      ),
+      render: (r) => {
+        const earned = Number(String(r.earnedTotalUsdt).replace(/[^\d.-]/g, ""));
+        return (
+          <span
+            className={cn(
+              "whitespace-nowrap text-sm tabular-nums font-medium",
+              earned > 0 ? "text-emerald-400" : "text-zinc-500",
+            )}
+          >
+            {formatUsdtAmount(r.earnedTotalUsdt)}
+          </span>
+        );
+      },
     },
     {
       key: "listings",
       header: a.t("admin.table.listings"),
+      className: "w-20",
       render: (r) =>
         r.activeListingsCount > 0 ? (
           <AdminStatusBadge label={String(r.activeListingsCount)} tone="pending" />
         ) : (
-          <span className="text-zinc-400">—</span>
+          <span className="text-sm tabular-nums text-zinc-500">0</span>
         ),
     },
     {
@@ -289,20 +350,22 @@ export function HoldingsSection() {
     {
       key: "risk",
       header: a.table.risk,
+      className: "w-16",
       render: (r) =>
         r.hasRiskFlag ? (
           <AdminStatusBadge label={r.riskSeverity ?? "flag"} tone="danger" />
         ) : (
-          <span className="text-zinc-400">—</span>
+          <span className="text-sm tabular-nums text-zinc-500">0</span>
         ),
     },
     {
       key: "open",
       header: "",
+      className: "w-px whitespace-nowrap text-right",
       render: (r) => (
         <button
           type="button"
-          className="inline-flex h-8 items-center rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-sm font-medium text-zinc-200 hover:bg-zinc-800/60"
+          className={cn(adminBtnGhost, "h-8 shrink-0 px-3")}
           onClick={(e) => {
             e.stopPropagation();
             void openDetail(r);
@@ -320,6 +383,7 @@ export function HoldingsSection() {
     <AdminSectionShell
       sectionId="holdings"
       title={a.adminSectionLabel("holdings")}
+      infoHint={a.t("admin.holdings.infoHint")}
       actions={
         <AdminSectionRefreshButton
           onClick={() => {
@@ -331,12 +395,7 @@ export function HoldingsSection() {
     >
       {isReadOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("holdings")} /> : null}
 
-      <AdminSectionInfoHint>
-        Контроль позиций пользователей по релизам Spliton: доступные и заблокированные юниты, начисления и
-        активность на вторичном рынке. Данные из live API — без fake email в production mode.
-      </AdminSectionInfoHint>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <div className={ADMIN_SECTION_KPI_GRID}>
         <StatTile
           label={a.t("admin.kpi.holdings.holders")}
           value={summaryLoading ? "…" : String(summary?.totalHolders ?? 0)}
@@ -398,13 +457,22 @@ export function HoldingsSection() {
         <div className={cn(ADMIN_SECTION_TILE, "space-y-2")}>
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Аналитика</p>
           <div className="flex flex-col gap-2 text-sm">
-            <Link href={ROUTES.adminAnalyticsTracks} className="inline-flex items-center gap-1 text-zinc-300 hover:underline">
+            <Link
+              href={ROUTES.adminAnalyticsTracks}
+              className="inline-flex items-center gap-1 text-zinc-300 transition-colors hover:text-[#B7F500]"
+            >
               <BarChart3 className="size-3.5" /> Аналитика треков
             </Link>
-            <Link href={ROUTES.adminAnalyticsUsers} className="inline-flex items-center gap-1 text-zinc-300 hover:underline">
+            <Link
+              href={ROUTES.adminAnalyticsUsers}
+              className="inline-flex items-center gap-1 text-zinc-300 transition-colors hover:text-[#B7F500]"
+            >
               <BarChart3 className="size-3.5" /> Аналитика пользователей
             </Link>
-            <Link href={ROUTES.adminAnalyticsMarket} className="inline-flex items-center gap-1 text-zinc-300 hover:underline">
+            <Link
+              href={ROUTES.adminAnalyticsMarket}
+              className="inline-flex items-center gap-1 text-zinc-300 transition-colors hover:text-[#B7F500]"
+            >
               <BarChart3 className="size-3.5" /> Аналитика рынка
             </Link>
           </div>
@@ -414,18 +482,45 @@ export function HoldingsSection() {
       <AdminSectionPanel>
         <AdminFilterBar
           className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          panelWidthClassName="w-[min(100vw-1rem,520px)]"
+          searchHint={a.t("admin.holdings.search.hint")}
+          extraActiveCount={activeUnitFilters}
+          onReset={resetExtraFilters}
+          footer={
+            <AdminFilterResultCount
+              label={a.t("admin.filters.foundCount")}
+              value={page.total}
+              className="w-full"
+            />
+          }
           fields={[
             {
               id: "search",
-              label: "Поиск",
+              label: a.t("admin.holdings.search.label"),
               type: "search",
               value: search,
               onChange: setSearch,
-              placeholder: "Email, user id, релиз…",
+              placeholder: a.t("admin.holdings.search.placeholder"),
+            },
+            {
+              id: "minUnits",
+              label: a.t("admin.filters.minUnits"),
+              type: "number",
+              value: minUnits,
+              onChange: setMinUnits,
+              placeholder: "0",
+            },
+            {
+              id: "maxUnits",
+              label: a.t("admin.filters.maxUnits"),
+              type: "number",
+              value: maxUnits,
+              onChange: setMaxUnits,
+              placeholder: "∞",
             },
             {
               id: "filter",
-              label: "Фильтр",
+              label: a.t("admin.holdings.filter.label"),
               type: "select",
               value: holdingFilter,
               onChange: setHoldingFilter,
@@ -433,7 +528,7 @@ export function HoldingsSection() {
             },
             {
               id: "releaseStatus",
-              label: "Статус релиза",
+              label: a.t("admin.holdings.filter.releaseStatus"),
               type: "select",
               value: releaseStatus,
               onChange: setReleaseStatus,
@@ -441,30 +536,29 @@ export function HoldingsSection() {
             },
             {
               id: "sort",
-              label: "Сортировка",
+              label: a.t("admin.filters.sort"),
               type: "select",
               value: sortBy,
               onChange: setSortBy,
-              options: SORT_OPTIONS,
-            },
-            {
-              id: "minUnits",
-              label: "Мин. юнитов",
-              type: "search",
-              value: minUnits,
-              onChange: setMinUnits,
-              placeholder: "0",
-            },
-            {
-              id: "maxUnits",
-              label: "Макс. юнитов",
-              type: "search",
-              value: maxUnits,
-              onChange: setMaxUnits,
-              placeholder: "∞",
+              options: sortOptions,
             },
           ]}
         />
+
+        <div className="flex flex-col gap-3 rounded-2xl bg-zinc-900/25 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-3">
+          <AdminFilterPills
+            label={a.t("admin.holdings.filter.label")}
+            value={holdingFilter}
+            onChange={setHoldingFilter}
+            options={holdingFilterOptions}
+          />
+          <AdminFilterPills
+            label={a.t("admin.holdings.filter.releaseStatus")}
+            value={releaseStatus}
+            onChange={setReleaseStatus}
+            options={releaseStatusOptions}
+          />
+        </div>
 
         <AdminSectionDataArea
           loading={loading}
@@ -474,6 +568,8 @@ export function HoldingsSection() {
         >
           <AdminDataTable
             flat
+            borderless
+            className="[&_table]:min-w-[1080px]"
             columns={columns}
             rows={page.items}
             rowKey={(r) => r.id}

@@ -5,6 +5,7 @@ import * as React from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AdminPageShell } from "@/features/admin/components/admin-page-shell";
 import type { AnalyticsSectionId } from "@/features/admin/analytics/config/analytics-nav";
+import { ADMIN_SECTION_PANEL } from "@/features/admin/lib/admin-section-styles";
 import { AdminAnalyticsCompactNav } from "./admin-analytics-compact-nav";
 import { AdminAnalyticsTabs } from "./admin-analytics-tabs";
 import type { AnalyticsPageTab } from "@/features/admin/analytics/config/analytics-page-tabs";
@@ -12,7 +13,10 @@ import { useAdminSectionTab } from "@/features/admin/hooks/use-admin-section-tab
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { isBusinessAnalyst } from "@/features/admin/config/admin-rbac";
 import { AdminPageHeader } from "@/features/admin/ui/admin-page-header";
+import { AdminErrorState } from "@/features/admin/ui/admin-error-state";
+import { AdminLoadingState } from "@/features/admin/ui/admin-loading-state";
 import { AdminReadOnlyBanner } from "@/features/admin/ui/admin-read-only-banner";
+import { cn } from "@/lib/utils";
 
 type Props = {
   activeSection: AnalyticsSectionId;
@@ -25,6 +29,31 @@ type Props = {
   defaultTab?: string;
   children: (activeTab: string) => React.ReactNode;
 };
+
+/** Загрузка / ошибка с отступами страницы и панелью (без «липания» к шапке). */
+export function AdminAnalyticsPageLoading({ label }: { label: string }) {
+  return (
+    <AdminPageShell>
+      <section className={cn(ADMIN_SECTION_PANEL, "min-w-0")}>
+        <AdminLoadingState
+          label={label}
+          centered
+          className="min-h-[min(48vh,420px)] bg-transparent shadow-none"
+        />
+      </section>
+    </AdminPageShell>
+  );
+}
+
+export function AdminAnalyticsPageError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <AdminPageShell>
+      <section className={cn(ADMIN_SECTION_PANEL, "min-w-0")}>
+        <AdminErrorState onRetry={onRetry} className="bg-transparent shadow-none" />
+      </section>
+    </AdminPageShell>
+  );
+}
 
 export function AdminAnalyticsPageShell({
   activeSection,

@@ -60,7 +60,6 @@ import {
   AdminPagination,
   AdminLocalizedStatusBadge,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -223,7 +222,7 @@ export function PlatformRevenueSection() {
       options={PLATFORM_REVENUE_SOURCE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
       onChange={setSourceFilter}
       aria-label={a.t("admin.ui.incomeSourceAria")}
-      className="min-w-[148px]"
+      className="min-w-[220px] sm:min-w-[240px]"
     />
   );
 
@@ -337,19 +336,20 @@ export function PlatformRevenueSection() {
     <AdminSectionShell
       sectionId="platformRevenue"
       title={a.adminSectionLabel("platformRevenue")}
+      infoHint={
+        <>
+          Финансовый центр Spliton: комиссии первичных покупок, выводов и вторичного рынка. Данные из таблицы{" "}
+          <code className="text-xs">fees</code> и wallet ledger.
+        </>
+      }
       actions={
-        <div className="flex flex-wrap items-center gap-2">
+        <>
           <AdminPeriodSelector value={period} onChange={setPeriod} />
           <AdminSectionRefreshButton onClick={() => void load()} />
-        </div>
+        </>
       }
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("platformRevenue")} /> : null}
-
-      <AdminSectionInfoHint>
-        Финансовый центр Spliton: комиссии первичных покупок, выводов и вторичного рынка. Данные из таблицы{" "}
-        <code className="text-xs">fees</code> и wallet ledger.
-      </AdminSectionInfoHint>
 
       <AdminSectionPanel>
         <AdminFilterBar
@@ -418,7 +418,7 @@ export function PlatformRevenueSection() {
                 <AdminMetricTrendCard
                   label={a.t("admin.kpi.platformRevenue.transactions")}
                   value={String(summary.transactionCount)}
-                  tooltip="Количество fee rows за период"
+                  tooltip="Количество комиссионных записей за период"
                 />
                 <AdminMetricTrendCard
                   label={a.t("admin.kpi.platformRevenue.avgFee")}
@@ -716,7 +716,7 @@ export function PlatformRevenueSection() {
         open={feeConfirm}
         onOpenChange={setFeeConfirm}
         title={a.t("admin.kpi.platformRevenue.updateFeesTitle")}
-        description="Новые значения вступят в силу немедленно. Действие записывается в audit log."
+        description="Новые значения вступят в силу немедленно. Действие записывается в журнал аудита."
         confirmPhrase={DANGEROUS_ACTION_PHRASES.platformFees}
         confirmLabel="Сохранить"
         onConfirm={() => void saveFees()}

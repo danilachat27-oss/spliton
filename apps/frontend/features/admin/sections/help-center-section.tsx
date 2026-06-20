@@ -58,6 +58,7 @@ import {
   type AdminHelpCategory,
 } from "@/services/admin/adminHelpCenter.service";
 import { fetchAllAdminPaginatedItems } from "@/services/admin/admin-api.util";
+import { cn } from "@/lib/utils";
 
 const HELP_TAB_KEYS = [
   { id: "overview", labelKey: "admin.helpCenter.tab.overview" },
@@ -71,13 +72,13 @@ const HELP_TAB_KEYS = [
 type HelpTab = (typeof HELP_TAB_KEYS)[number]["id"];
 
 function categoryLabel(categories: AdminHelpCategory[], id: string | null): string {
-  if (!id) return "—";
+  if (!id) return "Без категории";
   const row = categories.find((c) => c.id === id);
   return row?.titlePreview || row?.slug || id.slice(0, 8);
 }
 
 function parentLabel(categories: AdminHelpCategory[], parentId: string | null): string {
-  if (!parentId) return "—";
+  if (!parentId) return "Корневая";
   return categoryLabel(categories, parentId);
 }
 
@@ -524,7 +525,7 @@ export function HelpCenterSection() {
         const created = await createAdminHelpArticle(payload, client);
         setEditArticle(created);
         setArticleMode("edit");
-        showFeedback("Черновик создан — можно опубликовать после проверки");
+        showFeedback("Черновик создан. Можно опубликовать после проверки");
       } else if (editArticle) {
         const updated = await updateAdminHelpArticle(editArticle.id, payload, client);
         setEditArticle(updated);
@@ -642,7 +643,7 @@ export function HelpCenterSection() {
       header: "Название",
       render: (r) => (
         <div>
-          <p className="font-medium text-zinc-100">{r.titlePreview || "—"}</p>
+          <p className="font-medium text-zinc-100">{r.titlePreview || r.slug}</p>
           {r.icon ? <p className="text-[11px] text-zinc-400">{r.icon}</p> : null}
         </div>
       ),
@@ -655,7 +656,11 @@ export function HelpCenterSection() {
     {
       key: "parent",
       header: "Родитель",
-      render: (r) => parentLabel(categories, r.parentId),
+      render: (r) => (
+        <span className={cn("text-sm", !r.parentId ? "text-zinc-500" : "text-zinc-300")}>
+          {parentLabel(categories, r.parentId)}
+        </span>
+      ),
     },
     {
       key: "status",
@@ -703,7 +708,7 @@ export function HelpCenterSection() {
       header: "Заголовок",
       render: (r) => (
         <div>
-          <p className="font-medium">{r.titlePreview || "—"}</p>
+          <p className="font-medium">{r.titlePreview || r.slug}</p>
           <p className="font-mono text-[11px] text-zinc-400">{r.slug}</p>
         </div>
       ),
@@ -711,13 +716,20 @@ export function HelpCenterSection() {
     {
       key: "cat",
       header: "Категория",
-      render: (r) => categoryLabel(categories, r.categoryId),
+      render: (r) => (
+        <span className={cn("text-sm", !r.categoryId ? "text-zinc-500" : "text-zinc-300")}>
+          {categoryLabel(categories, r.categoryId)}
+        </span>
+      ),
     },
     {
       key: "status",
       header: "Статус",
       render: (r) => {
-        const { status: rowStatus } = r;
+        const rowStatus = r.status?.trim();
+        if (!rowStatus || rowStatus === "—") {
+          return <span className="text-sm text-zinc-500">Не указан</span>;
+        }
         return <AdminLocalizedStatusBadge status={rowStatus} />;
       },
     },
@@ -736,7 +748,7 @@ export function HelpCenterSection() {
             <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800">GS</span>
           ) : null}
           {!r.isFeatured && !r.isPopular && !r.isGettingStarted ? (
-            <span className="text-xs text-zinc-400">—</span>
+            <span className="text-sm tabular-nums text-zinc-500">0</span>
           ) : null}
         </div>
       ),
@@ -832,7 +844,7 @@ export function HelpCenterSection() {
               <div className="rounded-2xl border border-neutral-100 bg-zinc-900/80 p-4">
                 <h3 className="text-sm font-semibold text-zinc-100">Последние черновики</h3>
                 {articles.filter((a) => a.status === "draft").length === 0 ? (
-                  <p className="mt-3 text-sm text-zinc-500">Нет черновиков — создайте первую статью.</p>
+                  <p className="mt-3 text-sm text-zinc-500">Нет черновиков. Создайте первую статью.</p>
                 ) : (
                   <ul className="mt-3 space-y-2">
                     {articles

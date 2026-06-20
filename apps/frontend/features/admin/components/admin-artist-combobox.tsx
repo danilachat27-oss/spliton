@@ -91,7 +91,6 @@ export function AdminArtistCombobox({
       dictionaryHref={ROUTES.adminArtists}
       referenceHintKind="artist"
       referenceHintAction={a.t("admin.reference.action.addInDictionary")}
-      helperText="Выберите артиста из справочника. Если артиста ещё нет, добавьте его — он появится в общем списке артистов."
       createLabel="Добавить артиста"
       loadingLabel="Загрузка артистов…"
       items={items}

@@ -15,7 +15,8 @@ import { useAdminDrawerUnsavedGuard } from "@/features/admin/hooks/use-admin-dra
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { useAdminPermissions } from "@/features/admin/hooks/use-admin-permissions";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
-import { adminFieldInput } from "@/features/admin/lib/admin-ui";
+import { adminFieldInput, adminSectionCreateButton, adminSectionToolbarActions } from "@/features/admin/lib/admin-ui";
+import { AdminLabelPlatformSearch } from "@/features/admin/components/admin-label-platform-search";
 import {
   AdminSectionDataArea,
   AdminSectionPanel,
@@ -26,6 +27,8 @@ import {
   AdminDataTable,
   AdminDetailDrawer,
   AdminFilterBar,
+  AdminFilterPills,
+  AdminFilterResultCount,
   AdminFormField,
   AdminFormFooter,
   AdminReadOnlyBanner,
@@ -50,6 +53,9 @@ export function LabelsSection() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState("");
+  const [status, setStatus] = React.useState("all");
+  const [releases, setReleases] = React.useState("all");
+  const [sort, setSort] = React.useState("name_asc");
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [editRow, setEditRow] = React.useState<AdminLabelListItem | null>(null);
@@ -68,14 +74,19 @@ export function LabelsSection() {
     onOpenChange: setDrawerOpen,
   });
 
+  const listQuery = React.useMemo(
+    () => ({ search, status, releases, sort }),
+    [search, status, releases, sort],
+  );
+
   const load = React.useCallback(() => {
     setLoading(true);
     setError(null);
-    void listAdminLabels(search || undefined, client)
+    void listAdminLabels(listQuery, client)
       .then(setRows)
       .catch((e) => setError(localizedAdminError(e)))
       .finally(() => setLoading(false));
-  }, [client, search]);
+  }, [client, listQuery]);
 
   React.useEffect(() => {
     load();
@@ -107,10 +118,10 @@ export function LabelsSection() {
           { name: name.trim(), slug: slug.trim() || undefined },
           client,
         );
-        setFeedback("Изменения сохранены");
+        setFeedback(a.t("admin.labels.saved"));
       } else {
         await createAdminLabel({ name: name.trim(), slug: slug.trim() || undefined }, client);
-        setFeedback("Лейбл создан");
+        setFeedback(a.t("admin.labels.created"));
       }
       setDrawerOpen(false);
       load();
@@ -125,7 +136,7 @@ export function LabelsSection() {
     if (readOnly) return;
     try {
       await updateAdminLabel(row.id, { isActive: !row.isActive }, client);
-      setFeedback(row.isActive ? "Лейбл деактивирован" : "Лейбл восстановлен");
+      setFeedback(row.isActive ? a.t("admin.labels.deactivated") : a.t("admin.labels.reactivated"));
       load();
     } catch (e) {
       setError(localizedAdminError(e));
@@ -135,27 +146,53 @@ export function LabelsSection() {
   const columns: AdminColumn<AdminLabelListItem>[] = [
     {
       key: "name",
-      header: "Название",
+      header: a.t("admin.labels.col.name"),
       render: (r) => (
         <span className={cn(!r.isActive && "text-zinc-500 line-through")}>{r.name}</span>
       ),
     },
-    { key: "slug", header: "Slug", render: (r) => <span className="font-mono text-xs">{r.slug}</span> },
-    { key: "releases", header: "Релизов", render: (r) => <span className="tabular-nums">{r.releaseCount}</span> },
+    {
+      key: "slug",
+      header: a.t("admin.labels.col.slug"),
+      render: (r) => <span className="font-mono text-xs text-zinc-400">{r.slug}</span>,
+    },
+    {
+      key: "releases",
+      header: a.t("admin.labels.col.releases"),
+      render: (r) => <span className="tabular-nums">{r.releaseCount}</span>,
+    },
     {
       key: "status",
-      header: "Статус",
+      header: a.t("admin.labels.col.status"),
       render: (r) => (
         <span className={cn("text-xs", r.isActive ? "text-emerald-400" : "text-zinc-500")}>
-          {r.isActive ? "Активен" : "Неактивен"}
+          {r.isActive ? a.t("admin.labels.active") : a.t("admin.labels.inactive")}
         </span>
       ),
     },
-    { key: "created", header: "Создан", render: (r) => formatAdminDate(r.createdAt) },
+    {
+      key: "created",
+      header: a.t("admin.labels.col.created"),
+      render: (r) => formatAdminDate(r.createdAt),
+    },
   ];
 
   return (
-    <AdminSectionShell sectionId="labels" title={a.adminSectionLabel("labels")}>
+    <AdminSectionShell
+      sectionId="labels"
+      title={a.adminSectionLabel("labels")}
+      actions={
+        <div className={adminSectionToolbarActions}>
+          <AdminSectionRefreshButton onClick={load} />
+          {!readOnly ? (
+            <Button type="button" size="sm" className={adminSectionCreateButton} onClick={openCreate}>
+              <Plus className="size-3.5" aria-hidden />
+              {a.t("admin.labels.create")}
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
       {readOnly ? <AdminReadOnlyBanner area="Tracks" /> : null}
       {feedback ? (
         <p className="rounded-xl border border-[#B7F500]/30 bg-[#B7F500]/10 px-4 py-2 text-sm text-[#B7F500]">
@@ -164,33 +201,87 @@ export function LabelsSection() {
       ) : null}
 
       <AdminSectionPanel>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AdminFilterBar
-            fields={[
-              {
-                id: "search",
-                label: "Поиск",
-                type: "search",
-                value: search,
-                onChange: setSearch,
-                placeholder: "Поиск по названию…",
-              },
+        <AdminFilterBar
+          className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          panelWidthClassName="w-[min(100vw-1rem,520px)]"
+          searchHint={a.t("admin.labels.searchHint")}
+          footer={
+            <AdminFilterResultCount
+              label={a.t("admin.filters.foundCount")}
+              value={rows.length}
+              className="w-full"
+            />
+          }
+          fields={[
+            {
+              id: "label-search",
+              label: a.t("admin.labels.search"),
+              type: "search",
+              value: search,
+              onChange: setSearch,
+              placeholder: a.t("admin.labels.searchPlaceholder"),
+            },
+            {
+              id: "label-status",
+              label: a.t("admin.labels.filter.status"),
+              type: "select",
+              value: status,
+              onChange: setStatus,
+              options: [
+                { value: "all", label: a.actions.allStatuses },
+                { value: "active", label: a.t("admin.labels.active") },
+                { value: "inactive", label: a.t("admin.labels.inactive") },
+              ],
+            },
+            {
+              id: "label-releases",
+              label: a.t("admin.labels.filter.releases"),
+              type: "select",
+              value: releases,
+              onChange: setReleases,
+              options: [
+                { value: "all", label: a.t("admin.labels.filter.releases.all") },
+                { value: "with", label: a.t("admin.labels.filter.releases.with") },
+                { value: "without", label: a.t("admin.labels.filter.releases.without") },
+              ],
+            },
+            {
+              id: "label-sort",
+              label: a.t("admin.labels.filter.sort"),
+              type: "select",
+              value: sort,
+              onChange: setSort,
+              options: [
+                { value: "name_asc", label: a.t("admin.labels.filter.sort.nameAsc") },
+                { value: "name_desc", label: a.t("admin.labels.filter.sort.nameDesc") },
+                { value: "created_desc", label: a.t("admin.labels.filter.sort.createdDesc") },
+                { value: "releases_desc", label: a.t("admin.labels.filter.sort.releasesDesc") },
+              ],
+            },
+          ]}
+        />
+
+        <div className="flex flex-col gap-3 rounded-2xl bg-zinc-900/25 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-3">
+          <AdminFilterPills
+            label={a.t("admin.labels.filter.status")}
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: "all", label: a.actions.allStatuses },
+              { value: "active", label: a.t("admin.labels.active") },
+              { value: "inactive", label: a.t("admin.labels.inactive") },
             ]}
           />
-          <div className="flex gap-2">
-            <AdminSectionRefreshButton onClick={load} />
-            {!readOnly ? (
-              <Button
-                type="button"
-                size="sm"
-                className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
-                onClick={openCreate}
-              >
-                <Plus className="mr-1 size-4" />
-                Добавить лейбл
-              </Button>
-            ) : null}
-          </div>
+          <AdminFilterPills
+            label={a.t("admin.labels.filter.releases")}
+            value={releases}
+            onChange={setReleases}
+            options={[
+              { value: "all", label: a.t("admin.labels.filter.releases.all") },
+              { value: "with", label: a.t("admin.labels.filter.releases.with") },
+              { value: "without", label: a.t("admin.labels.filter.releases.without") },
+            ]}
+          />
         </div>
 
         <AdminSectionDataArea loading={loading} error={error ? true : undefined} onRetry={load}>
@@ -202,7 +293,7 @@ export function LabelsSection() {
             rows={rows}
             rowKey={(r) => r.id}
             onRowClick={openEdit}
-            emptyMessage="Лейблы не найдены"
+            emptyMessage={a.t("admin.labels.empty")}
           />
         </AdminSectionDataArea>
       </AdminSectionPanel>
@@ -210,14 +301,14 @@ export function LabelsSection() {
       <AdminDetailDrawer
         open={drawerOpen}
         onOpenChange={guardedOnOpenChange}
-        title={editRow ? "Редактировать лейбл" : "Добавить лейбл"}
+        title={editRow ? a.t("admin.labels.edit") : a.t("admin.labels.create")}
         footer={
           readOnly ? null : (
             <AdminFormFooter
               left={
                 editRow ? (
                   <AdminDrawerSecondaryButton onClick={() => void toggleActive(editRow)}>
-                    {editRow.isActive ? "Деактивировать" : "Восстановить"}
+                    {editRow.isActive ? a.t("admin.labels.deactivate") : a.t("admin.labels.reactivate")}
                   </AdminDrawerSecondaryButton>
                 ) : undefined
               }
@@ -245,7 +336,8 @@ export function LabelsSection() {
               onChange={(e) => setName(e.target.value)}
             />
           </AdminFormField>
-          <AdminFormField label="Slug (URL)" htmlFor="label-slug">
+          <AdminLabelPlatformSearch labelName={name} />
+          <AdminFormField label={a.t("admin.labels.field.slug")} htmlFor="label-slug">
             <Input
               id="label-slug"
               className={cn("font-mono text-sm", adminFieldInput)}
@@ -255,6 +347,11 @@ export function LabelsSection() {
               placeholder="label-slug"
             />
           </AdminFormField>
+          {editRow ? (
+            <p className="text-xs text-zinc-500">
+              {a.t("admin.labels.releaseCount").replace("{n}", String(editRow.releaseCount))}
+            </p>
+          ) : null}
         </div>
       </AdminDetailDrawer>
       {UnsavedChangesDialog}

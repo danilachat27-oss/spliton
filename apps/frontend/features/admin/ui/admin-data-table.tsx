@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { adminCard, adminTableCell, adminTableHead } from "@/features/admin/lib/admin-ui";
+import { adminCard, adminScrollbarHidden, adminTableCell, adminTableHead } from "@/features/admin/lib/admin-ui";
 
 export type AdminColumn<T> = {
   key: string;
@@ -17,6 +17,8 @@ type AdminDataTableProps<T> = {
   className?: string;
   /** Без рамки карточки — как лента на payouts/history */
   flat?: boolean;
+  /** Без линий между строками — как таблицы в drawer */
+  borderless?: boolean;
 };
 
 export function AdminDataTable<T>({
@@ -27,16 +29,26 @@ export function AdminDataTable<T>({
   emptyMessage = "Нет записей",
   className,
   flat = false,
+  borderless = false,
 }: AdminDataTableProps<T>) {
   return (
     <div
       className={cn(
-        flat ? "overflow-hidden rounded-2xl bg-zinc-900/40" : adminCard("overflow-hidden p-0"),
+        flat
+          ? borderless
+            ? "overflow-hidden rounded-2xl bg-zinc-900/35"
+            : "overflow-hidden rounded-2xl bg-zinc-900/40"
+          : adminCard("overflow-hidden p-0"),
         className,
       )}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left">
+      <div className={cn("overflow-x-auto", adminScrollbarHidden)}>
+        <table
+          className={cn(
+            "w-full border-collapse text-left",
+            flat ? "min-w-0" : "min-w-[720px]",
+          )}
+        >
           <thead>
             <tr
               className={cn(
@@ -44,7 +56,14 @@ export function AdminDataTable<T>({
               )}
             >
               {columns.map((col) => (
-                <th key={col.key} className={cn("px-4 py-3", adminTableHead, col.className)}>
+                <th
+                  key={col.key}
+                  className={cn(
+                    borderless ? "px-4 py-2" : "px-4 py-3",
+                    adminTableHead,
+                    col.className,
+                  )}
+                >
                   {col.header}
                 </th>
               ))}
@@ -65,8 +84,16 @@ export function AdminDataTable<T>({
                 <tr
                   key={rowKey(row)}
                   className={cn(
-                    flat ? "border-b border-zinc-800/50 last:border-0" : "border-b border-zinc-800/40 last:border-0",
-                    onRowClick && (flat ? "cursor-pointer hover:bg-zinc-800/50" : "cursor-pointer hover:bg-zinc-800/40"),
+                    !borderless &&
+                      (flat
+                        ? "border-b border-zinc-800/50 last:border-0"
+                        : "border-b border-zinc-800/40 last:border-0"),
+                    onRowClick &&
+                      (borderless
+                        ? "cursor-pointer transition-colors hover:bg-zinc-800/35"
+                        : flat
+                          ? "cursor-pointer hover:bg-zinc-800/50"
+                          : "cursor-pointer hover:bg-zinc-800/40"),
                   )}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                 >

@@ -75,6 +75,14 @@ export class LegalPoliciesService implements OnModuleInit {
     });
   }
 
+  async getAdminById(id: string) {
+    const row = await this.prisma.legalPolicy.findUnique({ where: { id } });
+    if (!row) {
+      throwAdminError('POLICY_NOT_FOUND', 'Policy not found', HttpStatus.NOT_FOUND);
+    }
+    return row;
+  }
+
   async createDraft(
     data: {
       type: LegalPolicyType;

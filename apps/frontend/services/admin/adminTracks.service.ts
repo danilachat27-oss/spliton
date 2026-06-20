@@ -14,6 +14,7 @@ import {
 
 } from "@/features/admin/mocks/admin-tracks.mock";
 
+import { compareAdminTracks } from "@/features/admin/lib/admin-tracks-sort";
 import { adminMockDelay, fetchAllAdminPaginatedItems } from "./admin-api.util";
 import { assertLiveAdminClient } from "./admin-service.util";
 
@@ -52,6 +53,16 @@ function filterMockTracks(items: AdminTrackListItem[], query?: AdminListQuery): 
     rows = rows.filter((t) => t.genre === query.genre);
 
   }
+
+  if (query?.dateFrom) {
+    rows = rows.filter((t) => t.createdAt.slice(0, 10) >= query.dateFrom!);
+  }
+
+  if (query?.dateTo) {
+    rows = rows.filter((t) => t.createdAt.slice(0, 10) <= query.dateTo!);
+  }
+
+  rows.sort((a, b) => compareAdminTracks(a, b, query?.sortBy, query?.sortDir ?? "desc"));
 
   return rows;
 

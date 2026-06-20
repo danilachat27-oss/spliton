@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 
-import { Input } from "@/components/ui/input";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import {
   AdminSectionDataArea,
@@ -18,12 +17,13 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { fetchAllAdminPaginatedItems } from "@/services/admin/admin-api.util";
 import { formatAdminDate } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_FILTERS } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_SECTION_KPI_GRID, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   AdminDataTable,
   AdminErrorState,
+  AdminFilterBar,
+  AdminFilterResultCount,
   AdminLocalizedStatusBadge,
-  AdminLoadingState,
   type AdminColumn,
 } from "@/features/admin/ui";
 import { AdminDisputeDrawer } from "@/features/admin/sections/admin-dispute-drawer";
@@ -32,6 +32,8 @@ import {
   listAdminDisputesPaginated,
   type AdminDisputeListItem,
 } from "@/services/admin/adminDisputes.service";
+import { disputeTypeLabel } from "@/lib/i18n/disputes-messages";
+import { cn } from "@/lib/utils";
 
 const DISPUTE_TABS = [
   { id: "all", labelKey: "admin.disputes.tab.all" },
@@ -43,6 +45,40 @@ const DISPUTE_TABS = [
 ] as const;
 
 type DisputeTab = (typeof DISPUTE_TABS)[number]["id"];
+
+function StatTile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: number;
+  tone?: "neutral" | "success" | "warning" | "danger" | "info";
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-400"
+      : tone === "warning"
+        ? "text-amber-400"
+        : tone === "danger"
+          ? "text-rose-400"
+          : tone === "info"
+            ? "text-sky-400"
+            : "text-zinc-100";
+
+  return (
+    <div className={cn(ADMIN_SECTION_TILE, "flex min-h-[5.5rem] flex-col justify-between gap-2")}>
+      <p className="text-[11px] font-semibold uppercase leading-snug tracking-wide text-zinc-500">{label}</p>
+      <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
+    </div>
+  );
+}
+
+function disputePriorityTone(priority: string): "neutral" | "danger" | "warning" {
+  if (priority === "high" || priority === "critical") return "danger";
+  if (priority === "medium") return "warning";
+  return "neutral";
+}
 
 export function DisputesSection() {
   const a = useAdminI18n();
@@ -88,10 +124,10 @@ export function DisputesSection() {
       .then(([items, s]) => {
         setRows(items);
         setSummary({
-          open: s.open,
-          waitingAdmin: s.waitingAdmin,
-          escalated: s.escalated,
-          highPriority: s.highPriority,
+          open: s.open ?? 0,
+          waitingAdmin: s.waitingAdmin ?? 0,
+          escalated: s.escalated ?? 0,
+          highPriority: s.highPriority ?? 0,
         });
       })
       .catch((e) => setError(localizedAdminError(e)))
@@ -120,69 +156,119 @@ export function DisputesSection() {
     );
   });
 
+  const tabCounts = React.useMemo(() => {
+    const counts: Record<DisputeTab, number> = {
+      all: rows.length,
+      open: 0,
+      waiting_for_admin: 0,
+      waiting_for_user: 0,
+      escalated: 0,
+      resolved: 0,
+    };
+    for (const r of rows) {
+      if (r.status in counts) counts[r.status as DisputeTab] += 1;
+    }
+    return counts;
+  }, [rows]);
+
   const columns: AdminColumn<AdminDisputeListItem>[] = [
     { key: "subject", header: a.table.name, render: (r) => r.subject },
     { key: "user", header: a.table.user, render: (r) => r.userEmail },
-    { key: "type", header: a.table.type, render: (r) => r.type },
+    {
+      key: "type",
+      header: a.table.type,
+      render: (r) => disputeTypeLabel(r.type, a.locale),
+    },
     {
       key: "status",
       header: a.table.status,
-      render: (r) => {
-        const { status: rowStatus } = r;
-        return <AdminLocalizedStatusBadge status={rowStatus} />;
-      },
+      render: (r) => <AdminLocalizedStatusBadge status={r.status} />,
     },
-    { key: "priority", header: a.t("admin.disputes.priority"), render: (r) => r.priority },
+    {
+      key: "priority",
+      header: a.t("admin.disputes.priority"),
+      render: (r) => (
+        <AdminLocalizedStatusBadge status={r.priority} tone={disputePriorityTone(r.priority)} />
+      ),
+    },
     {
       key: "updated",
       header: a.table.updated,
-      render: (r) => formatAdminDate(r.updatedAt),
+      render: (r) => <span className="text-xs text-zinc-500">{formatAdminDate(r.updatedAt)}</span>,
     },
   ];
 
   return (
-    <AdminSectionShell sectionId="disputes" title={a.adminSectionLabel("disputes")}>
+    <AdminSectionShell
+      sectionId="disputes"
+      title={a.adminSectionLabel("disputes")}
+      infoHint="Очередь споров пользователей: статусы, приоритеты, назначение оператора и переписка по кейсу."
+      actions={<AdminSectionRefreshButton onClick={load} />}
+    >
       <AdminSectionPanel>
-        {summary ? (
-          <div className="mb-4 grid gap-3 sm:grid-cols-4">
-            {[
-              { label: a.t("admin.disputes.kpi.open"), value: summary.open },
-              { label: a.t("admin.disputes.kpi.waitingAdmin"), value: summary.waitingAdmin },
-              { label: a.t("admin.disputes.kpi.escalated"), value: summary.escalated },
-              { label: a.t("admin.disputes.kpi.highPriority"), value: summary.highPriority },
-            ].map((kpi) => (
-              <div key={kpi.label} className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
-                <p className="text-xs text-neutral-500">{kpi.label}</p>
-                <p className="text-2xl font-semibold text-neutral-900">{kpi.value}</p>
-              </div>
+        {summary && !loading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            <StatTile label={a.t("admin.disputes.kpi.open")} value={summary.open} tone="info" />
+            <StatTile
+              label={a.t("admin.disputes.kpi.waitingAdmin")}
+              value={summary.waitingAdmin}
+              tone="warning"
+            />
+            <StatTile
+              label={a.t("admin.disputes.kpi.escalated")}
+              value={summary.escalated}
+              tone={summary.escalated > 0 ? "danger" : "neutral"}
+            />
+            <StatTile
+              label={a.t("admin.disputes.kpi.highPriority")}
+              value={summary.highPriority}
+              tone={summary.highPriority > 0 ? "danger" : "neutral"}
+            />
+          </div>
+        ) : loading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-800/50")} />
             ))}
           </div>
         ) : null}
 
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <Input
-            className={ADMIN_SECTION_FILTERS}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={a.t("admin.disputes.searchPlaceholder")}
-          />
-          <AdminSectionRefreshButton onClick={() => load()} />
-        </div>
+        <AdminFilterBar
+          className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          searchHint="Поиск по теме спора, email пользователя или ID."
+          footer={
+            <AdminFilterResultCount label={a.t("admin.filters.foundCount")} value={filtered.length} className="w-full" />
+          }
+          fields={[
+            {
+              id: "search",
+              label: a.t("admin.filters.title"),
+              type: "search",
+              value: search,
+              onChange: setSearch,
+              placeholder: a.t("admin.disputes.searchPlaceholder"),
+            },
+          ]}
+        />
 
         <AdminSectionTabBar
-          tabs={DISPUTE_TABS.map((t) => ({ id: t.id, label: a.t(t.labelKey) }))}
+          tabs={DISPUTE_TABS.map((t) => ({
+            id: t.id,
+            label: a.t(t.labelKey),
+            count: tabCounts[t.id],
+          }))}
           activeId={tab}
           onChange={(id) => setTab(id as DisputeTab)}
         />
 
-        <AdminSectionDataArea>
-          {loading ? <AdminLoadingState label={a.t("admin.loading.disputes")} /> : null}
-          {error ? <AdminErrorState message={error} onRetry={() => load()} /> : null}
-          {!loading && !error && filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-neutral-500">{a.t("admin.disputes.empty")}</p>
-          ) : null}
-          {!loading && !error && filtered.length > 0 ? (
+        <AdminSectionDataArea loading={loading} loadingLabel={a.t("admin.loading.disputes")}>
+          {error ? (
+            <AdminErrorState message={error} onRetry={load} />
+          ) : (
             <AdminDataTable
+              flat
+              borderless
+              className="[&_table]:min-w-[960px]"
               columns={columns}
               rows={filtered}
               rowKey={(r) => r.id}
@@ -190,8 +276,9 @@ export function DisputesSection() {
                 setSelectedId(r.id);
                 setDrawerOpen(true);
               }}
+              emptyMessage={a.t("admin.disputes.empty")}
             />
-          ) : null}
+          )}
         </AdminSectionDataArea>
       </AdminSectionPanel>
 

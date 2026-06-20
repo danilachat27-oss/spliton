@@ -94,7 +94,7 @@ const TAB_LABELS: Record<UserDetailTab, string> = {
   roles: "Роли и доступ",
   wallet: "Кошелёк",
   audit: "Активность / аудит",
-  risk: "Риск / Compliance",
+  risk: "Риск / комплаенс",
   support: "Поддержка",
 };
 
@@ -105,6 +105,16 @@ function kycStatusTone(status: string | null | undefined): "success" | "warning"
   if (["rejected", "declined", "expired"].includes(key)) return "danger";
   if (key === "not_started") return "neutral";
   return "neutral";
+}
+
+export function UserDetailProfileLoading() {
+  const a = useAdminI18n();
+
+  return (
+    <AdminSectionShell sectionId="users" title={a.adminSectionLabel("users")}>
+      <AdminLoadingState label={a.t("admin.loading.profile")} inset />
+    </AdminSectionShell>
+  );
 }
 
 function UserDetailField({
@@ -232,15 +242,17 @@ export function UserDetailSection() {
   }
 
   if (loading) {
-    return <AdminLoadingState label={a.t("admin.loading.profile")} />;
+    return <UserDetailProfileLoading />;
   }
 
   if (error || !profile) {
     return (
-      <AdminErrorState
-        message="Пользователь не найден или недоступен"
-        onRetry={() => void loadProfile()}
-      />
+      <AdminSectionShell sectionId="users" title={a.adminSectionLabel("users")}>
+        <AdminErrorState
+          message="Пользователь не найден или недоступен"
+          onRetry={() => void loadProfile()}
+        />
+      </AdminSectionShell>
     );
   }
 

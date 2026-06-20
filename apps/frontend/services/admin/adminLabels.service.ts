@@ -1,6 +1,12 @@
 import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import type { AdminApiClient } from "@/features/admin/api/admin-api-client";
+import {
+  applyAdminLabelsListFilters,
+  type AdminLabelsListQuery,
+} from "@/features/admin/lib/admin-labels-list";
 import { assertLiveAdminClient } from "./admin-service.util";
+
+export type { AdminLabelsListQuery };
 
 export type AdminLabelListItem = {
   id: string;
@@ -18,17 +24,17 @@ export type AdminLabelBody = {
 };
 
 export async function listAdminLabels(
-  search: string | undefined,
+  query: AdminLabelsListQuery | string | undefined,
   client: AdminApiClient | undefined,
-  options?: { activeOnly?: boolean },
 ): Promise<AdminLabelListItem[]> {
   assertLiveAdminClient(client);
-  const params = new URLSearchParams();
-  if (search?.trim()) params.set("search", search.trim());
-  if (options?.activeOnly) params.set("activeOnly", "true");
-  const qs = params.toString() ? `?${params.toString()}` : "";
+  const params = typeof query === "string" ? { search: query } : query ?? {};
+  const qsParams = new URLSearchParams();
+  if (params.search?.trim()) qsParams.set("search", params.search.trim());
+  if (params.status === "active") qsParams.set("activeOnly", "true");
+  const qs = qsParams.toString() ? `?${qsParams.toString()}` : "";
   const res = await client.get<{ items: AdminLabelListItem[] }>(`${ADMIN_API_PATHS.labels}${qs}`);
-  return res.items;
+  return applyAdminLabelsListFilters(res.items, params);
 }
 
 export async function createAdminLabel(

@@ -8,11 +8,11 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   ChevronRight,
+  ChevronDown,
   CircleDollarSign,
   FileChartColumn,
   Handshake,
   Music2,
-  RefreshCw,
   Store,
   Users,
   Wallet,
@@ -20,6 +20,7 @@ import {
 import type { LucideIcon } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { ROUTES } from "@/constants/routes";
 import { AdminMultiLineChart } from "@/features/admin/analytics/components/admin-charts.lazy";
 import { AdminPeriodSelector } from "@/features/admin/analytics/components/admin-period-selector";
@@ -54,6 +55,69 @@ function hasPositiveUsdt(value: string): boolean {
 }
 
 type TaskItem = { id: string; label: string; count: number; href: string };
+
+const TASKS_PREVIEW_LIMIT = 5;
+
+function TasksQueueList({
+  tasks,
+  emptyLabel,
+  showMoreLabel,
+  showLessLabel,
+}: {
+  tasks: TaskItem[];
+  emptyLabel: string;
+  showMoreLabel: (hiddenCount: number) => string;
+  showLessLabel: string;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  const sortedTasks = React.useMemo(
+    () => [...tasks].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "ru")),
+    [tasks],
+  );
+
+  const hiddenCount = Math.max(sortedTasks.length - TASKS_PREVIEW_LIMIT, 0);
+  const visibleTasks = expanded ? sortedTasks : sortedTasks.slice(0, TASKS_PREVIEW_LIMIT);
+
+  if (tasks.length === 0) {
+    return (
+      <li className={cn(adminTile, "text-center text-sm text-zinc-500")}>{emptyLabel}</li>
+    );
+  }
+
+  return (
+    <>
+      {visibleTasks.map((task) => (
+        <li key={task.id}>
+          <Link
+            href={task.href}
+            className={cn(adminTile, "flex items-center justify-between gap-3 transition-colors hover:bg-zinc-800/50")}
+          >
+            <span className="min-w-0 text-sm text-zinc-200">{task.label}</span>
+            <span className={cn("shrink-0 text-xs font-semibold tabular-nums", adminCountBadgeActive)}>
+              {task.count}
+            </span>
+          </Link>
+        </li>
+      ))}
+      {hiddenCount > 0 ? (
+        <li>
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-zinc-900/40 px-3 py-2.5 text-xs font-semibold text-zinc-500 transition-colors hover:bg-zinc-800/60 hover:text-zinc-200"
+          >
+            {expanded ? showLessLabel : showMoreLabel(hiddenCount)}
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
+              aria-hidden
+            />
+          </button>
+        </li>
+      ) : null}
+    </>
+  );
+}
 
 type AdminDashboardOverviewProps = {
   title: string;
@@ -140,34 +204,44 @@ function StatTile({
       : null;
 
   const inner = (
-    <div className={cn(adminTile, href && "transition-colors hover:bg-zinc-800/50")}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+    <div className={cn(adminTile, "flex h-full flex-col", href && "transition-colors hover:bg-zinc-800/50")}>
+      <div className="flex min-h-10 items-start justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
           {label}
           {tooltip ? <AdminKpiTooltip text={tooltip} /> : null}
         </p>
         {spark ? (
           <svg viewBox="0 0 56 22" className="h-5 w-14 shrink-0 opacity-60" aria-hidden>
-            <polyline points={spark} fill="none" stroke="#171717" strokeWidth="1.5" strokeLinecap="round" />
+            <polyline points={spark} fill="none" stroke="#B7F500" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-        ) : null}
+        ) : (
+          <span className="h-5 w-14 shrink-0" aria-hidden />
+        )}
       </div>
-      <p className={cn("mt-2 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl", valueTone ?? "text-zinc-100")}>
+      <p
+        className={cn(
+          "mt-3 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl",
+          valueTone ?? "text-zinc-100",
+        )}
+      >
         {value}
       </p>
       {deltaLabel ? (
-        <p className={cn("mt-1 text-xs font-medium tabular-nums", (deltaPct ?? 0) >= 0 ? "text-blue-800" : "text-zinc-400")}>
+        <p
+          className={cn(
+            "mt-2 text-xs font-medium tabular-nums",
+            (deltaPct ?? 0) >= 0 ? "text-[#B7F500]" : "text-zinc-400",
+          )}
+        >
           {deltaLabel}
         </p>
-      ) : (
-        <p className="mt-1 text-xs text-zinc-500">—</p>
-      )}
+      ) : null}
     </div>
   );
 
   if (href) {
     return (
-      <Link href={href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20 rounded-2xl">
+      <Link href={href} className="block h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B7F500]/25 rounded-2xl">
         {inner}
       </Link>
     );
@@ -188,13 +262,37 @@ function PriorityTile({
   tone?: "neutral" | "warning" | "danger" | "accent";
   openLabel: string;
 }) {
-  const valueTone =
-    tone === "danger" ? "text-rose-700" : tone === "warning" ? "text-amber-800" : tone === "accent" ? "text-blue-800" : "text-zinc-100";
+  const hasAttention =
+    tone === "warning" || tone === "danger"
+      ? value.includes("USDT")
+        ? hasPositiveUsdt(value)
+        : Number.isFinite(Number(value.replace(/\s/g, ""))) && Number(value.replace(/\s/g, "")) > 0
+      : false;
+  const forceAccent =
+    tone === "accent" &&
+    (value.includes("USDT")
+      ? hasPositiveUsdt(value)
+      : Number.isFinite(Number(value.replace(/\s/g, ""))) && Number(value.replace(/\s/g, "")) > 0);
+
+  const valueTone = forceAccent
+    ? "text-sky-400"
+    : !hasAttention
+      ? "text-zinc-100"
+      : tone === "danger"
+        ? "text-rose-400"
+        : tone === "warning"
+          ? "text-amber-400"
+          : "text-zinc-100";
 
   return (
-    <Link href={href} className={cn(adminTile, "group block transition-colors hover:bg-zinc-800/50")}>
+    <Link
+      href={href}
+      className={cn(adminTile, "group block h-full min-w-0 transition-colors hover:bg-zinc-800/50")}
+    >
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">{label}</p>
-      <p className={cn("mt-2 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl", valueTone)}>{value}</p>
+      <p className={cn("mt-2 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl", valueTone)}>
+        {value}
+      </p>
       <span className="mt-2 inline-flex items-center gap-0.5 text-[11px] font-semibold text-zinc-500 group-hover:text-zinc-200">
         {openLabel}
         <ChevronRight className="size-3" aria-hidden />
@@ -312,36 +410,28 @@ export function AdminDashboardOverview({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-9 rounded-xl border border-zinc-700 bg-zinc-900/80 px-4 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
+                  className="h-9 rounded-lg bg-zinc-900/80 px-4 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
                 >
                   {a.t("admin.dashboard.analytics")}
                 </Button>
               </Link>
             ) : null}
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 gap-1.5 rounded-xl bg-[#B7F500] px-4 text-xs font-semibold text-zinc-950 hover:bg-[#a8e600]"
-              onClick={onRefresh}
-            >
-              <RefreshCw className="size-3.5" aria-hidden />
-              {a.portal.refresh}
-            </Button>
+            <AdminSectionRefreshButton onClick={onRefresh} variant="primary" />
           </div>
         </div>
 
         <section className={cn(adminPanel, "space-y-5")}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-3">
             <p className={adminEyebrow}>{a.t("admin.dashboard.attention.eyebrow")}</p>
             {taskTotal > 0 ? (
-              <span className={cn("text-[11px] font-semibold", adminCountBadgeActive)}>
+              <span className={cn("shrink-0 text-[11px] font-semibold", adminCountBadgeActive)}>
                 {a.t("admin.dashboard.attention.inQueue").replace("{count}", String(taskTotal))}
               </span>
             ) : (
-              <span className="text-xs text-zinc-500">{a.t("admin.dashboard.attention.queuesEmpty")}</span>
+              <span className="shrink-0 text-xs text-zinc-500">{a.t("admin.dashboard.attention.queuesEmpty")}</span>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid min-w-0 grid-cols-1 items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {layout.priorityTiles.map((key) => {
               const tile = PRIORITY_TILE_KEYS[key];
               return (
@@ -362,7 +452,7 @@ export function AdminDashboardOverview({
       {layout.showUsersSection ? (
       <section className={cn(adminPanel, "space-y-5")}>
         <SectionIntro eyebrow={a.t("admin.dashboard.audience.eyebrow")} title={a.t("admin.section.users")} description={a.t("admin.dashboard.audience.desc")} />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile
             label={a.t("admin.analytics.metric.totalUsers")}
             value={String(kpis.totalUsers)}
@@ -396,7 +486,7 @@ export function AdminDashboardOverview({
           title={a.t("admin.dashboard.treasury.title")}
           description={a.t("admin.dashboard.treasury.desc")}
         />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile
             label={a.t("admin.analytics.operations.kpi.deposits")}
             value={formatUsdtAmount(kpis.totalDepositsUsdt)}
@@ -432,7 +522,7 @@ export function AdminDashboardOverview({
       {layout.showContentSection ? (
       <section className={cn(adminPanel, "space-y-5")}>
         <SectionIntro eyebrow={a.t("admin.dashboard.contentMarket.eyebrow")} title={a.t("admin.dashboard.contentMarket.title")} />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile label={a.t("admin.analytics.tracks.kpi.published")} value={String(kpis.totalTracks)} href={ROUTES.adminTracks} deltaLabelTemplate={deltaLabelTemplate} />
           <StatTile label={a.t("admin.analytics.tracks.kpi.liveRounds")} value={String(kpis.activeRounds)} href={ROUTES.adminRounds} deltaLabelTemplate={deltaLabelTemplate} />
           <StatTile label={a.t("admin.analytics.market.trades")} value={String(kpis.completedTrades)} href={ROUTES.adminAnalyticsMarket} deltaLabelTemplate={deltaLabelTemplate} />
@@ -531,23 +621,14 @@ export function AdminDashboardOverview({
             }
           />
           <ul className="space-y-2">
-            {tasks.length === 0 ? (
-              <li className={cn(adminTile, "text-center text-sm text-zinc-500")}>{a.t("admin.dashboard.tasks.none")}</li>
-            ) : (
-              tasks.map((task) => (
-                <li key={task.id}>
-                  <Link
-                    href={task.href}
-                    className={cn(adminTile, "flex items-center justify-between gap-3 transition-colors hover:bg-zinc-800/50")}
-                  >
-                    <span className="text-sm text-zinc-200">{task.label}</span>
-                    <span className={cn("text-xs font-semibold tabular-nums", adminCountBadgeActive)}>
-                      {task.count}
-                    </span>
-                  </Link>
-                </li>
-              ))
-            )}
+            <TasksQueueList
+              tasks={tasks}
+              emptyLabel={a.t("admin.dashboard.tasks.none")}
+              showMoreLabel={(count) =>
+                a.t("admin.dashboard.tasks.showMore").replace("{count}", String(count))
+              }
+              showLessLabel={a.t("admin.dashboard.tasks.showLess")}
+            />
           </ul>
         </section>
         ) : null}

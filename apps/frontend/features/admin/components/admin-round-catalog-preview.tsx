@@ -7,13 +7,12 @@ import type { AdminRoundFormBody } from "@/features/admin/lib/admin-round-form";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import {
   formatUnitsLabel,
-  releaseStatusLabel,
   roundAvailableUnits,
   roundFullSalePotential,
   roundProgressPct,
 } from "@/features/admin/lib/admin-round-form";
 import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
-import { AdminStatusBadge } from "@/features/admin/ui";
+import { AdminStatusBadge, AdminRaiseProgress } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
 
 type AdminRoundCatalogPreviewProps = {
@@ -49,11 +48,11 @@ export function AdminRoundCatalogPreview({
     >
       <div className="mb-4 flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-          Preview · каталог Spliton
+          {a.t("admin.rounds.catalogPreview.title")}
         </p>
         {isHidden ? (
           <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
-            Не виден пользователям
+            {a.t("admin.rounds.catalogPreview.hidden")}
           </span>
         ) : null}
       </div>
@@ -107,19 +106,12 @@ export function AdminRoundCatalogPreview({
           <span className="font-semibold tabular-nums">{formatUnitsLabel(available)}</span>
         </div>
         <div>
-          <div className="mb-1 flex justify-between text-[11px] text-zinc-500">
-            <span>Прогресс · цель {formatUsdtAmount(form.raiseTargetUsdt || "0")}</span>
-            <span className="tabular-nums">{progress}%</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
-            <div
-              className="h-full rounded-full bg-emerald-500/90 transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-1 text-[10px] text-zinc-500">
-            Собрано {formatUsdtAmount(form.raisedAmountUsdt || "0")}
-          </p>
+          <AdminRaiseProgress
+            variant="preview"
+            pct={progress}
+            raised={form.raisedAmountUsdt || "0"}
+            target={form.raiseTargetUsdt || "0"}
+          />
         </div>
         {form.endDate ? (
           <div className="flex items-center justify-between text-xs">
@@ -139,7 +131,7 @@ export function AdminRoundCatalogPreview({
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900/80 py-2.5 text-sm font-semibold text-zinc-100 opacity-90"
       >
         <Music2 className="size-4" />
-        Купить юниты (preview)
+        {a.t("admin.rounds.catalogPreview.buyUnits")}
       </button>
 
       {!releaseCoverUrl?.trim() ? (

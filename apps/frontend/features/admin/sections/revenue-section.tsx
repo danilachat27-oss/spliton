@@ -20,8 +20,8 @@ import { useAdminPaginatedList } from "@/features/admin/hooks/use-admin-paginate
 import { useAdminPermissions } from "@/features/admin/hooks/use-admin-permissions";
 import {
   formatRevenuePeriod,
-  REVENUE_SOURCE_OPTIONS,
   revenueSourceLabel,
+  revenueSourceOptions,
   revenueStatusLabel,
   revenueStatusTone,
 } from "@/features/admin/lib/admin-revenue-i18n";
@@ -32,14 +32,14 @@ import {
   formatUsdtAmount,
   isAdminMetricEmpty,
 } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_SECTION_KPI_GRID, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { adminBtnGhost } from "@/features/admin/lib/admin-ui";
 import type { AdminRevenueDetail, AdminRevenueListItem } from "@/features/admin/mocks/admin-revenue.mock";
 import {
   AdminDataTable,
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -67,16 +67,6 @@ const REVENUE_FILTER_OPTIONS = [
   { value: "manual_review", label: "Ручная проверка" },
 ];
 
-const STATUS_OPTIONS_BASE = [
-  { value: "draft", label: revenueStatusLabel("draft") },
-  { value: "calculated", label: revenueStatusLabel("calculated") },
-  { value: "review", label: revenueStatusLabel("review") },
-  { value: "approved", label: revenueStatusLabel("approved") },
-  { value: "paid", label: revenueStatusLabel("paid") },
-  { value: "failed", label: revenueStatusLabel("failed") },
-  { value: "cancelled", label: revenueStatusLabel("cancelled") },
-];
-
 const SORT_OPTIONS = [
   { value: "newest", label: "Сначала новые" },
   { value: "amount", label: "Крупнее доход" },
@@ -84,6 +74,32 @@ const SORT_OPTIONS = [
   { value: "pending_first", label: "Ожидающие первыми" },
   { value: "track", label: "По релизу" },
 ];
+
+function statValueSize(value: string): string {
+  if (value === "…" || value === ADMIN_METRIC_NA_LABEL) return "text-2xl";
+  const len = value.replace(/\s/g, "").length;
+  if (len > 16) return "text-base leading-snug sm:text-lg";
+  if (len > 11) return "text-lg sm:text-xl";
+  return "text-2xl";
+}
+
+function tableUsdtClass(value: string, emphasis = false): string {
+  const formatted = formatUsdtAmount(value);
+  const len = formatted.replace(/\s/g, "").length;
+  return cn(
+    "tabular-nums whitespace-nowrap",
+    len > 15 ? "text-[11px] leading-snug" : len > 12 ? "text-xs" : "text-sm",
+    emphasis ? "font-medium text-zinc-100" : "text-zinc-300",
+  );
+}
+
+function usdtPositive(value: string): boolean {
+  const n = Number(String(value).replace(/[^\d.-]/g, ""));
+  return !Number.isNaN(n) && n > 0;
+}
+
+const adminTableLink =
+  "text-sm font-medium text-zinc-100 transition-colors hover:text-[#B7F500]";
 
 function StatTile({
   label,
@@ -106,13 +122,14 @@ function StatTile({
             : "text-zinc-100";
   const empty = isAdminMetricEmpty(value);
   return (
-    <div className={cn(ADMIN_SECTION_TILE, "space-y-1")}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</p>
+    <div className={cn(ADMIN_SECTION_TILE, "flex min-h-[5.5rem] min-w-0 flex-col justify-between gap-2")}>
+      <p className="text-[11px] font-semibold uppercase leading-snug tracking-wide text-zinc-500">{label}</p>
       <p
         className={cn(
-          "tabular-nums tracking-tight",
-          empty ? "text-base font-medium text-zinc-500" : cn("text-2xl font-semibold", valueClass),
+          "font-semibold tabular-nums tracking-tight break-words",
+          empty ? "text-base font-medium text-zinc-500" : cn(statValueSize(value), valueClass),
         )}
+        title={empty ? undefined : value}
       >
         {empty ? ADMIN_METRIC_NA_LABEL : value}
       </p>
@@ -122,10 +139,21 @@ function StatTile({
 
 export function RevenueSection() {
   const a = useAdminI18n();
+  const { locale } = a;
   const statusOptions = React.useMemo(
-    () => [{ value: "all", label: a.actions.allStatuses }, ...STATUS_OPTIONS_BASE],
-    [a],
+    () => [
+      { value: "all", label: a.actions.allStatuses },
+      { value: "draft", label: revenueStatusLabel("draft", locale) },
+      { value: "calculated", label: revenueStatusLabel("calculated", locale) },
+      { value: "review", label: revenueStatusLabel("review", locale) },
+      { value: "approved", label: revenueStatusLabel("approved", locale) },
+      { value: "paid", label: revenueStatusLabel("paid", locale) },
+      { value: "failed", label: revenueStatusLabel("failed", locale) },
+      { value: "cancelled", label: revenueStatusLabel("cancelled", locale) },
+    ],
+    [a.actions.allStatuses, locale],
   );
+  const sourceOptions = React.useMemo(() => revenueSourceOptions(locale), [locale]);
   const client = useAdminApi();
   const perms = useAdminPermissions();
   const readOnly = perms.readOnly("Revenue");
@@ -267,7 +295,7 @@ export function RevenueSection() {
         <div className="min-w-[160px]">
           <Link
             href={ROUTES.adminTracks}
-            className="text-sm font-medium hover:underline"
+            className={adminTableLink}
             onClick={(e) => e.stopPropagation()}
           >
             {r.trackTitle}
@@ -280,45 +308,55 @@ export function RevenueSection() {
       key: "period",
       header: "Период",
       render: (r) => (
-        <span className="whitespace-nowrap text-xs">{formatRevenuePeriod(r.periodFrom, r.periodTo)}</span>
+        <span className="whitespace-nowrap text-xs">{formatRevenuePeriod(r.periodFrom, r.periodTo, locale)}</span>
       ),
     },
     {
       key: "source",
       header: "Источник",
-      render: (r) => revenueSourceLabel(r.source),
+      render: (r) => revenueSourceLabel(r.source, locale),
     },
     {
       key: "gross",
       header: a.t("admin.table.gross"),
-      render: (r) => <span className="tabular-nums font-medium">{formatUsdtAmount(r.grossRevenueUsdt)}</span>,
+      render: (r) => (
+        <span className={tableUsdtClass(r.grossRevenueUsdt, true)}>{formatUsdtAmount(r.grossRevenueUsdt)}</span>
+      ),
     },
     {
       key: "holders",
       header: "Держателям",
-      render: (r) => formatUsdtAmount(r.holdersShareUsdt),
+      render: (r) => (
+        <span className={cn(tableUsdtClass(r.holdersShareUsdt), usdtPositive(r.holdersShareUsdt) && "text-emerald-400")}>
+          {formatUsdtAmount(r.holdersShareUsdt)}
+        </span>
+      ),
     },
     {
       key: "artist",
       header: "Артисту",
-      render: (r) => formatUsdtAmount(r.artistShareUsdt),
+      render: (r) => (
+        <span className={tableUsdtClass(r.artistShareUsdt)}>{formatUsdtAmount(r.artistShareUsdt)}</span>
+      ),
     },
     {
       key: "platform",
       header: "Платформе",
-      render: (r) => formatUsdtAmount(r.platformShareUsdt),
+      render: (r) => (
+        <span className={tableUsdtClass(r.platformShareUsdt)}>{formatUsdtAmount(r.platformShareUsdt)}</span>
+      ),
     },
     {
       key: "hc",
       header: "Держат.",
-      render: (r) => r.holdersCount,
+      render: (r) => <span className="tabular-nums text-sm text-zinc-300">{r.holdersCount}</span>,
     },
     {
       key: "status",
       header: a.table.status,
       render: (r) => (
         <div className="flex flex-col gap-1">
-          <AdminStatusBadge label={revenueStatusLabel(r.status)} tone={revenueStatusTone(r.status)} />
+          <AdminStatusBadge label={revenueStatusLabel(r.status, locale)} tone={revenueStatusTone(r.status)} />
           {r.errorMessage ? (
             <span className="max-w-[120px] truncate text-[10px] text-red-600" title={r.errorMessage}>
               {r.errorMessage}
@@ -330,7 +368,12 @@ export function RevenueSection() {
     {
       key: "by",
       header: "Создал",
-      render: (r) => r.createdBy ?? "—",
+      render: (r) =>
+        r.createdBy ? (
+          <span className="text-sm text-zinc-300">{r.createdBy}</span>
+        ) : (
+          <span className="text-sm text-zinc-500">Система</span>
+        ),
     },
     {
       key: "created",
@@ -345,7 +388,7 @@ export function RevenueSection() {
       render: (r) => (
         <button
           type="button"
-          className="inline-flex h-8 items-center rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-sm font-medium hover:bg-zinc-800/60"
+          className={cn(adminBtnGhost, "h-8 shrink-0 px-3")}
           onClick={(e) => {
             e.stopPropagation();
             void openDetail(r);
@@ -361,8 +404,15 @@ export function RevenueSection() {
     <AdminSectionShell
       sectionId="revenue"
       title={a.adminSectionLabel("revenue")}
+      infoHint={
+        <>
+          Управление доходами релизов Spliton, предпросмотром распределения и начислениями держателям юнитов через
+          wallet ledger. Начисления рассчитываются автоматически на основе юнитов держателей; запуск выполняется
+          оператором.
+        </>
+      }
       actions={
-        <div className="flex items-center gap-2">
+        <>
           <Link href={ROUTES.adminAnalyticsRevenue}>
             <Button type="button" size="sm" variant="ghost" className={adminBtnOutline}>
               <BarChart3 className="mr-1.5 size-3.5" />
@@ -381,18 +431,12 @@ export function RevenueSection() {
               void loadSummary();
             }}
           />
-        </div>
+        </>
       }
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("revenue")} /> : null}
 
-      <AdminSectionInfoHint>
-        Управление доходами релизов Spliton, предпросмотром распределения и начислениями держателям юнитов через
-        wallet ledger. Начисления рассчитываются автоматически на основе юнитов держателей; запуск выполняется
-        оператором.
-      </AdminSectionInfoHint>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-9">
+      <div className={ADMIN_SECTION_KPI_GRID}>
         <StatTile
           label={a.t("admin.kpi.revenue.releaseIncome")}
           value={summaryLoading ? "…" : formatUsdtAmount(summary?.totalGrossRevenueUsdt ?? "0")}
@@ -457,7 +501,7 @@ export function RevenueSection() {
               type: "select",
               value: sourceFilter,
               onChange: setSourceFilter,
-              options: REVENUE_SOURCE_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+              options: sourceOptions.map((o) => ({ value: o.value, label: o.label })),
             },
             {
               id: "revFilter",
@@ -511,6 +555,8 @@ export function RevenueSection() {
         <AdminSectionDataArea loading={loading} error={error} onRetry={reload} loadingLabel="Загрузка доходов…">
           <AdminDataTable
             flat
+            borderless
+            className="[&_table]:min-w-[1280px]"
             columns={columns}
             rows={page.items}
             rowKey={(r) => r.id}

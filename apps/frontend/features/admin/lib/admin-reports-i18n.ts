@@ -1,3 +1,5 @@
+import { ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
+
 export const REPORTS_FIELD_TOOLTIPS = {
   total: "Все задачи генерации отчётов за выбранный период (или всего).",
   completed: "Успешно сформированные отчёты с доступным файлом.",
@@ -8,8 +10,8 @@ export const REPORTS_FIELD_TOOLTIPS = {
   totalSize: "Суммарный размер файлов завершённых отчётов.",
   worker: "Фоновый worker обрабатывает очередь report jobs.",
   storageMode:
-    "db — Postgres (dev/staging); local/object/supabase — файловое хранилище для production.",
-  sensitive: "Содержит финансовые или персональные данные — доступ ограничен RBAC.",
+    "db · Postgres (dev/staging); local/object/supabase · файловое хранилище для production.",
+  sensitive: "Содержит финансовые или персональные данные. Доступ ограничен RBAC.",
   retention: "Файлы хранятся согласно политике retention платформы (TODO: configurable).",
 } as const;
 
@@ -35,14 +37,14 @@ export const REPORT_PERIOD_PRESETS = [
 ] as const;
 
 export function formatFileSize(bytes: number | null | undefined): string {
-  if (bytes == null || bytes === 0) return "—";
+  if (bytes == null || bytes === 0) return ADMIN_METRIC_NA_LABEL;
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 export function formatDurationMs(ms: number | null | undefined): string {
-  if (ms == null) return "—";
+  if (ms == null) return ADMIN_METRIC_NA_LABEL;
   if (ms < 1000) return `${ms} мс`;
   const sec = Math.round(ms / 1000);
   if (sec < 60) return `${sec} сек`;

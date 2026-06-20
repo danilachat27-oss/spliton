@@ -16,6 +16,8 @@ type AdminDetailDrawerProps = {
   wide?: boolean;
   /** e.g. w-[min(1120px,100vw)] for complex forms */
   widthClassName?: string;
+  /** Убрать border-b / border-t у шапки и футера */
+  borderless?: boolean;
 };
 
 export function AdminDetailDrawer({
@@ -27,6 +29,7 @@ export function AdminDetailDrawer({
   footer,
   wide,
   widthClassName,
+  borderless = false,
 }: AdminDetailDrawerProps) {
   const a = useAdminI18n();
 
@@ -40,7 +43,12 @@ export function AdminDetailDrawer({
             wide ? widthClassName ?? "w-[min(720px,100vw)]" : widthClassName ?? "w-[min(480px,100vw)]",
           )}
         >
-          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-zinc-800/80 px-5 py-4">
+          <header
+            className={cn(
+              "flex shrink-0 items-start justify-between gap-4 px-5 py-4",
+              !borderless && "border-b border-zinc-800/80",
+            )}
+          >
             <div className="min-w-0">
               <Dialog.Title className="text-base font-semibold text-zinc-100">{title}</Dialog.Title>
               {subtitle ? (
@@ -58,7 +66,14 @@ export function AdminDetailDrawer({
             {children}
           </div>
           {footer ? (
-            <footer className="shrink-0 border-t border-zinc-800/80 bg-zinc-950 px-5 py-4">{footer}</footer>
+            <footer
+              className={cn(
+                "shrink-0 bg-zinc-950 px-5 py-4",
+                !borderless && "border-t border-zinc-800/80",
+              )}
+            >
+              {footer}
+            </footer>
           ) : null}
         </Dialog.Popup>
       </Dialog.Portal>

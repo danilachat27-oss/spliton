@@ -5,10 +5,12 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, AlertTriangle } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AdminPageShell } from "@/features/admin/components/admin-page-shell";
+import { AdminAnalyticsPageError, AdminAnalyticsPageLoading } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
 import { AdminAnalyticsExportButton } from "@/features/admin/analytics/components/admin-analytics-export-button";
 import { AdminAnalyticsInsightsPanel } from "@/features/admin/analytics/components/admin-analytics-insights-panel";
 import { AdminAnalyticsKpiGroup } from "@/features/admin/analytics/components/admin-analytics-kpi-group";
@@ -21,7 +23,7 @@ import { parseAnalyticsMoney, useAnalyticsPeriod } from "@/features/admin/analyt
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { formatAdminDateShort, formatAdminMetricUsdt, formatUsdtAmount } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_ANALYTICS_DRILL_LINK, ADMIN_ANALYTICS_INLINE_STAT, ADMIN_SECTION_NOTICE, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { isBusinessAnalyst } from "@/features/admin/config/admin-rbac";
 import {
   buildRevenueHealthSummary,
@@ -43,8 +45,6 @@ import {
 } from "@/services/admin/adminRevenueAnalytics.service";
 import {
   AdminDataTable,
-  AdminErrorState,
-  AdminLoadingState,
   AdminPageHeader,
   AdminReadOnlyBanner,
   type AdminColumn,
@@ -153,27 +153,19 @@ export function AnalyticsRevenueSection() {
   }, [load]);
 
   if (loading && !summary) {
-    return (
-      <AdminPageShell>
-        <AdminLoadingState label={a.t("admin.analytics.revenue.loading")} centered />
-      </AdminPageShell>
-    );
+    return <AdminAnalyticsPageLoading label={a.t("admin.analytics.revenue.loading")} />;
   }
 
   if (error) {
-    return (
-      <AdminPageShell>
-        <AdminErrorState onRetry={load} />
-      </AdminPageShell>
-    );
+    return <AdminAnalyticsPageError onRetry={load} />;
   }
 
   const s = pickRevenueSummary(summary as Record<string, unknown> | null);
   const hasActivity = s.revenueEventsCount > 0 || parseAnalyticsMoney(s.distributedUsdt) > 0;
   const issues: string[] = [];
-  if (s.eventsWithoutDistribution > 0) issues.push("Есть revenue events без distribution.");
-  if (s.failedDistributions > 0) issues.push("Есть failed distributions, требуется retry.");
-  if (s.ledgerMismatchCount > 0) issues.push("Есть расхождение с wallet ledger.");
+  if (s.eventsWithoutDistribution > 0) issues.push("Есть события дохода без распределения.");
+  if (s.failedDistributions > 0) issues.push("Есть ошибочные распределения, требуется повтор.");
+  if (s.ledgerMismatchCount > 0) issues.push("Есть расхождение с журналом проводок кошелька.");
 
   const health = buildRevenueHealthSummary({
     hasActivity,
@@ -302,9 +294,7 @@ export function AnalyticsRevenueSection() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex flex-wrap items-center justify-end gap-2">
               <AdminPeriodSelector value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomDatesChange={setCustomDates} />
-              <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
-                {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
-              </Button>
+              <AdminSectionRefreshButton onClick={load} loading={loading} />
               <AdminAnalyticsExportButton
                 reportType="revenue_distributions"
                 label={a.t("admin.analytics.common.generateReport")}
@@ -323,7 +313,7 @@ export function AnalyticsRevenueSection() {
       />
 
       <AdminAnalyticsLayout activeSection="analyticsRevenue">
-        <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
+        <div className={cn(ADMIN_SECTION_TILE, healthBannerClass)}>
           <h2 className={cn("text-sm font-semibold", adminAnalyticsHealthBannerTitleClass(health.tone))}>
             {health.title}
           </h2>
@@ -358,10 +348,8 @@ export function AnalyticsRevenueSection() {
                 value={String(s.eventsWithoutDistribution)}
                 tooltip={REVENUE_KPI_TOOLTIPS.noDist}
                 href={ROUTES.adminRevenue}
+                activeTone={s.eventsWithoutDistribution > 0 ? "warning" : "neutral"}
               />
-            </AdminAnalyticsKpiGroup>
-
-            <AdminAnalyticsKpiGroup title={a.t("admin.analytics.revenue.kpi.distribution")}>
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.toHolders")}
                 value={formatUsdtAmount(s.distributedUsdt)}
@@ -385,10 +373,8 @@ export function AnalyticsRevenueSection() {
                 value={String(s.failedDistributions)}
                 tooltip={REVENUE_KPI_TOOLTIPS.failed}
                 href={ROUTES.adminRevenue}
+                activeTone={s.failedDistributions > 0 ? "danger" : "neutral"}
               />
-            </AdminAnalyticsKpiGroup>
-
-            <AdminAnalyticsKpiGroup title={a.t("admin.analytics.revenue.kpi.payouts")}>
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.recipients")}
                 value={String(s.payoutHoldersCount)}
@@ -413,6 +399,7 @@ export function AnalyticsRevenueSection() {
                   value={String(s.ledgerMismatchCount)}
                   tooltip={REVENUE_KPI_TOOLTIPS.ledgerMismatch}
                   href={ROUTES.adminWallets}
+                  activeTone={s.ledgerMismatchCount > 0 ? "danger" : "neutral"}
                 />
                 <AdminMetricTrendCard label={a.t("admin.kpi.completed")} value={String(s.completedDistributions)} />
                 <AdminMetricTrendCard label={a.t("admin.kpi.processing")} value={String(s.processingDistributions)} />
@@ -438,7 +425,7 @@ export function AnalyticsRevenueSection() {
                   <Link
                     key={st.key}
                     href={ROUTES.adminRevenue}
-                    className="rounded-xl border border-zinc-800 bg-zinc-50/80 px-4 py-3 hover:bg-zinc-100"
+                    className={cn(ADMIN_ANALYTICS_INLINE_STAT, "transition-colors hover:bg-zinc-900/70")}
                   >
                     <p className="text-xs text-zinc-500">{st.label}</p>
                     <p className="mt-1 text-xl font-semibold tabular-nums">{st.count}</p>
@@ -496,17 +483,17 @@ export function AnalyticsRevenueSection() {
               />
             ) : null}
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between rounded-lg bg-emerald-50 px-3 py-2">
-                <span>Держатели ({split?.holdersPct ?? 70}%)</span>
-                <span className="font-medium">{formatUsdtAmount(split?.holdersShareUsdt ?? "0,00")}</span>
+              <div className={cn(ADMIN_ANALYTICS_INLINE_STAT, "flex justify-between")}>
+                <span className="text-zinc-400">Держатели ({split?.holdersPct ?? 70}%)</span>
+                <span className="font-medium text-emerald-400">{formatUsdtAmount(split?.holdersShareUsdt ?? "0,00")}</span>
               </div>
-              <div className="flex justify-between rounded-lg bg-violet-50 px-3 py-2">
-                <span>Артист ({split?.artistPct ?? 15}%)</span>
-                <span className="font-medium">{formatUsdtAmount(split?.artistShareUsdt ?? "0,00")}</span>
+              <div className={cn(ADMIN_ANALYTICS_INLINE_STAT, "flex justify-between")}>
+                <span className="text-zinc-400">Артист ({split?.artistPct ?? 15}%)</span>
+                <span className="font-medium text-violet-300">{formatUsdtAmount(split?.artistShareUsdt ?? "0,00")}</span>
               </div>
-              <div className="flex justify-between rounded-lg bg-blue-50 px-3 py-2">
-                <span>Платформа ({split?.platformPct ?? 15}%)</span>
-                <span className="font-medium">{formatUsdtAmount(split?.platformShareUsdt ?? "0,00")}</span>
+              <div className={cn(ADMIN_ANALYTICS_INLINE_STAT, "flex justify-between")}>
+                <span className="text-zinc-400">Платформа ({split?.platformPct ?? 15}%)</span>
+                <span className="font-medium text-blue-300">{formatUsdtAmount(split?.platformShareUsdt ?? "0,00")}</span>
               </div>
               <p className="text-xs text-zinc-500">
                 Доли считаются из earning reports (70/15/15). Не включают покупку юнитов на первичном рынке.
@@ -565,8 +552,9 @@ export function AnalyticsRevenueSection() {
             <div className="mt-4 flex flex-wrap items-start gap-4">
               <div
                 className={cn(
-                  "flex items-center gap-2 rounded-xl px-4 py-3 text-sm",
-                  reconciliation.matched ? "bg-emerald-50 text-emerald-900" : "bg-amber-50 text-amber-900",
+                  ADMIN_SECTION_NOTICE,
+                  "text-sm",
+                  reconciliation.matched ? "text-emerald-300" : "text-amber-300",
                 )}
               >
                 {reconciliation.matched ? (
@@ -577,21 +565,21 @@ export function AnalyticsRevenueSection() {
                 <span>{reconciliation.matched ? "Сверка совпала" : "Есть расхождение"}</span>
               </div>
               <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border border-zinc-800 px-3 py-2">
+                <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                   <p className="text-xs text-zinc-500">Payout items</p>
                   <p className="font-semibold">{reconciliation.payoutItemsCount}</p>
                   <p className="text-xs">{formatUsdtAmount(reconciliation.payoutSumUsdt)}</p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 px-3 py-2">
+                <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                   <p className="text-xs text-zinc-500">Ledger PAYOUT tx</p>
                   <p className="font-semibold">{reconciliation.ledgerTxCount}</p>
                   <p className="text-xs">{formatUsdtAmount(reconciliation.ledgerSumUsdt)}</p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 px-3 py-2">
+                <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                   <p className="text-xs text-zinc-500">Без wallet tx</p>
                   <p className="font-semibold">{reconciliation.missingWalletTxCount}</p>
                 </div>
-                <div className="rounded-lg border border-zinc-800 px-3 py-2">
+                <div className={ADMIN_ANALYTICS_INLINE_STAT}>
                   <p className="text-xs text-zinc-500">Проверено</p>
                   <p className="text-xs">{formatAdminDateShort(reconciliation.lastCheckedAt)}</p>
                 </div>
@@ -607,7 +595,7 @@ export function AnalyticsRevenueSection() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="flex items-center justify-between rounded-lg border border-zinc-800 px-3 py-2.5 text-sm hover:bg-zinc-800/60"
+                className={ADMIN_ANALYTICS_DRILL_LINK}
               >
                 {link.label}
                 <ArrowRight className="size-4 text-zinc-400" />

@@ -39,7 +39,6 @@ import {
   AdminFilterBar,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -60,7 +59,7 @@ const WITHDRAWAL_FILTER_OPTIONS_BASE = [
   { value: "high_value", labelKey: "admin.filters.highValue" as const },
   { value: "on_hold", label: "На удержании" },
   { value: "failed", label: "Ошибочные" },
-  { value: "no_tx_hash", label: "Без tx hash" },
+  { value: "no_tx_hash", label: "Без хеша транзакции" },
   { value: "with_risk", label: "С риск-флагами" },
 ];
 
@@ -364,6 +363,12 @@ function WithdrawalsSectionInner() {
     <AdminSectionShell
       sectionId="withdrawals"
       title={a.adminSectionLabel("withdrawals")}
+      infoHint={
+        <>
+          Контроль исходящих USDT TRC20 выводов Spliton: одобрение, блокировка средств, отправка в сеть и списание через
+          wallet ledger.
+        </>
+      }
       actions={
         <AdminSectionRefreshButton
           onClick={() => {
@@ -374,11 +379,6 @@ function WithdrawalsSectionInner() {
       }
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("withdrawals")} /> : null}
-
-      <AdminSectionInfoHint>
-        Контроль исходящих USDT TRC20 выводов Spliton: одобрение, блокировка средств, отправка в сеть и списание через
-        wallet ledger.
-      </AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <StatTile

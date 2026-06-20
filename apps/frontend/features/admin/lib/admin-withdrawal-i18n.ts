@@ -1,12 +1,12 @@
 /** Labels and tooltips for admin withdrawals section. */
 
 export const WITHDRAWAL_FIELD_TOOLTIPS = {
-  approve: "Блокирует сумму на кошельке и переводит вывод в обработку (PROCESSING).",
+  approve: "Блокирует сумму на кошельке и переводит вывод в обработку.",
   hold: "Средства остаются заблокированы; вывод требует дополнительной проверки.",
-  reject: "Разблокирует сумму на available; reversal в wallet ledger.",
-  complete: "Списывает locked и завершает вывод; укажите tx hash отправки в сеть.",
-  txHash: "Blockchain transaction id исходящего TRC20 перевода.",
-  ledgerDebit: "Wallet transaction withdrawal_completed при завершении.",
+  reject: "Разблокирует сумму на доступном балансе; создаёт обратную проводку в журнале кошелька.",
+  complete: "Списывает заблокированную сумму и завершает вывод; укажите хеш транзакции отправки в сеть.",
+  txHash: "Идентификатор исходящего перевода TRC20 в блокчейне.",
+  ledgerDebit: "Проводка withdrawal_completed при завершении вывода.",
 } as const;
 
 const STATUS_LABELS: Record<string, string> = {

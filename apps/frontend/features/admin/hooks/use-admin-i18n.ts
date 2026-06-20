@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { ROUTES } from "@/constants/routes";
 import type { AdminBreadcrumbItem } from "@/features/admin/ui/admin-breadcrumbs";
+import { DEFAULT_LOCALE } from "@/lib/i18n/types";
 import {
   ADMIN_MESSAGES,
   adminSectionLabelForLocale,
@@ -33,6 +34,14 @@ const PORTAL_KEYS = [
   "breadcrumbRoot",
   "searchPlaceholder",
   "searchSectionPlaceholder",
+  "searchOpen",
+  "searchModalTitle",
+  "searchModalHint",
+  "searchClose",
+  "searchCloseBackdrop",
+  "searchLoading",
+  "searchNoResults",
+  "searchError",
   "refresh",
   "viewAll",
   "envProduction",
@@ -130,7 +139,18 @@ function pickGroup<K extends string>(
 }
 
 export function useAdminI18n() {
-  const { locale, t } = useI18n();
+  const { locale, t: clientT } = useI18n();
+
+  /** Admin keys — синхронно из ADMIN_MESSAGES; client t только для portal/table и fallback. */
+  const t = useCallback(
+    (key: string, fallback?: string) => {
+      const direct =
+        ADMIN_MESSAGES[locale]?.[key] ?? ADMIN_MESSAGES[DEFAULT_LOCALE]?.[key];
+      if (direct) return direct;
+      return clientT(key, fallback);
+    },
+    [clientT, locale],
+  );
 
   const portal = useMemo(
     () => pickGroup(t, "admin.portal", PORTAL_KEYS),

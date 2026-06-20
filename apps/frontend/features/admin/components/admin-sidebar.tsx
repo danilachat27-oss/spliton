@@ -131,20 +131,20 @@ export function AdminSidebar() {
 
       style={{ width }}
 
-      className="relative z-30 flex h-full min-h-0 shrink-0 flex-col border-r border-zinc-800/80 bg-[#141416] text-zinc-300 transition-[width] duration-200"
+      className="relative z-30 flex h-full min-h-0 shrink-0 flex-col overflow-hidden bg-[#141416] text-zinc-300 transition-[width] duration-200"
 
       aria-label={a.t("admin.sidebar.navAriaLabel")}
 
     >
 
-      <div className={cn("shrink-0 border-b border-zinc-800/80", collapsed ? "px-2 py-3" : "px-3 py-3")}>
+      <div className={cn("shrink-0", collapsed ? "px-2 py-3" : "px-3 py-3")}>
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
             <SplitonLogo href={ROUTES.admin} className="text-white" />
             <button
               type="button"
               onClick={() => setCollapsed(false)}
-              className="flex size-9 w-full items-center justify-center rounded-xl border border-zinc-800/80 bg-zinc-900/40 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+              className="flex size-9 w-full items-center justify-center rounded-xl bg-zinc-900/40 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
               aria-label={a.t("admin.sidebar.expandMenu")}
             >
               <ChevronRight className="size-4" aria-hidden />
@@ -248,7 +248,7 @@ export function AdminSidebar() {
 
 
       {!collapsed ? (
-        <div className="mt-auto shrink-0 border-t border-zinc-800/80 px-3 py-3">
+        <div className="mt-auto shrink-0 px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <span className="shrink-0 rounded-md bg-zinc-800/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
               {envLabel}
@@ -260,7 +260,7 @@ export function AdminSidebar() {
           </p>
         </div>
       ) : (
-        <div className="mt-auto shrink-0 border-t border-zinc-800/80 px-2 py-3">
+        <div className="mt-auto shrink-0 px-2 py-3">
           <span
             className={cn(
               "mx-auto block size-2.5 rounded-full",

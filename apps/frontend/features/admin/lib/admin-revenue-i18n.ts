@@ -1,49 +1,80 @@
-/** Labels and tooltips for admin revenue / distribution section. */
+import type { AppLocale } from "@/lib/i18n/types";
+import { ADMIN_MESSAGES } from "@/lib/i18n/admin-messages";
 
+function msg(locale: AppLocale, key: string, fallback?: string): string {
+  return ADMIN_MESSAGES[locale]?.[key] ?? ADMIN_MESSAGES.ru[key] ?? fallback ?? key;
+}
+
+const REVENUE_STATUS_KEYS = [
+  "draft",
+  "calculated",
+  "preview",
+  "review",
+  "approved",
+  "paid",
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
+  "manual_review",
+] as const;
+
+const REVENUE_SOURCE_KEYS = [
+  "streaming",
+  "distributor",
+  "license",
+  "manual",
+  "import",
+  "other",
+] as const;
+
+export type RevenueTooltipKey =
+  | "grossRevenue"
+  | "holdersShare"
+  | "artistShare"
+  | "platformShare"
+  | "distribution"
+  | "duplicateProtection"
+  | "walletLedger"
+  | "preview";
+
+export function revenueStatusLabel(status: string, locale: AppLocale = "ru"): string {
+  return msg(locale, `admin.revenue.status.${status}`, status);
+}
+
+export function revenueSourceLabel(source: string, locale: AppLocale = "ru"): string {
+  return msg(locale, `admin.revenue.source.${source}`, source);
+}
+
+export function revenueFieldTooltip(field: RevenueTooltipKey, locale: AppLocale = "ru"): string {
+  return msg(locale, `admin.revenue.tooltip.${field}`);
+}
+
+export function revenueSourceOptions(locale: AppLocale = "ru") {
+  return [
+    { value: "all", label: msg(locale, "admin.revenue.sourceAll") },
+    ...REVENUE_SOURCE_KEYS.map((value) => ({
+      value,
+      label: revenueSourceLabel(value, locale),
+    })),
+  ] as const;
+}
+
+/** @deprecated Use revenueFieldTooltip(field, locale) */
 export const REVENUE_FIELD_TOOLTIPS = {
-  grossRevenue: "Полный доход релиза за период до распределения долей.",
-  holdersShare: "70% gross — пул для держателей юнитов пропорционально владению.",
-  artistShare: "15% gross — доля артиста (preview; отдельное начисление при реализации).",
-  platformShare: "15% gross — комиссия платформы Spliton.",
-  distribution:
-    "Запуск распределения выполняется оператором. Средства зачисляются через wallet ledger.",
-  duplicateProtection: "Повторное начисление за один период блокируется уникальным ограничением.",
-  walletLedger: "Каждое начисление создаёт wallet transaction payout_credit.",
-  preview:
-    "Начисления рассчитываются автоматически на основе юнитов держателей. Запуск — оператором.",
+  grossRevenue: revenueFieldTooltip("grossRevenue"),
+  holdersShare: revenueFieldTooltip("holdersShare"),
+  artistShare: revenueFieldTooltip("artistShare"),
+  platformShare: revenueFieldTooltip("platformShare"),
+  distribution: revenueFieldTooltip("distribution"),
+  duplicateProtection: revenueFieldTooltip("duplicateProtection"),
+  walletLedger: revenueFieldTooltip("walletLedger"),
+  preview: revenueFieldTooltip("preview"),
 } as const;
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Черновик",
-  calculated: "Рассчитано",
-  preview: "Предпросмотр",
-  review: "На проверке",
-  approved: "Одобрено",
-  paid: "Выплачено",
-  pending: "Ожидает запуска",
-  processing: "В обработке",
-  completed: "Завершено",
-  failed: "Ошибка",
-  cancelled: "Отменено",
-  manual_review: "Ручная проверка",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  streaming: "Стриминг",
-  distributor: "Дистрибьютор",
-  license: "Лицензия",
-  manual: "Ручное начисление",
-  import: "Импорт отчёта",
-  other: "Другое",
-};
-
-export function revenueStatusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
-}
-
-export function revenueSourceLabel(source: string): string {
-  return SOURCE_LABELS[source] ?? source;
-}
+/** @deprecated Use revenueSourceOptions(locale) */
+export const REVENUE_SOURCE_OPTIONS = revenueSourceOptions();
 
 export function revenueStatusTone(
   status: string,
@@ -72,21 +103,15 @@ export function revenueStatusTone(
   }
 }
 
-export function formatRevenuePeriod(from: string, to: string): string {
+export function formatRevenuePeriod(from: string, to: string, locale: AppLocale = "ru"): string {
   const fmt = (d: string) => {
     const date = new Date(d);
     if (Number.isNaN(date.getTime())) return d;
-    return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return date.toLocaleDateString(locale === "ru" ? "ru-RU" : locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
-  return `${fmt(from)} — ${fmt(to)}`;
+  return `${fmt(from)} · ${fmt(to)}`;
 }
-
-export const REVENUE_SOURCE_OPTIONS = [
-  { value: "all", label: "Все источники" },
-  { value: "streaming", label: revenueSourceLabel("streaming") },
-  { value: "distributor", label: revenueSourceLabel("distributor") },
-  { value: "license", label: revenueSourceLabel("license") },
-  { value: "manual", label: revenueSourceLabel("manual") },
-  { value: "import", label: revenueSourceLabel("import") },
-  { value: "other", label: revenueSourceLabel("other") },
-] as const;

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { Input } from "@/components/ui/input";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import {
   AdminSectionDataArea,
@@ -14,15 +13,18 @@ import {
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminSectionTab } from "@/features/admin/hooks/use-admin-section-tab";
 import { formatAdminDate } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_FILTERS } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_SECTION_KPI_GRID, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type { AdminTicketListItem } from "@/features/admin/mocks/admin-support.mock";
 import {
   AdminDataTable,
+  AdminFilterBar,
+  AdminFilterResultCount,
   AdminLocalizedStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
 import { AdminSupportTicketDrawer } from "@/features/admin/sections/admin-support-ticket-drawer";
 import { getAdminSupportSummary, listAdminTickets } from "@/services/admin/adminSupport.service";
+import { cn } from "@/lib/utils";
 
 const SUPPORT_TABS = [
   { id: "all", label: "Все" },
@@ -44,6 +46,37 @@ const CATEGORY_LABELS: Record<string, string> = {
   technical: "Техническая проблема",
   other: "Другое",
 };
+
+const adminTableLink =
+  "text-sm font-medium text-zinc-100 transition-colors hover:text-[#B7F500]";
+
+function StatTile({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: number;
+  tone?: "neutral" | "success" | "warning" | "danger" | "info";
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-400"
+      : tone === "warning"
+        ? "text-amber-400"
+        : tone === "danger"
+          ? "text-rose-400"
+          : tone === "info"
+            ? "text-sky-400"
+            : "text-zinc-100";
+
+  return (
+    <div className={cn(ADMIN_SECTION_TILE, "flex min-h-[5.5rem] flex-col justify-between gap-2")}>
+      <p className="text-[11px] font-semibold uppercase leading-snug tracking-wide text-zinc-500">{label}</p>
+      <p className={cn("text-2xl font-semibold tabular-nums tracking-tight", valueClass)}>{value}</p>
+    </div>
+  );
+}
 
 export function SupportSection() {
   const a = useAdminI18n();
@@ -107,8 +140,16 @@ export function SupportSection() {
   }, [rows]);
 
   const columns: AdminColumn<AdminTicketListItem>[] = [
-    { key: "id", header: a.table.ticket, render: (r) => <span className="font-mono text-xs">{r.id}</span> },
-    { key: "user", header: a.table.user, render: (r) => r.userEmail },
+    {
+      key: "id",
+      header: a.table.ticket,
+      render: (r) => <span className="font-mono text-xs text-zinc-300">{r.id}</span>,
+    },
+    {
+      key: "user",
+      header: a.table.user,
+      render: (r) => <span className={adminTableLink}>{r.userEmail}</span>,
+    },
     { key: "subject", header: a.table.subject, render: (r) => r.subject },
     {
       key: "cat",
@@ -128,12 +169,18 @@ export function SupportSection() {
     {
       key: "status",
       header: a.table.status,
-      render: (r) => {
-        const { status: rowStatus } = r;
-        return <AdminLocalizedStatusBadge status={rowStatus} />;
-      },
+      render: (r) => <AdminLocalizedStatusBadge status={r.status} />,
     },
-    { key: "assigned", header: a.table.assigned, render: (r) => r.assignedTo ?? "—" },
+    {
+      key: "assigned",
+      header: a.table.assigned,
+      render: (r) =>
+        r.assignedTo ? (
+          <span className="text-sm text-zinc-200">{r.assignedTo}</span>
+        ) : (
+          <span className="text-sm text-zinc-500">Не назначен</span>
+        ),
+    },
     {
       key: "updated",
       header: a.table.updated,
@@ -142,53 +189,65 @@ export function SupportSection() {
   ];
 
   return (
-    <AdminSectionShell sectionId="support" title={a.adminSectionLabel("support")}>
-      {summary ? (
-        <div className="grid gap-3 sm:grid-cols-4">
-          {[
-            { label: "Открытые", value: summary.open },
-            { label: "В работе", value: summary.inProgress },
-            { label: "Эскалированы", value: summary.escalated },
-            { label: a.t("admin.support.highCritical"), value: summary.highPriorityOpen },
-          ].map((k) => (
-            <div key={k.label} className="rounded-2xl border border-neutral-200/80 bg-zinc-900/80 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{k.label}</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">{k.value}</p>
-            </div>
-          ))}
-        </div>
-      ) : null}
+    <AdminSectionShell
+      sectionId="support"
+      title={a.adminSectionLabel("support")}
+      infoHint="Очередь обращений пользователей: статусы, приоритеты, назначение оператора и история переписки."
+      actions={<AdminSectionRefreshButton onClick={load} />}
+    >
       <AdminSectionPanel>
+        {summary && !loading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            <StatTile label="Открытые" value={summary.open} tone="info" />
+            <StatTile label="В работе" value={summary.inProgress} tone="warning" />
+            <StatTile
+              label="Эскалированы"
+              value={summary.escalated}
+              tone={summary.escalated > 0 ? "danger" : "neutral"}
+            />
+            <StatTile
+              label={a.t("admin.support.highCritical")}
+              value={summary.highPriorityOpen}
+              tone={summary.highPriorityOpen > 0 ? "danger" : "neutral"}
+            />
+          </div>
+        ) : loading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-800/50")} />
+            ))}
+          </div>
+        ) : null}
+
+        <AdminFilterBar
+          className="!rounded-2xl !border-0 !bg-zinc-900/40 !p-4 !shadow-none"
+          searchHint="Поиск по номеру тикета, email пользователя и теме обращения."
+          footer={
+            <AdminFilterResultCount label={a.t("admin.filters.foundCount")} value={filtered.length} className="w-full" />
+          }
+          fields={[
+            {
+              id: "search",
+              label: "Поиск",
+              type: "search",
+              value: search,
+              onChange: setSearch,
+              placeholder: a.t("admin.placeholder.supportSearch"),
+            },
+          ]}
+        />
+
         <AdminSectionTabBar
           tabs={SUPPORT_TABS.map((t) => ({ ...t, count: tabCounts[t.id] }))}
           activeId={tab}
           onChange={(id) => setTab(id as SupportTab)}
         />
 
-        <div className={ADMIN_SECTION_FILTERS}>
-          <div className="sm:col-span-2">
-            <label htmlFor="support-search" className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Поиск
-            </label>
-            <Input
-              id="support-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={a.t("admin.placeholder.supportSearch")}
-              className="h-10 rounded-xl border-neutral-200 bg-zinc-900/80"
-            />
-          </div>
-          <div className="flex items-end justify-between gap-2 sm:col-span-2">
-            <p className="text-xs text-zinc-500">
-              Показано: <span className="font-semibold tabular-nums text-zinc-200">{filtered.length}</span>
-            </p>
-            <AdminSectionRefreshButton onClick={load} />
-          </div>
-        </div>
-
         <AdminSectionDataArea loading={loading} error={error} onRetry={load} loadingLabel="Загрузка тикетов…">
           <AdminDataTable
             flat
+            borderless
+            className="[&_table]:min-w-[960px]"
             columns={columns}
             rows={filtered}
             rowKey={(r) => r.id}

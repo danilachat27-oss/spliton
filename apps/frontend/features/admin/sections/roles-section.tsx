@@ -14,6 +14,7 @@ import {
 } from "@/lib/lucide";
 
 import { AdminPageShell } from "@/features/admin/components/admin-page-shell";
+import { AdminSectionPanel } from "@/features/admin/components/admin-section-layout";
 import {
   PERMISSION_AREA_LABELS,
   PERMISSION_MATRIX,
@@ -25,8 +26,15 @@ import {
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canAssignUserRoles } from "@/features/admin/config/admin-rbac";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
-import { adminTableHead } from "@/features/admin/lib/admin-ui";
+import { formatAdminDate } from "@/features/admin/lib/admin-format";
+import { ADMIN_SECTION_NOTICE } from "@/features/admin/lib/admin-section-styles";
+import {
+  adminAlertSurface,
+  adminBtnOutline,
+  adminListRow,
+  adminTableHead,
+  adminTile,
+} from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { listAdminRoleUsers, listAdminRoles } from "@/services/admin/adminRoles.service";
 import {
@@ -35,8 +43,9 @@ import {
   AdminPageHeader,
   AdminRoleBadge,
   AdminSectionCard,
-  AdminSectionInfoHint,
+  AdminInfoHint,
   AdminStatusBadge,
+  AdminTableSkeleton,
 } from "@/features/admin/ui";
 import { AdminCopyButton } from "@/features/admin/ui/admin-copy-button";
 import { cn } from "@/lib/utils";
@@ -50,52 +59,103 @@ const LEVEL_TONE: Record<PermissionLevel, "success" | "neutral" | "warning" | "d
 
 const ROLE_CARD_META: Record<
   string,
-  { icon: LucideIcon; accent: string; selected: string; iconBg: string }
+  { icon: LucideIcon; iconBg: string; selectedBg: string }
 > = {
   SUPER_ADMIN: {
     icon: Shield,
-    accent: "hover:border-[#B7F500]/30",
-    selected: "border-[#B7F500]/40 bg-zinc-900 ring-1 ring-[#B7F500]/20",
-    iconBg: "bg-zinc-800 text-[#B7F500]",
+    iconBg: "bg-[#B7F500]/10 text-[#B7F500]",
+    selectedBg: "bg-[#B7F500]/[0.06]",
   },
   ADMIN: {
     icon: Shield,
-    accent: "hover:border-zinc-600",
-    selected: "border-zinc-500/50 bg-zinc-900 ring-1 ring-zinc-500/20",
     iconBg: "bg-zinc-800 text-zinc-300",
+    selectedBg: "bg-zinc-800/80",
   },
   ACCOUNTANT: {
     icon: Wallet,
-    accent: "hover:border-sky-700/50",
-    selected: "border-sky-500/40 bg-zinc-900 ring-1 ring-sky-500/20",
-    iconBg: "bg-sky-950 text-sky-400",
+    iconBg: "bg-sky-500/10 text-sky-400",
+    selectedBg: "bg-sky-500/[0.06]",
   },
   CONTENT_MANAGER: {
     icon: Music2,
-    accent: "hover:border-violet-700/50",
-    selected: "border-violet-500/40 bg-zinc-900 ring-1 ring-violet-500/20",
-    iconBg: "bg-violet-950 text-violet-400",
+    iconBg: "bg-violet-500/10 text-violet-400",
+    selectedBg: "bg-violet-500/[0.06]",
   },
   SUPPORT_MANAGER: {
     icon: Headphones,
-    accent: "hover:border-zinc-600",
-    selected: "border-zinc-400/40 bg-zinc-900 ring-1 ring-zinc-400/20",
     iconBg: "bg-zinc-800 text-zinc-400",
+    selectedBg: "bg-zinc-800/80",
   },
   COMPLIANCE: {
     icon: AlertTriangle,
-    accent: "hover:border-amber-700/50",
-    selected: "border-amber-500/40 bg-zinc-900 ring-1 ring-amber-500/20",
-    iconBg: "bg-amber-950 text-amber-400",
+    iconBg: "bg-amber-500/10 text-amber-400",
+    selectedBg: "bg-amber-500/[0.06]",
   },
 };
 
 const DEFAULT_CARD_META = {
   icon: Shield,
-  accent: "hover:border-zinc-700",
-  selected: "border-zinc-600/50 bg-zinc-900 ring-1 ring-zinc-600/20",
   iconBg: "bg-zinc-800 text-zinc-400",
+  selectedBg: "bg-zinc-800/80",
 };
+
+type RoleUser = Awaited<ReturnType<typeof listAdminRoleUsers>>[number];
+
+function RoleUserRow({ user }: { user: RoleUser }) {
+  const a = useAdminI18n();
+  const assignedLabel = a
+    .t("admin.roles.assignedSince")
+    .replace("{date}", formatAdminDate(user.assignedAt));
+
+  return (
+    <li>
+      <Link
+        href={ROUTES.adminUserDetail(user.userId)}
+        className={cn(adminListRow(), "group flex items-center gap-3 px-4 py-3")}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-zinc-100 group-hover:text-white">{user.email}</p>
+          {user.displayName ? (
+            <p className="mt-0.5 truncate text-xs text-zinc-500">{user.displayName}</p>
+          ) : null}
+        </div>
+        <AdminCopyButton value={user.userId} label={a.t("admin.ui.copyId")} />
+        <span className="hidden shrink-0 text-xs tabular-nums text-zinc-500 sm:inline">{assignedLabel}</span>
+        <ChevronRight
+          className="size-4 shrink-0 text-zinc-600 transition group-hover:text-zinc-300"
+          aria-hidden
+        />
+      </Link>
+    </li>
+  );
+}
+
+function RoleUsersLink({
+  roleCode,
+  className,
+  label,
+  onClick,
+}: {
+  roleCode: string;
+  className?: string;
+  label: string;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  return (
+    <Link
+      href={`${ROUTES.adminUsers}?role=${encodeURIComponent(roleCode)}`}
+      className={cn(
+        adminBtnOutline,
+        "inline-flex h-9 w-full items-center justify-between gap-2 px-3.5 text-xs font-semibold",
+        className,
+      )}
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      <ChevronRight className="size-3.5 shrink-0 text-zinc-500" aria-hidden />
+    </Link>
+  );
+}
 
 function RoleCard({
   role,
@@ -118,9 +178,9 @@ function RoleCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        ADMIN_SECTION_TILE,
-        "group relative flex h-full flex-col border text-left transition-all duration-200",
-        selected ? meta.selected : cn("border-zinc-800 bg-zinc-900/80", meta.accent),
+        adminTile,
+        "group relative flex h-full flex-col px-4 py-4 text-left transition-colors sm:px-5 sm:py-5",
+        selected ? meta.selectedBg : "hover:bg-zinc-800/50",
       )}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
@@ -139,14 +199,12 @@ function RoleCard({
         <p className="mt-0.5 text-xs text-zinc-500">{a.formatRoleUserCount(role.userCount)}</p>
       </div>
 
-      <Link
-        href={`${ROUTES.adminUsers}?role=${encodeURIComponent(role.code)}`}
-        className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-zinc-300 transition-colors group-hover:text-zinc-100"
+      <RoleUsersLink
+        roleCode={role.code}
+        label={a.t("admin.roles.viewUsers")}
+        className="mt-4"
         onClick={(e) => e.stopPropagation()}
-      >
-        Пользователи с этой ролью
-        <ChevronRight className="size-3.5 opacity-60 transition-transform group-hover:translate-x-0.5" />
-      </Link>
+      />
     </button>
   );
 }
@@ -216,6 +274,20 @@ export function RolesSection() {
             : "Обзор ролей и матрицы прав (только чтение). Назначение ролей доступно только главному администратору."
         }
         breadcrumbs={a.adminBreadcrumbs(a.adminSectionLabel("roles"))}
+        actions={
+          <AdminInfoHint
+            size="md"
+            placement="bottom-end"
+            iconClassName="size-9 rounded-xl"
+            panelClassName="max-w-sm"
+            text={
+              <>
+                Права в Spliton статичны и привязаны к роли. Отдельного редактора прав нет — доступ
+                определяется только набором ролей пользователя.
+              </>
+            }
+          />
+        }
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -228,11 +300,6 @@ export function RolesSection() {
           />
         ))}
       </div>
-
-      <AdminSectionInfoHint className="mb-6">
-        Права в Spliton статичны и привязаны к роли. Отдельного редактора прав нет — доступ
-        определяется только набором ролей пользователя.
-      </AdminSectionInfoHint>
 
       <AdminSectionCard
         title={a.t("admin.title.permissionMatrix")}
@@ -285,59 +352,48 @@ export function RolesSection() {
         </div>
       </AdminSectionCard>
 
-      <AdminSectionCard
-        title={
-          selectedCode
-            ? `Пользователи с ролью «${a.adminRoleLabel(selectedCode)}»`
-            : "Пользователи по роли"
-        }
-        description={
-          selectedRole
-            ? a.formatRoleUserCount(selectedRole.userCount)
-            : "Выберите роль в карточках выше"
-        }
-      >
+      <AdminSectionPanel>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-zinc-100">
+              {selectedCode
+                ? a.t("admin.roles.usersWithRole").replace("{role}", a.adminRoleLabel(selectedCode))
+                : a.t("admin.roles.usersByRole")}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {selectedRole
+                ? a.formatRoleUserCount(selectedRole.userCount)
+                : a.t("admin.roles.selectRoleHint")}
+            </p>
+          </div>
+          {selectedCode ? (
+            <RoleUsersLink
+              roleCode={selectedCode}
+              label={a.t("admin.roles.viewAllUsers")}
+              className="h-8 w-auto shrink-0 px-3 text-xs"
+            />
+          ) : null}
+        </div>
+
         {usersLoading ? (
-          <AdminLoadingState label={a.t("admin.loading.users")} />
+          <AdminTableSkeleton rows={Math.min(selectedRole?.userCount ?? 3, 5) || 3} />
         ) : users.length === 0 ? (
-          <p className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-6 text-center text-sm text-zinc-500">
-            Нет пользователей с этой ролью
-          </p>
+          <p className="text-sm text-zinc-500">{a.t("admin.roles.noUsers")}</p>
         ) : (
-          <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800">
+          <ul className="space-y-1.5">
             {users.map((u) => (
-              <li
-                key={u.userId}
-                className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-zinc-900/80 px-4 py-3 transition-colors hover:bg-zinc-800/60"
-              >
-                <span className="font-medium text-zinc-100">{u.email}</span>
-                {u.displayName ? (
-                  <span className="text-sm text-zinc-500">{u.displayName}</span>
-                ) : null}
-                <AdminCopyButton value={u.userId} label={a.t("admin.ui.copyId")} />
-                <span className="ml-auto text-xs tabular-nums text-zinc-400">
-                  с {u.assignedAt.slice(0, 10)}
-                </span>
-              </li>
+              <RoleUserRow key={u.userId} user={u} />
             ))}
           </ul>
         )}
-        {selectedCode ? (
-          <Link
-            href={`${ROUTES.adminUsers}?role=${encodeURIComponent(selectedCode)}`}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-zinc-100 underline-offset-4 hover:underline"
-          >
-            Все пользователи с этой ролью
-            <ChevronRight className="size-4" />
-          </Link>
-        ) : null}
+
         {canManageRoles ? (
-          <p className="mt-4 rounded-xl border border-amber-800/40 bg-amber-950/20 px-3 py-2.5 text-xs leading-relaxed text-amber-200/90">
-            Назначение роли главного администратора требует ввода фразы подтверждения и записи в
-            журнал аудита.
-          </p>
+          <div className={cn(ADMIN_SECTION_NOTICE, adminAlertSurface("warning"))}>
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 opacity-80" aria-hidden />
+            <p className="text-xs leading-relaxed">{a.t("admin.roles.superAdminNotice")}</p>
+          </div>
         ) : null}
-      </AdminSectionCard>
+      </AdminSectionPanel>
     </AdminPageShell>
   );
 }

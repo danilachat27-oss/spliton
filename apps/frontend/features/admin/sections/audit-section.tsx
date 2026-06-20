@@ -25,7 +25,6 @@ import {
   AdminLocalizedStatusBadge,
   AdminPagination,
   AdminRoleBadge,
-  AdminSectionInfoHint,
   type AdminColumn,
 } from "@/features/admin/ui";
 import { listAdminAuditPaginated } from "@/services/admin/adminAudit.service";
@@ -184,13 +183,14 @@ export function AuditSection() {
     <AdminSectionShell
       sectionId="audit"
       title={a.adminSectionLabel("audit")}
+      infoHint={
+        <>
+          Неизменяемый журнал действий операторов: финансовые операции, роли, риски и системные изменения. Каждая
+          запись содержит состояние до и после, IP и браузер.
+        </>
+      }
       actions={<AdminSectionRefreshButton onClick={reload} />}
     >
-      <AdminSectionInfoHint>
-        Неизменяемый журнал действий операторов: финансовые операции, роли, риски и системные
-        изменения. Каждая запись содержит состояние до и после, IP и браузер.
-      </AdminSectionInfoHint>
-
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label={a.t("admin.kpi.audit.totalRecords")} value={loading ? "…" : String(page.total)} />
         <StatTile

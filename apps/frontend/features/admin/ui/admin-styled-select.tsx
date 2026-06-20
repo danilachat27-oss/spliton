@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 
@@ -13,7 +13,15 @@ import type { ComponentProps } from "react";
 type AdminStyledSelectProps = Omit<ComponentProps<typeof StyledSelect>, "tone" | "borderless">;
 
 export function AdminStyledSelect(props: AdminStyledSelectProps) {
-  return <StyledSelect tone="dark" borderless {...props} />;
+  return (
+    <StyledSelect
+      tone="dark"
+      borderless
+      menuMinWidth={280}
+      menuClassName="rounded-xl border border-zinc-800/80 bg-zinc-950 shadow-xl shadow-black/40"
+      {...props}
+    />
+  );
 }
 
 export function AdminStyledSelectField({

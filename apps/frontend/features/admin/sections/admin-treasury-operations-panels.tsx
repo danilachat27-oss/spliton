@@ -4,14 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { adminBtnOutline } from "@/features/admin/lib/admin-ui";
+import { Input } from "@/components/ui/input";
+import { adminBtnOutline, adminFieldInput } from "@/features/admin/lib/admin-ui";
 import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { ADMIN_METRIC_NA_LABEL } from "@/features/admin/lib/admin-format";
-import { adminCard } from "@/features/admin/lib/admin-ui";
+import { ADMIN_METRIC_NA_LABEL, formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { ADMIN_SECTION_NOTICE, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { AdminDataTable, AdminFormField, type AdminColumn } from "@/features/admin/ui";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -134,66 +136,82 @@ export function AdminTreasuryAccountsPanel({ embedded = false }: { embedded?: bo
     return <p className="text-sm text-zinc-500">{admin.t("admin.treasury.accounts.loading")}</p>;
   }
 
+  const columns: AdminColumn<TreasuryAccount>[] = [
+    {
+      key: "type",
+      header: admin.t("admin.table.type"),
+      render: (account) => (
+        <span className="font-medium text-zinc-200">{admin.adminTreasuryTypeLabel(account.type)}</span>
+      ),
+    },
+    {
+      key: "expected",
+      header: admin.t("admin.table.expected"),
+      render: (account) => (
+        <span className="tabular-nums text-emerald-400">{formatUsdtAmount(account.balanceExpected)}</span>
+      ),
+    },
+    {
+      key: "observed",
+      header: admin.t("admin.table.observed"),
+      render: (account) => (
+        <Input
+          className={cn(adminFieldInput, "h-8 w-28 tabular-nums")}
+          value={observedDraft[account.id] ?? ""}
+          onChange={(e) =>
+            setObservedDraft((prev) => ({ ...prev, [account.id]: e.target.value }))
+          }
+        />
+      ),
+    },
+    {
+      key: "address",
+      header: admin.table.address,
+      render: (account) => (
+        <span className="max-w-[140px] truncate font-mono text-[10px] text-zinc-500">
+          {account.address ?? ADMIN_METRIC_NA_LABEL}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (account) => (
+        <Button
+          size="sm"
+          className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
+          disabled={savingId === account.id}
+          onClick={() => void saveObserved(account.id)}
+        >
+          Сохранить
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <div className={cn("space-y-3 text-sm", !embedded && adminCard("p-4"))}>
+    <div className={cn("space-y-4 text-sm", !embedded && ADMIN_SECTION_TILE)}>
       {!embedded ? <p className="font-semibold text-zinc-100">{admin.t("admin.treasury.accounts")}</p> : null}
       <p className="text-xs text-zinc-500">{admin.t("admin.treasury.accounts.hint")}</p>
       {message ? <p className="text-xs text-zinc-300">{message}</p> : null}
-      <label className="block text-xs">
-        <span className="text-zinc-400">{admin.t("admin.treasury.accounts.auditReason")}</span>
-        <input
-          className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900/60 px-2 py-1.5 text-zinc-100"
+      <AdminFormField label={admin.t("admin.treasury.accounts.auditReason")} htmlFor="treasury-audit-reason">
+        <Input
+          id="treasury-audit-reason"
+          className={adminFieldInput}
           value={reasonDraft}
           onChange={(e) => setReasonDraft(e.target.value)}
           placeholder={admin.t("admin.treasury.accounts.auditPlaceholder")}
         />
-      </label>
-      <div className="overflow-x-auto rounded-xl border border-zinc-800">
-        <table className="min-w-full text-left text-xs">
-          <thead className="bg-zinc-900/80 text-zinc-500">
-            <tr>
-              <th className="px-3 py-2">{admin.t("admin.table.type")}</th>
-              <th className="px-3 py-2">{admin.t("admin.table.expected")}</th>
-              <th className="px-3 py-2">{admin.t("admin.table.observed")}</th>
-              <th className="px-3 py-2">{admin.table.address}</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((account) => (
-              <tr key={account.id} className="border-t border-zinc-800">
-                <td className="px-3 py-2 font-medium text-zinc-200">
-                  {admin.adminTreasuryTypeLabel(account.type)}
-                </td>
-                <td className="px-3 py-2 tabular-nums text-zinc-200">{account.balanceExpected}</td>
-                <td className="px-3 py-2">
-                  <input
-                    className="w-28 rounded border border-zinc-800 bg-zinc-900/60 px-1.5 py-1 tabular-nums text-zinc-100"
-                    value={observedDraft[account.id] ?? ""}
-                    onChange={(e) =>
-                      setObservedDraft((prev) => ({ ...prev, [account.id]: e.target.value }))
-                    }
-                  />
-                </td>
-                <td className="max-w-[120px] truncate px-3 py-2 font-mono text-[10px] text-zinc-500">
-                  {account.address ?? ADMIN_METRIC_NA_LABEL}
-                </td>
-                <td className="px-3 py-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={adminBtnOutline}
-                    disabled={savingId === account.id}
-                    onClick={() => void saveObserved(account.id)}
-                  >
-                    Сохранить
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      </AdminFormField>
+      <AdminDataTable
+        flat
+        borderless
+        className="[&_table]:min-w-[720px]"
+        columns={columns}
+        rows={accounts}
+        rowKey={(account) => account.id}
+        emptyMessage={admin.t("admin.empty.noData")}
+      />
     </div>
   );
 }
@@ -269,18 +287,23 @@ export function AdminTreasuryReconciliationPanel({
   };
 
   return (
-    <div className="space-y-3 text-sm">
+    <div className="space-y-4 text-sm">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="ghost" className={adminBtnOutline} disabled={running} onClick={() => void run(false)}>
           {admin.t("admin.treasury.reconciliation.dryRun")}
         </Button>
-        <Button size="sm" disabled={running} onClick={() => void run(true)}>
+        <Button
+          size="sm"
+          className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
+          disabled={running}
+          onClick={() => void run(true)}
+        >
           {admin.t("admin.treasury.reconciliation.saveRun")}
         </Button>
       </div>
       {message ? <p className="text-xs text-zinc-400">{message}</p> : null}
       {dryRun ? (
-        <div className={adminCard("space-y-1 p-3 text-xs")}>
+        <div className={cn(ADMIN_SECTION_NOTICE, "space-y-1 text-xs")}>
           <p className="font-medium text-zinc-200">
             {admin.t("admin.treasury.reconciliation.lastRun").replace("{count}", String(dryRun.discrepancyCount))}
           </p>
@@ -298,14 +321,14 @@ export function AdminTreasuryReconciliationPanel({
       {discrepancies.length > 0 ? (
         <ul className="space-y-2">
           {discrepancies.map((d) => (
-            <li key={d.id} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs">
+            <li key={d.id} className={cn(ADMIN_SECTION_TILE, "text-xs")}>
               <p className="font-medium text-zinc-200">
                 {admin.adminTreasuryTypeLabel(d.treasuryAccount.type)} · Δ {d.deltaAmount} ·{" "}
                 {admin.complianceSeverityLabel(d.severity)}
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <input
-                  className="min-w-[160px] flex-1 rounded border border-zinc-800 bg-zinc-900/60 px-2 py-1 text-zinc-100"
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Input
+                  className={cn(adminFieldInput, "min-w-[160px] flex-1")}
                   placeholder={admin.t("admin.placeholder.treasuryResolve")}
                   value={resolveReason[d.id] ?? ""}
                   onChange={(e) =>
@@ -376,7 +399,7 @@ export function AdminTreasuryLimitsPanel({
   ];
 
   return (
-    <div className={cn("space-y-3 text-sm", !embedded && adminCard("p-4"))}>
+    <div className={cn("space-y-4 text-sm", !embedded && ADMIN_SECTION_TILE)}>
       {!embedded ? (
         <p className="font-semibold text-zinc-100">{admin.t("admin.treasury.operationalLimits")}</p>
       ) : null}
@@ -385,10 +408,10 @@ export function AdminTreasuryLimitsPanel({
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         {fields.map((f) => (
-          <label key={f.key} className="block text-xs">
-            <span className="text-zinc-400">{f.label}</span>
-            <input
-              className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900/60 px-2 py-1.5 tabular-nums text-zinc-100"
+          <AdminFormField key={f.key} label={f.label} htmlFor={`limit-${f.key}`}>
+            <Input
+              id={`limit-${f.key}`}
+              className={adminFieldInput}
               value={String(limits[f.key])}
               disabled={!isSuperAdmin}
               onChange={(e) =>
@@ -405,11 +428,16 @@ export function AdminTreasuryLimitsPanel({
                 )
               }
             />
-          </label>
+          </AdminFormField>
         ))}
       </div>
       {isSuperAdmin ? (
-        <Button size="sm" disabled={saving} onClick={() => void save()}>
+        <Button
+          size="sm"
+          className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
+          disabled={saving}
+          onClick={() => void save()}
+        >
           Сохранить лимиты
         </Button>
       ) : null}
@@ -431,21 +459,21 @@ export function AdminTreasurySafetyPanel({
   );
 
   return (
-    <div className="space-y-3 text-sm">
+    <div className="space-y-4 text-sm">
       <p className="text-xs text-zinc-500">
         {admin.t("admin.treasury.safety.hint")}{" "}
-        <Link href={ROUTES.adminOperatorTasks} className="underline text-zinc-300">
+        <Link href={ROUTES.adminOperatorTasks} className="text-[#B7F500] hover:text-[#a8e600]">
           {admin.t("admin.section.operatorTasks")}
         </Link>
       </p>
       {activeKillSwitches.length === 0 ? (
-        <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+        <div className={cn(ADMIN_SECTION_NOTICE, "text-xs text-emerald-300")}>
           {admin.t("admin.treasury.safety.noActive")}
-        </p>
+        </div>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-2">
           {activeKillSwitches.map(([key, label]) => (
-            <li key={key} className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+            <li key={key} className={cn(ADMIN_SECTION_NOTICE, "text-xs text-rose-200")}>
               {label}
             </li>
           ))}
@@ -456,7 +484,7 @@ export function AdminTreasurySafetyPanel({
       </Button>
       <p className="text-xs text-zinc-500">
         {admin.t("admin.treasury.safety.approvalsLink")}:{" "}
-        <Link href={ROUTES.adminWithdrawals} className="underline">
+        <Link href={ROUTES.adminWithdrawals} className="text-[#B7F500] hover:text-[#a8e600]">
           {admin.t("admin.treasury.safety.withdrawalsLink")}
         </Link>
       </p>

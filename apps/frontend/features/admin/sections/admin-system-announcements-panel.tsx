@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
-import { AdminSectionPanel } from "@/features/admin/components/admin-section-layout";
+import { AdminSectionPanel, AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { LOCALE_OPTIONS, type AppLocale } from "@/lib/i18n/types";
 
@@ -161,9 +161,7 @@ export function AdminSystemAnnouncementsPanel() {
             Баннеры для пользователей и админки: техработы, деградация сервисов, релизы. RU/EN/KA.
           </p>
         </div>
-        <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load}>
-          Обновить
-        </Button>
+        <AdminSectionRefreshButton onClick={load} />
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

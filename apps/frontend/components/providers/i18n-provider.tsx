@@ -88,9 +88,11 @@ export function I18nProvider({
         CLIENT_DICTIONARIES[DEFAULT_LOCALE][key] ??
         (fallback !== undefined ? fallback : undefined);
       if (value) return value;
+      if (fallback !== undefined) return fallback;
       if (process.env.NODE_ENV === "development") {
         console.warn(`[i18n] missing key: ${key} (${locale})`);
       }
+      if (key.startsWith("admin.")) return key;
       return CLIENT_DICTIONARIES[DEFAULT_LOCALE].UNKNOWN_ERROR ?? "—";
     },
     [adminMessages, locale],

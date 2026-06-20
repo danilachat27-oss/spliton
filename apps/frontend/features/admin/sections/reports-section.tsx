@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { FileSpreadsheet, Info, Plus, Server } from "@/lib/lucide";
+import { Info, Plus, Server } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
-import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
-import { AdminMetricTrendCard } from "@/features/admin/analytics/components/admin-metric-trend-card";
+import { adminBtnOutline, adminBtnPrimary } from "@/features/admin/lib/admin-ui";
 import { AdminReportCreateDrawer } from "@/features/admin/components/admin-report-create-drawer";
 import { AdminReportJobDrawer } from "@/features/admin/components/admin-report-job-drawer";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
@@ -28,27 +27,26 @@ import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminPaginatedList } from "@/features/admin/hooks/use-admin-paginated-list";
 import { useAdminPermissions } from "@/features/admin/hooks/use-admin-permissions";
 import { useAdminSectionTab } from "@/features/admin/hooks/use-admin-section-tab";
-import { formatAdminDate } from "@/features/admin/lib/admin-format";
+import { ADMIN_METRIC_NA_LABEL, formatAdminDate, isAdminMetricEmpty } from "@/features/admin/lib/admin-format";
 import {
   DB_STORAGE_WARNING,
   formatDurationMs,
   formatFileSize,
-  REPORTS_FIELD_TOOLTIPS,
   REPORT_STATUS_LABELS,
   reportStatusTone,
   SCHEDULED_REPORTS_PLACEHOLDER,
   WORKER_DISABLED_MESSAGE,
 } from "@/features/admin/lib/admin-reports-i18n";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_SECTION_KPI_GRID, ADMIN_SECTION_NOTICE, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import type { AdminReportsSummary } from "@/features/admin/mocks/admin-reports.mock";
 import {
   AdminDataTable,
+  AdminEmptyState,
   AdminErrorState,
   AdminLoadingState,
   AdminLocalizedStatusBadge,
   AdminPagination,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -80,6 +78,86 @@ const TABS = [
 ] as const;
 
 type ReportsTab = (typeof TABS)[number]["id"];
+
+function formatReportPeriod(from?: string | null, to?: string | null): string {
+  const f = from?.slice(0, 10) || ADMIN_METRIC_NA_LABEL;
+  const t = to?.slice(0, 10) || ADMIN_METRIC_NA_LABEL;
+  return `${f} · ${t}`;
+}
+
+function StatTile({
+  label,
+  value,
+  tone = "neutral",
+  onClick,
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "success" | "warning" | "danger" | "info";
+  onClick?: () => void;
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-400"
+      : tone === "warning"
+        ? "text-amber-400"
+        : tone === "danger"
+          ? "text-rose-400"
+          : tone === "info"
+            ? "text-sky-400"
+            : "text-zinc-100";
+  const empty = isAdminMetricEmpty(value);
+
+  const body = (
+    <div
+      className={cn(
+        ADMIN_SECTION_TILE,
+        "flex min-h-22 flex-col justify-between gap-2",
+        onClick && "cursor-pointer transition-colors hover:bg-zinc-900/70",
+      )}
+    >
+      <p className="text-[11px] font-semibold uppercase leading-snug tracking-wide text-zinc-500">{label}</p>
+      <p
+        className={cn(
+          "tabular-nums tracking-tight",
+          empty ? "text-base font-medium text-zinc-500" : cn("text-2xl font-semibold", valueClass),
+        )}
+      >
+        {empty ? ADMIN_METRIC_NA_LABEL : value}
+      </p>
+    </div>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" className="block w-full text-left" onClick={onClick}>
+        {body}
+      </button>
+    );
+  }
+
+  return body;
+}
+
+function ReportsNotice({
+  children,
+  tone = "warning",
+}: {
+  children: React.ReactNode;
+  tone?: "warning" | "info";
+}) {
+  return (
+    <div
+      className={cn(
+        ADMIN_SECTION_NOTICE,
+        "flex items-start gap-3 text-sm",
+        tone === "warning" ? "text-amber-300" : "text-sky-300",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function ReportsSection() {
   const a = useAdminI18n();
@@ -231,15 +309,13 @@ export function ReportsSection() {
     {
       key: "cat",
       header: "Категория",
-      render: (r) => r.category ?? "—",
+      render: (r) => r.category ?? ADMIN_METRIC_NA_LABEL,
     },
     {
       key: "period",
       header: "Период",
       render: (r) => (
-        <span className="text-xs tabular-nums">
-          {r.dateFrom?.slice(0, 10) ?? "—"} — {r.dateTo?.slice(0, 10) ?? "—"}
-        </span>
+        <span className="text-xs tabular-nums text-zinc-400">{formatReportPeriod(r.dateFrom, r.dateTo)}</span>
       ),
     },
     {
@@ -270,7 +346,7 @@ export function ReportsSection() {
     {
       key: "storage",
       header: a.t("admin.table.storage"),
-      render: (r) => <span className="text-xs">{r.storageMode ?? "—"}</span>,
+      render: (r) => <span className="text-xs">{r.storageMode ?? ADMIN_METRIC_NA_LABEL}</span>,
     },
     {
       key: "created",
@@ -281,7 +357,7 @@ export function ReportsSection() {
       key: "done",
       header: "Завершено",
       render: (r) => (
-        <span className="text-xs">{r.completedAt ? formatAdminDate(r.completedAt) : "—"}</span>
+        <span className="text-xs">{r.completedAt ? formatAdminDate(r.completedAt) : ADMIN_METRIC_NA_LABEL}</span>
       ),
     },
     {
@@ -292,12 +368,29 @@ export function ReportsSection() {
           {r.status === "completed" &&
           canMutate &&
           canGenerateReportType(user?.roles, r.type) ? (
-            <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={() => void handleDownload(r.id)}>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleDownload(r.id);
+              }}
+            >
               CSV
             </Button>
           ) : null}
           {r.status === "failed" && canMutate ? (
-            <Button type="button" size="sm" variant="ghost" onClick={() => void handleRetry(r.id)}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={adminBtnOutline}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleRetry(r.id);
+              }}
+            >
               Повторить
             </Button>
           ) : null}
@@ -341,17 +434,24 @@ export function ReportsSection() {
           <Button
             type="button"
             size="sm"
+            className={adminBtnPrimary}
             disabled={!allowed || !canMutate}
             onClick={() => openCreate(entry.value)}
           >
             Сформировать
           </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => openCreate(entry.value)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className={adminBtnOutline}
+            onClick={() => openCreate(entry.value)}
+          >
             Подробнее
           </Button>
         </div>
         {!allowed ? (
-          <p className="text-[11px] text-amber-700">Недоступно для вашей роли</p>
+          <p className="text-[11px] text-amber-300">Недоступно для вашей роли</p>
         ) : null}
       </article>
     );
@@ -359,76 +459,134 @@ export function ReportsSection() {
 
   const kpi = summary
     ? [
-        { key: "total", label: "Всего отчётов", value: summary.total, tip: REPORTS_FIELD_TOOLTIPS.total, tab: "jobs" as const },
-        { key: "done", label: "Завершено", value: summary.completed, tip: REPORTS_FIELD_TOOLTIPS.completed, tab: "jobs" as const },
-        { key: "queue", label: "В очереди", value: summary.queued, tip: REPORTS_FIELD_TOOLTIPS.queued, tab: "worker" as const },
-        { key: "proc", label: "В обработке", value: summary.processing, tip: REPORTS_FIELD_TOOLTIPS.processing, tab: "worker" as const },
-        { key: "fail", label: "Ошибки 24ч", value: summary.failed24h, tip: REPORTS_FIELD_TOOLTIPS.failed24h, tab: "jobs" as const },
+        {
+          key: "total",
+          label: "Всего отчётов",
+          value: String(summary.total),
+          tone: "neutral" as const,
+          tab: "jobs" as const,
+        },
+        {
+          key: "done",
+          label: "Завершено",
+          value: String(summary.completed),
+          tone: "success" as const,
+          tab: "jobs" as const,
+        },
+        {
+          key: "queue",
+          label: "В очереди",
+          value: String(summary.queued),
+          tone: summary.queued > 0 ? ("warning" as const) : ("neutral" as const),
+          tab: "worker" as const,
+        },
+        {
+          key: "proc",
+          label: "В обработке",
+          value: String(summary.processing),
+          tone: summary.processing > 0 ? ("info" as const) : ("neutral" as const),
+          tab: "worker" as const,
+        },
+        {
+          key: "fail",
+          label: "Ошибки 24ч",
+          value: String(summary.failed24h),
+          tone: summary.failed24h > 0 ? ("danger" as const) : ("neutral" as const),
+          tab: "jobs" as const,
+        },
         {
           key: "avg",
           label: "Среднее время",
           value: formatDurationMs(summary.avgGenerationMs),
-          tip: REPORTS_FIELD_TOOLTIPS.avgGeneration,
+          tone: "neutral" as const,
           tab: "overview" as const,
         },
         {
           key: "size",
           label: "Общий размер",
           value: formatFileSize(summary.totalFileSizeBytes),
-          tip: REPORTS_FIELD_TOOLTIPS.totalSize,
+          tone: "neutral" as const,
           tab: "overview" as const,
+        },
+        {
+          key: "worker",
+          label: "Worker",
+          value: workerStatus?.healthy ? a.t("admin.systemStatus.ok") : a.t("admin.systemStatus.degraded"),
+          tone: workerStatus?.healthy ? ("success" as const) : ("warning" as const),
+          tab: "worker" as const,
         },
       ]
     : [];
+
+  const accessColumns: AdminColumn<ReportCatalogEntry>[] = [
+    {
+      key: "label",
+      header: "Отчёт",
+      render: (r) => <span className="font-medium text-zinc-200">{r.label}</span>,
+    },
+    {
+      key: "sensitive",
+      header: "Sensitive",
+      render: (r) =>
+        r.sensitive ? (
+          <AdminStatusBadge label={a.t("admin.reports.sensitive")} tone="warning" />
+        ) : (
+          <span className="text-zinc-500">Нет</span>
+        ),
+    },
+    {
+      key: "roles",
+      header: "Роли",
+      render: (r) => <span className="text-xs text-zinc-400">{r.roles.join(", ")}</span>,
+    },
+  ];
+
+  const refreshing = summaryLoading || jobs.loading;
 
   return (
     <AdminSectionShell
       sectionId="reports"
       title={a.adminSectionLabel("reports")}
+      infoHint="Spliton Reports & Export Center: формирование CSV-отчётов, очередь задач, worker и контроль доступа по ролям."
       actions={
-        <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => openCreate()} disabled={!canMutate}>
+        <>
+          <Button
+            type="button"
+            size="sm"
+            className={adminBtnPrimary}
+            onClick={() => openCreate()}
+            disabled={!canMutate}
+          >
             <Plus className="mr-1 size-4" />
             Новый отчёт
           </Button>
-          <AdminSectionRefreshButton onClick={refreshAll} />
-        </div>
+          <AdminSectionRefreshButton onClick={refreshAll} loading={refreshing} />
+        </>
       }
     >
       {readOnly ? <AdminReadOnlyBanner area="Отчёты" /> : null}
 
-      <AdminSectionInfoHint>
-        Spliton Reports & Export Center — формирование CSV-отчётов, очередь задач, worker и
-        контроль доступа по ролям.
-      </AdminSectionInfoHint>
+      <AdminSectionPanel className="min-w-0 space-y-5">
+        {summary && !summaryLoading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {kpi.map((k) => (
+              <StatTile
+                key={k.key}
+                label={k.label}
+                value={k.value}
+                tone={k.tone}
+                onClick={() => setTab(k.tab)}
+              />
+            ))}
+          </div>
+        ) : summaryLoading ? (
+          <div className={ADMIN_SECTION_KPI_GRID}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-800/50")} />
+            ))}
+          </div>
+        ) : null}
 
-      {summaryLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className={cn(ADMIN_SECTION_TILE, "h-24 animate-pulse bg-zinc-900/40")} />
-          ))}
-        </div>
-      ) : summary ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {kpi.map((k) => (
-            <AdminMetricTrendCard
-              key={k.key}
-              label={k.label}
-              value={String(k.value)}
-              tooltip={k.tip}
-              onClick={() => setTab(k.tab)}
-            />
-          ))}
-          <AdminMetricTrendCard
-            label="Worker"
-            value={workerStatus?.healthy ? a.t("admin.systemStatus.ok") : a.t("admin.systemStatus.degraded")}
-            tooltip={REPORTS_FIELD_TOOLTIPS.worker}
-            onClick={() => setTab("worker")}
-          />
-        </div>
-      ) : null}
-
-      <AdminSectionPanel>
         <AdminSectionTabBar
           tabs={TABS.map((t) => ({
             id: t.id,
@@ -442,23 +600,29 @@ export function ReportsSection() {
         {tab === "overview" ? (
           <div className="space-y-4 pt-4">
             {summary?.lastCompleted ? (
-              <div className={cn(ADMIN_SECTION_TILE, "p-4 text-sm")}>
-                <p className="font-medium text-zinc-200">Последний успешный отчёт</p>
-                <p className="mt-1 text-zinc-400">
-                  {summary.lastCompleted.title ?? summary.lastCompleted.type} ·{" "}
+              <div className={cn(ADMIN_SECTION_TILE, "text-sm")}>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Последний успешный отчёт
+                </p>
+                <p className="mt-2 font-medium text-zinc-200">
+                  {summary.lastCompleted.title ?? summary.lastCompleted.type}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
                   {formatAdminDate(summary.lastCompleted.completedAt ?? summary.lastCompleted.createdAt)}
                 </p>
               </div>
             ) : (
-              <p className="py-6 text-center text-sm text-zinc-500">
-                Отчётов пока нет. Сформируйте первый отчёт из каталога.
-              </p>
+              <AdminEmptyState
+                title="Отчётов пока нет"
+                description="Сформируйте первый отчёт из каталога или нажмите «Новый отчёт»."
+                className="bg-zinc-900/40 shadow-none"
+              />
             )}
             {workerStatus && !workerStatus.workerEnabled ? (
-              <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <ReportsNotice>
                 <Info className="size-4 shrink-0" />
                 {WORKER_DISABLED_MESSAGE}
-              </div>
+              </ReportsNotice>
             ) : null}
           </div>
         ) : null}
@@ -495,6 +659,8 @@ export function ReportsSection() {
               <>
                 <AdminDataTable
                   flat
+                  borderless
+                  className="[&_table]:min-w-[1100px]"
                   columns={columns}
                   rows={jobs.data.items}
                   rowKey={(r) => r.id}
@@ -513,51 +679,52 @@ export function ReportsSection() {
         ) : null}
 
         {tab === "schedule" ? (
-          <div className={cn(ADMIN_SECTION_TILE, "mt-4 p-6 text-sm text-zinc-400")}>
+          <div className={cn(ADMIN_SECTION_TILE, "mt-4 text-sm text-zinc-400")}>
             <p>{SCHEDULED_REPORTS_PLACEHOLDER}</p>
           </div>
         ) : null}
 
         {tab === "worker" && workerStatus ? (
           <div className="mt-4 space-y-4">
-            <div className={cn(ADMIN_SECTION_TILE, "grid gap-4 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3")}>
-              <p>
-                Worker:{" "}
-                <AdminStatusBadge
-                  label={workerStatus.workerEnabled ? "enabled" : "disabled"}
-                  tone={workerStatus.workerEnabled ? "success" : "danger"}
-                />
-              </p>
-              <p>
-                Health:{" "}
-                <AdminStatusBadge
-                  label={workerStatus.healthy ? "healthy" : "degraded"}
-                  tone={workerStatus.healthy ? "success" : "warning"}
-                />
-              </p>
-              <p>
-                Queued: <strong className="tabular-nums">{workerStatus.queued}</strong>
-              </p>
-              <p>
-                Processing: <strong className="tabular-nums">{workerStatus.processing}</strong>
-              </p>
-              <p>
-                Stuck: <strong className="tabular-nums">{workerStatus.stuckProcessing}</strong>
-              </p>
-              <p>
-                Failed 24h: <strong className="tabular-nums">{workerStatus.failedLast24h}</strong>
-              </p>
-              <p>
-                Storage: <strong>{workerStatus.storageMode}</strong>
-              </p>
-              <p>
-                Bucket: <strong>{workerStatus.bucketName ?? "—"}</strong>
-              </p>
-              <p>
-                Avg time: <strong>{formatDurationMs(workerStatus.avgProcessingMs)}</strong>
+            <div className={ADMIN_SECTION_KPI_GRID}>
+              <StatTile
+                label="Worker"
+                value={workerStatus.workerEnabled ? "enabled" : "disabled"}
+                tone={workerStatus.workerEnabled ? "success" : "danger"}
+              />
+              <StatTile
+                label="Health"
+                value={workerStatus.healthy ? "healthy" : "degraded"}
+                tone={workerStatus.healthy ? "success" : "warning"}
+              />
+              <StatTile label="Queued" value={String(workerStatus.queued)} tone={workerStatus.queued > 0 ? "warning" : "neutral"} />
+              <StatTile
+                label="Processing"
+                value={String(workerStatus.processing)}
+                tone={workerStatus.processing > 0 ? "info" : "neutral"}
+              />
+              <StatTile
+                label="Stuck"
+                value={String(workerStatus.stuckProcessing)}
+                tone={workerStatus.stuckProcessing > 0 ? "danger" : "neutral"}
+              />
+              <StatTile
+                label="Failed 24h"
+                value={String(workerStatus.failedLast24h)}
+                tone={workerStatus.failedLast24h > 0 ? "danger" : "neutral"}
+              />
+              <StatTile label="Storage" value={workerStatus.storageMode} tone="neutral" />
+              <StatTile label="Bucket" value={workerStatus.bucketName ?? ADMIN_METRIC_NA_LABEL} tone="neutral" />
+            </div>
+            <div className={cn(ADMIN_SECTION_TILE, "grid gap-2 text-sm sm:grid-cols-2")}>
+              <p className="text-zinc-400">
+                Avg time:{" "}
+                <span className="font-medium tabular-nums text-zinc-200">
+                  {formatDurationMs(workerStatus.avgProcessingMs)}
+                </span>
               </p>
               {workerStatus.lastProcessedJobId ? (
-                <p className="sm:col-span-2 lg:col-span-3 font-mono text-xs">
+                <p className="font-mono text-xs text-zinc-500 sm:col-span-2">
                   Last job: {workerStatus.lastProcessedJobId}
                   {workerStatus.lastProcessedAt
                     ? ` · ${formatAdminDate(workerStatus.lastProcessedAt)}`
@@ -566,45 +733,33 @@ export function ReportsSection() {
               ) : null}
             </div>
             {!workerStatus.workerEnabled ? (
-              <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+              <ReportsNotice>
                 <Server className="size-4 shrink-0" />
                 {WORKER_DISABLED_MESSAGE}
-              </div>
+              </ReportsNotice>
             ) : null}
             {workerStatus.storageMode === "db" ? (
-              <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <ReportsNotice tone="info">
                 <Info className="size-4 shrink-0" />
                 {DB_STORAGE_WARNING}
-              </div>
+              </ReportsNotice>
             ) : null}
           </div>
         ) : null}
 
         {tab === "access" ? (
           <div className="mt-4 space-y-4">
-            <div className={cn(ADMIN_SECTION_TILE, "overflow-x-auto p-4")}>
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b text-xs text-zinc-500">
-                    <th className="py-2 pr-4">Отчёт</th>
-                    <th className="py-2 pr-4">Sensitive</th>
-                    <th className="py-2">Роли</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {REPORT_CATALOG.map((r) => (
-                    <tr key={r.value} className="border-b border-zinc-50">
-                      <td className="py-2 pr-4 font-medium">{r.label}</td>
-                      <td className="py-2 pr-4">{r.sensitive ? "Да" : "Нет"}</td>
-                      <td className="py-2 text-xs text-zinc-400">{r.roles.join(", ")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AdminDataTable
+              flat
+              borderless
+              className="[&_table]:min-w-[640px]"
+              columns={accessColumns}
+              rows={REPORT_CATALOG}
+              rowKey={(r) => r.value}
+            />
             <p className="text-xs text-zinc-500">
-              Retry и download — COMPLIANCE/ACCOUNTANT/Super Admin согласно RBAC. Retention policy —
-              TODO configurable.
+              Retry и download доступны COMPLIANCE, ACCOUNTANT и Super Admin согласно RBAC. Retention policy будет
+              настраиваемой в следующих версиях.
             </p>
           </div>
         ) : null}

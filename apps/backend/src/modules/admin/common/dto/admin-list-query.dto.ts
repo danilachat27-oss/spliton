@@ -72,4 +72,9 @@ export class AdminListQueryDto {
   @IsOptional()
   @IsString()
   managerId?: string;
+
+  /** Фильтр жанра релиза (tracks) */
+  @IsOptional()
+  @IsString()
+  genre?: string;
 }

@@ -5,10 +5,12 @@ import Link from "next/link";
 import { ArrowRight } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
 import { AdminPageShell } from "@/features/admin/components/admin-page-shell";
+import { AdminAnalyticsPageError, AdminAnalyticsPageLoading } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
 import { AdminAnalyticsExportButton } from "@/features/admin/analytics/components/admin-analytics-export-button";
 import { AdminAnalyticsInsightsPanel } from "@/features/admin/analytics/components/admin-analytics-insights-panel";
 import { AdminAnalyticsKpiGroup } from "@/features/admin/analytics/components/admin-analytics-kpi-group";
@@ -50,8 +52,6 @@ import {
 } from "@/services/admin/adminRiskAnalytics.service";
 import {
   AdminDataTable,
-  AdminErrorState,
-  AdminLoadingState,
   AdminPageHeader,
   AdminReadOnlyBanner,
   type AdminColumn,
@@ -195,19 +195,11 @@ export function AnalyticsRiskSection() {
   }, [load]);
 
   if (loading && !summary) {
-    return (
-      <AdminPageShell>
-        <AdminLoadingState label={a.t("admin.analytics.risk.loading")} centered />
-      </AdminPageShell>
-    );
+    return <AdminAnalyticsPageLoading label={a.t("admin.analytics.risk.loading")} />;
   }
 
   if (error) {
-    return (
-      <AdminPageShell>
-        <AdminErrorState onRetry={load} />
-      </AdminPageShell>
-    );
+    return <AdminAnalyticsPageError onRetry={load} />;
   }
 
   const s = pickRiskSummary(summary as Record<string, unknown> | null);
@@ -430,9 +422,7 @@ export function AnalyticsRiskSection() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex flex-wrap items-center justify-end gap-2">
               <AdminPeriodSelector value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomDatesChange={setCustomDates} />
-              <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
-                {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
-              </Button>
+              <AdminSectionRefreshButton onClick={load} loading={loading} />
               <AdminAnalyticsExportButton
                 reportType="risk_flags"
                 label={a.t("admin.analytics.common.generateReport")}
@@ -451,7 +441,7 @@ export function AnalyticsRiskSection() {
       <AdminAnalyticsLayout activeSection="analyticsRisk">
         <AdminRiskAnalyticsFilters value={filters} onChange={setFilters} className="mb-6" />
 
-        <div className={cn(ADMIN_SECTION_TILE, "border p-5", healthBannerClass)}>
+        <div className={cn(ADMIN_SECTION_TILE, healthBannerClass)}>
           <h2 className={cn("text-sm font-semibold", adminAnalyticsHealthBannerTitleClass(health.tone))}>
             {health.title}
           </h2>
@@ -468,24 +458,28 @@ export function AnalyticsRiskSection() {
                 value={String(s.openFlags)}
                 tooltip={RISK_KPI_TOOLTIPS.openFlags}
                 href={ROUTES.adminCompliance}
+                activeTone={s.openFlags > 0 ? "warning" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.highCritical")}
                 value={String(s.highCriticalOpen)}
                 tooltip={RISK_KPI_TOOLTIPS.highCritical}
                 href={ROUTES.adminCompliance}
+                activeTone={s.highCriticalOpen > 0 ? "danger" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.operations.kpi.unassigned")}
                 value={String(s.unassignedOpen)}
                 tooltip={RISK_KPI_TOOLTIPS.unassigned}
                 href={ROUTES.adminCompliance}
+                activeTone={s.unassignedOpen > 0 ? "warning" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.operations.kpi.overdueSla")}
                 value={String(s.overdueSla)}
                 tooltip={RISK_KPI_TOOLTIPS.overdue}
                 href={ROUTES.adminCompliance}
+                activeTone={s.overdueSla > 0 ? "danger" : "neutral"}
               />
             </AdminAnalyticsKpiGroup>
 

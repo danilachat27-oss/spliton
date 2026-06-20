@@ -14,8 +14,10 @@ import {
   AdminErrorState,
   AdminLoadingState,
   AdminPageHeader,
+  AdminInfoHint,
   type AdminBreadcrumbItem,
 } from "@/features/admin/ui";
+import { adminSectionToolbarActions } from "@/features/admin/lib/admin-ui";
 import { cn } from "@/lib/utils";
 
 export type AdminSectionTabItem = {
@@ -29,6 +31,8 @@ type AdminSectionShellProps = {
   sectionId?: string;
   title: string;
   breadcrumbs?: AdminBreadcrumbItem[];
+  /** Подсказка «i» в правом верхнем углу шапки */
+  infoHint?: React.ReactNode;
   actions?: React.ReactNode;
   banner?: React.ReactNode;
   children: React.ReactNode;
@@ -39,19 +43,35 @@ export function AdminSectionShell({
   sectionId,
   title,
   breadcrumbs,
+  infoHint,
   actions,
   banner,
   children,
   className,
 }: AdminSectionShellProps) {
   const a = useAdminI18n();
+  const headerActions =
+    infoHint || actions ? (
+      <div className={adminSectionToolbarActions}>
+        {infoHint ? (
+          <AdminInfoHint
+            size="md"
+            placement="bottom-end"
+            text={infoHint}
+            iconClassName="size-9 rounded-xl"
+            panelClassName="max-w-sm"
+          />
+        ) : null}
+        {actions}
+      </div>
+    ) : undefined;
   return (
     <AdminPageShell contained className={cn(ADMIN_SECTION_BG, className)}>
       <div className="space-y-6 pb-8 sm:space-y-8">
         <AdminPageHeader
           title={title}
           breadcrumbs={breadcrumbs ?? (sectionId ? a.adminSectionBreadcrumbs(sectionId) : undefined)}
-          actions={actions}
+          actions={headerActions}
         />
         {banner}
         {children}
@@ -107,19 +127,36 @@ export function AdminSectionTabBar({
   );
 }
 
-export function AdminSectionRefreshButton({ onClick }: { onClick: () => void }) {
+export function AdminSectionRefreshButton({
+  onClick,
+  variant = "default",
+  loading = false,
+  disabled,
+}: {
+  onClick: () => void;
+  variant?: "default" | "primary";
+  loading?: boolean;
+  disabled?: boolean;
+}) {
   const a = useAdminI18n();
+  const label = loading ? a.t("admin.analytics.common.refreshing") : a.portal.refresh;
   return (
     <Button
       type="button"
-      variant="outline"
-      size="icon-sm"
-      className="rounded-xl border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800 hover:text-zinc-200"
+      variant="ghost"
+      size="icon-lg"
+      className={cn(
+        "shrink-0 rounded-xl",
+        variant === "primary"
+          ? "bg-[#B7F500] text-zinc-950 hover:bg-[#a8e600]"
+          : "bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200",
+      )}
       onClick={onClick}
-      aria-label={a.portal.refresh}
-      title={a.portal.refresh}
+      disabled={disabled ?? loading}
+      aria-label={label}
+      title={label}
     >
-      <RefreshCw className="size-3.5" aria-hidden />
+      <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
     </Button>
   );
 }

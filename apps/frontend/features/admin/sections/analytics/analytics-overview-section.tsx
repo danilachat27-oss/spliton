@@ -13,6 +13,7 @@ import {
 } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { AdminAnalyticsExportButton } from "@/features/admin/analytics/components/admin-analytics-export-button";
@@ -27,8 +28,7 @@ import {
 import { AdminMetricTrendCard } from "@/features/admin/analytics/components/admin-metric-trend-card";
 import { AdminPeriodSelector } from "@/features/admin/analytics/components/admin-period-selector";
 import { ANALYTICS_OVERVIEW_TABS } from "@/features/admin/analytics/config/analytics-page-tabs";
-import { AdminAnalyticsPageShell } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
-import { AdminAnalyticsSection } from "@/features/admin/analytics/ui/admin-analytics-section";
+import { AdminAnalyticsPageShell, AdminAnalyticsPageError, AdminAnalyticsPageLoading } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
 import { AdminAnalyticsTabPanel } from "@/features/admin/analytics/ui/admin-analytics-tab-panel";
 import {
   countPointsToValues,
@@ -50,7 +50,7 @@ import {
   formatAdminMetricUsdt,
   formatUsdtAmount,
 } from "@/features/admin/lib/admin-format";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { ADMIN_SECTION_NOTICE, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   labelFromMap,
   RISK_SEVERITY_LABELS,
@@ -69,8 +69,6 @@ import {
   getSupportAnalyticsSummary,
 } from "@/services/admin/adminSupportAnalytics.service";
 import { getAdminReportsSummary } from "@/services/admin/adminReports.service";
-import { AdminErrorState } from "@/features/admin/ui/admin-error-state";
-import { AdminLoadingState } from "@/features/admin/ui/admin-loading-state";
 import { cn } from "@/lib/utils";
 
 import {
@@ -225,11 +223,11 @@ export function AnalyticsOverviewSection() {
   }, [load]);
 
   if (loading && !finance && !trends) {
-    return <AdminLoadingState label={a.t("admin.analytics.overview.loading")} centered />;
+    return <AdminAnalyticsPageLoading label={a.t("admin.analytics.overview.loading")} />;
   }
 
   if (error) {
-    return <AdminErrorState onRetry={load} />;
+    return <AdminAnalyticsPageError onRetry={load} />;
   }
 
   const financeRec = finance as Record<string, unknown> | null;
@@ -340,8 +338,8 @@ export function AnalyticsOverviewSection() {
 
   const executiveBannerClass = adminAnalyticsHealthBannerSurface(executive.tone);
 
-  const overviewKpis = (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+  const overviewKpiCards = (
+    <>
       <AdminMetricTrendCard
         label={a.t("admin.analytics.operations.kpi.deposits")}
         value={formatUsdtAmount(depositsUsdt)}
@@ -349,6 +347,7 @@ export function AnalyticsOverviewSection() {
         tooltip={KPI.deposits}
         href={ROUTES.adminDeposits}
         trend={depositPoints.map((p) => p.value)}
+        activeTone={parseAnalyticsMoney(depositsUsdt) > 0 ? "success" : "neutral"}
       />
       <AdminMetricTrendCard
         label={a.t("admin.analytics.operations.kpi.withdrawals")}
@@ -357,6 +356,7 @@ export function AnalyticsOverviewSection() {
         tooltip={KPI.withdrawals}
         href={ROUTES.adminWithdrawals}
         trend={withdrawalPoints.map((p) => p.value)}
+        activeTone={parseAnalyticsMoney(withdrawalsUsdt) > 0 ? "warning" : "neutral"}
       />
       <AdminMetricTrendCard
         label={a.t("admin.analytics.finance.netFlow")}
@@ -365,6 +365,13 @@ export function AnalyticsOverviewSection() {
         tooltip={KPI.netFlow}
         href={ROUTES.adminAnalyticsFinance}
         trend={netFlowPoints.map((p) => p.value)}
+        activeTone={
+          parseAnalyticsMoney(netFlowUsdt) > 0
+            ? "success"
+            : parseAnalyticsMoney(netFlowUsdt) < 0
+              ? "danger"
+              : "neutral"
+        }
       />
       <AdminMetricTrendCard
         label={a.t("admin.analytics.metric.newUsers")}
@@ -373,24 +380,27 @@ export function AnalyticsOverviewSection() {
         tooltip={KPI.newUsers}
         href={ROUTES.adminAnalyticsUsers}
         trend={newUserPoints.map((p) => p.value)}
+        activeTone={newUsers > 0 ? "success" : "neutral"}
       />
       <AdminMetricTrendCard
         label={a.t("admin.analytics.metric.marketTrades")}
         value={String(completedTrades)}
         tooltip={KPI.tradesCount}
         href={ROUTES.adminSecondaryMarket}
+        activeTone={completedTrades > 0 ? "info" : "neutral"}
       />
       <AdminMetricTrendCard
         label={a.t("admin.analytics.metric.openRiskSignals")}
         value={String(openFlags)}
         tooltip={KPI.openFlags}
         href={ROUTES.adminCompliance}
+        activeTone={openFlags > 0 ? "warning" : "neutral"}
       />
-    </div>
+    </>
   );
 
   const drillSection = (
-    <section className={cn(ADMIN_SECTION_TILE, "p-5")}>
+    <section className={cn(ADMIN_SECTION_TILE)}>
       <h2 className="text-sm font-semibold text-zinc-100">Детальная аналитика</h2>
       <p className="mt-1 text-xs text-zinc-500">
         Перейдите в доменные разделы для drill-down, сегментов и экспорта.
@@ -402,13 +412,13 @@ export function AnalyticsOverviewSection() {
             <Link
               key={link.href}
               href={link.href}
-              className="group flex items-center justify-between gap-2 rounded-2xl bg-zinc-50/80 px-4 py-3 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-900/80"
+              className="group flex items-center justify-between gap-2 rounded-2xl bg-zinc-900/50 px-4 py-3 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900/70 hover:text-[#B7F500]"
             >
               <span className="flex items-center gap-2">
-                <Icon className="size-4 text-zinc-500 group-hover:text-zinc-200" />
+                <Icon className="size-4 text-zinc-500 group-hover:text-[#B7F500]" />
                 {link.label}
               </span>
-              <ArrowRight className="size-4 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100" />
+              <ArrowRight className="size-4 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-[#B7F500]" />
             </Link>
           );
         })}
@@ -433,9 +443,7 @@ export function AnalyticsOverviewSection() {
               customTo={customTo}
               onCustomDatesChange={setCustomDates}
             />
-            <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
-              {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
-            </Button>
+            <AdminSectionRefreshButton onClick={load} loading={loading} />
             <AdminAnalyticsExportButton
               reportType="finance_cashflow"
               label={a.t("admin.analytics.common.export")}
@@ -456,11 +464,11 @@ export function AnalyticsOverviewSection() {
         <>
           <AdminAnalyticsTabPanel activeTab={tab} tabId="overview">
             {optionalWidgetError ? (
-              <p className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              <div className={cn(ADMIN_SECTION_NOTICE, "mb-4 text-sm text-amber-300")}>
                 {a.t("admin.ui.widgetUnavailable")}
-              </p>
+              </div>
             ) : null}
-            <div className={cn(ADMIN_SECTION_TILE, "border p-5 sm:p-6", executiveBannerClass)}>
+            <div className={cn(ADMIN_SECTION_TILE, executiveBannerClass)}>
               <p
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wider",
@@ -479,12 +487,14 @@ export function AnalyticsOverviewSection() {
               </p>
             </div>
             <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_320px]">
-              <AdminAnalyticsSection
+              <AdminAnalyticsKpiGroup
                 title={a.t("admin.analytics.common.keyMetrics")}
                 description={a.t("admin.analytics.common.keyMetricsDesc")}
+                gridClassName="xl:grid-cols-3"
+                embedded
               >
-                {overviewKpis}
-              </AdminAnalyticsSection>
+                {overviewKpiCards}
+              </AdminAnalyticsKpiGroup>
               <AdminAnalyticsInsightsPanel items={attentionItems} className="xl:sticky xl:top-4 xl:self-start" />
             </div>
             <div className="mt-6">
@@ -519,6 +529,7 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.deposits}
                 href={ROUTES.adminDeposits}
                 trend={depositPoints.map((p) => p.value)}
+                activeTone={parseAnalyticsMoney(depositsUsdt) > 0 ? "success" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.operations.kpi.withdrawals")}
@@ -527,6 +538,7 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.withdrawals}
                 href={ROUTES.adminWithdrawals}
                 trend={withdrawalPoints.map((p) => p.value)}
+                activeTone={parseAnalyticsMoney(withdrawalsUsdt) > 0 ? "warning" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.finance.netFlow")}
@@ -535,6 +547,13 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.netFlow}
                 href={ROUTES.adminAnalyticsFinance}
                 trend={netFlowPoints.map((p) => p.value)}
+                activeTone={
+                  parseAnalyticsMoney(netFlowUsdt) > 0
+                    ? "success"
+                    : parseAnalyticsMoney(netFlowUsdt) < 0
+                      ? "danger"
+                      : "neutral"
+                }
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.tracks.platformRevenue")}
@@ -542,12 +561,14 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.platformRevenue}
                 href={ROUTES.adminPlatformRevenue}
                 trend={revenuePoints.map((p) => p.value)}
+                activeTone={parseAnalyticsMoney(platformRevenueUsdt) > 0 ? "success" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.finance.pendingQueue")}
                 value={formatUsdtAmount(pendingWithdrawalsUsdt)}
                 tooltip={KPI.pendingWithdrawals}
                 href={`${ROUTES.adminWithdrawals}?status=requested`}
+                activeTone={parseAnalyticsMoney(pendingWithdrawalsUsdt) > 0 ? "warning" : "neutral"}
               />
             </AdminAnalyticsKpiGroup>
             <div className="mt-6 grid gap-4 xl:grid-cols-2">
@@ -602,24 +623,28 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.newUsers}
                 href={ROUTES.adminAnalyticsUsers}
                 trend={newUserPoints.map((p) => p.value)}
+                activeTone={newUsers > 0 ? "success" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.activeUsers")}
                 value={String(activeUsers)}
                 tooltip={KPI.activeUsers}
                 href={ROUTES.adminUsers}
+                activeTone={activeUsers > 0 ? "info" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.firstDeposit")}
                 value={String(firstDeposit)}
                 tooltip={KPI.firstDeposit}
                 href={ROUTES.adminAnalyticsUsers}
+                activeTone={firstDeposit > 0 ? "success" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.firstPurchase")}
                 value={String(firstPurchase)}
                 tooltip={KPI.firstPurchase}
                 href={ROUTES.adminAnalyticsUsers}
+                activeTone={firstPurchase > 0 ? "success" : "neutral"}
               />
             </AdminAnalyticsKpiGroup>
             <div className="mt-6">
@@ -655,6 +680,7 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.marketVolume}
                 href={ROUTES.adminSecondaryMarket}
                 trend={marketVolumePoints.map((p) => p.value)}
+                activeTone={parseAnalyticsMoney(volumeUsdt) > 0 ? "success" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.market.trades")}
@@ -662,12 +688,14 @@ export function AnalyticsOverviewSection() {
                 tooltip={KPI.tradesCount}
                 href={ROUTES.adminSecondaryMarket}
                 trend={marketTradePoints.map((p) => p.value)}
+                activeTone={completedTrades > 0 ? "info" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.tracks.kpi.activeListings")}
                 value={String(activeListings)}
                 tooltip={KPI.activeListings}
                 href={ROUTES.adminSecondaryMarket}
+                activeTone={activeListings > 0 ? "info" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.avgPricePerUnit")}
@@ -702,24 +730,28 @@ export function AnalyticsOverviewSection() {
                 value={String(openFlags)}
                 tooltip={KPI.openFlags}
                 href={ROUTES.adminCompliance}
+                activeTone={openFlags > 0 ? "warning" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.highCritical")}
                 value={String(criticalRisk || highRisk)}
                 tooltip={KPI.criticalRisk}
                 href={`${ROUTES.adminCompliance}?severity=high`}
+                activeTone={(criticalRisk || highRisk) > 0 ? "danger" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.operations.kpi.openTickets")}
                 value={String(openTickets)}
                 tooltip={KPI.openTickets}
                 href={ROUTES.adminSupport}
+                activeTone={openTickets > 0 ? "warning" : "neutral"}
               />
               <AdminMetricTrendCard
                 label={a.t("admin.analytics.metric.overdueSla")}
                 value={String(overdueSla)}
                 tooltip={KPI.overdueSla}
                 href={ROUTES.adminSupport}
+                activeTone={overdueSla > 0 ? "danger" : "neutral"}
               />
             </AdminAnalyticsKpiGroup>
             <div className="mt-6">

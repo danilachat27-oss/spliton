@@ -434,7 +434,7 @@ export function AdminWithdrawalDrawer({
                   ))}
                 </ul>
               ) : (
-                <EmptyTab message="Записей audit пока нет." />
+                <EmptyTab message="Записей аудита пока нет." />
               )
             ) : null}
           </div>

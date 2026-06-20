@@ -1,4 +1,4 @@
-﻿import NextImage from "next/image";
+import NextImage from "next/image";
 import Link from "next/link";
 
 import { ROUTES } from "@/constants/routes";
@@ -17,7 +17,7 @@ export function SplitonLogo({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center overflow-visible",
+        "inline-flex items-center overflow-hidden rounded-xl",
         className,
       )}
       aria-label="Spliton"
@@ -27,7 +27,7 @@ export function SplitonLogo({
         alt="Spliton"
         width={28}
         height={28}
-        className="size-7 object-contain"
+        className="size-7 rounded-xl object-contain"
         priority
       />
     </Link>

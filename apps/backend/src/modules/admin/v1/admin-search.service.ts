@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { throwAdminError } from '../common/admin-http.util';
 
@@ -10,7 +9,12 @@ export type AdminSearchGroupType =
   | 'tracks'
   | 'rounds'
   | 'trades'
-  | 'audit';
+  | 'audit'
+  | 'artists'
+  | 'disputes'
+  | 'support'
+  | 'wallets'
+  | 'news';
 
 type SearchItem = {
   id: string;
@@ -27,25 +31,49 @@ type SearchGroup = {
   items: SearchItem[];
 };
 
+type AdminSearchRow = {
+  group_type: string;
+  entity_id: string;
+  title: string;
+  subtitle: string | null;
+  status: string | null;
+  meta: string | null;
+  rank: number | bigint | string;
+};
+
 const GROUP_TITLES: Record<AdminSearchGroupType, string> = {
   users: 'Пользователи',
   withdrawals: 'Выводы',
   deposits: 'Пополнения',
-  tracks: 'Треки',
+  tracks: 'Треки / релизы',
   rounds: 'Раунды',
   trades: 'Сделки вторичного рынка',
   audit: 'Audit log',
+  artists: 'Артисты',
+  disputes: 'Споры',
+  support: 'Поддержка',
+  wallets: 'Кошельки',
+  news: 'Новости',
 };
+
+const GROUP_ORDER: AdminSearchGroupType[] = [
+  'users',
+  'tracks',
+  'rounds',
+  'artists',
+  'withdrawals',
+  'deposits',
+  'wallets',
+  'trades',
+  'disputes',
+  'support',
+  'news',
+  'audit',
+];
 
 @Injectable()
 export class AdminSearchService {
   constructor(private readonly prisma: PrismaService) {}
-
-  private isUuid(value: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value,
-    );
-  }
 
   async search(roles: string[], q: string): Promise<{ groups: SearchGroup[] }> {
     const query = q?.trim();
@@ -55,218 +83,108 @@ export class AdminSearchService {
 
     const allowed = this.allowedGroups(roles);
     const limit = 5;
+
+    let rows: AdminSearchRow[] = [];
+    try {
+      rows = await this.prisma.$queryRawUnsafe<AdminSearchRow[]>(
+        `SELECT * FROM admin_global_search($1::text, $2::text[], $3::integer)`,
+        query.slice(0, 64),
+        Array.from(allowed),
+        limit,
+      );
+    } catch {
+      return { groups: [] };
+    }
+
+    const grouped = new Map<AdminSearchGroupType, SearchItem[]>();
+
+    for (const row of rows) {
+      const type = row.group_type as AdminSearchGroupType;
+      if (!allowed.has(type)) continue;
+
+      const item: SearchItem = {
+        id: row.entity_id,
+        title: row.title,
+        subtitle: this.maskField(row.subtitle ?? undefined, roles, type),
+        href: this.buildHref(type, row),
+        status: row.status ?? undefined,
+        meta: row.meta ?? undefined,
+      };
+
+      const bucket = grouped.get(type) ?? [];
+      bucket.push(item);
+      grouped.set(type, bucket);
+    }
+
     const groups: SearchGroup[] = [];
-
-    if (allowed.has('users')) {
-      const userOr: Prisma.UserWhereInput[] = [
-        { email: { contains: query, mode: 'insensitive' } },
-        { profile: { displayName: { contains: query, mode: 'insensitive' } } },
-      ];
-      if (this.isUuid(query)) userOr.push({ id: query });
-      const users = await this.prisma.user.findMany({
-        where: { OR: userOr },
-        take: limit,
-        include: { profile: true },
+    for (const type of GROUP_ORDER) {
+      const items = grouped.get(type);
+      if (!items?.length) continue;
+      groups.push({
+        type,
+        title: GROUP_TITLES[type],
+        items,
       });
-      if (users.length) {
-        groups.push({
-          type: 'users',
-          title: GROUP_TITLES.users,
-          items: users.map((u) => ({
-            id: u.id,
-            title: u.profile?.displayName?.trim() || u.email,
-            subtitle: u.email,
-            href: `/admin/users?search=${encodeURIComponent(u.email)}`,
-            status: u.status.toLowerCase(),
-          })),
-        });
-      }
-    }
-
-    if (allowed.has('withdrawals')) {
-      const withdrawalOr: Prisma.WithdrawalWhereInput[] = [
-        { blockchainTxid: { contains: query, mode: 'insensitive' } },
-        { toAddress: { contains: query, mode: 'insensitive' } },
-        {
-          walletTx: {
-            wallet: {
-              user: { email: { contains: query, mode: 'insensitive' } },
-            },
-          },
-        },
-      ];
-      if (this.isUuid(query)) withdrawalOr.unshift({ id: query });
-      const withdrawals = await this.prisma.withdrawal.findMany({
-        where: { OR: withdrawalOr },
-        take: limit,
-        include: {
-          walletTx: { include: { wallet: { include: { user: true } } } },
-        },
-      });
-      if (withdrawals.length) {
-        groups.push({
-          type: 'withdrawals',
-          title: GROUP_TITLES.withdrawals,
-          items: withdrawals.map((w) => ({
-            id: w.id,
-            title: this.maskFinancial(w.walletTx.wallet.user.email, roles),
-            subtitle: this.maskFinancial(
-              `${Number(w.walletTx.amount.toString()).toFixed(2)} USDT`,
-              roles,
-            ),
-            href: `/admin/withdrawals?search=${encodeURIComponent(w.id)}`,
-            status: w.status.toLowerCase(),
-            meta: w.blockchainTxid?.slice(0, 12) ?? undefined,
-          })),
-        });
-      }
-    }
-
-    if (allowed.has('deposits')) {
-      const depositOr: Prisma.DepositWhereInput[] = [
-        { blockchainTxid: { contains: query, mode: 'insensitive' } },
-        { toAddress: { contains: query, mode: 'insensitive' } },
-        {
-          walletTx: {
-            wallet: {
-              user: { email: { contains: query, mode: 'insensitive' } },
-            },
-          },
-        },
-      ];
-      if (this.isUuid(query)) depositOr.unshift({ id: query });
-      const deposits = await this.prisma.deposit.findMany({
-        where: { OR: depositOr },
-        take: limit,
-        include: {
-          walletTx: { include: { wallet: { include: { user: true } } } },
-        },
-      });
-      if (deposits.length) {
-        groups.push({
-          type: 'deposits',
-          title: GROUP_TITLES.deposits,
-          items: deposits.map((d) => ({
-            id: d.id,
-            title: this.maskFinancial(d.walletTx.wallet.user.email, roles),
-            subtitle: this.maskFinancial(
-              `${Number(d.walletTx.amount.toString()).toFixed(2)} USDT`,
-              roles,
-            ),
-            href: `/admin/deposits?search=${encodeURIComponent(d.id)}`,
-            status: d.status.toLowerCase(),
-            meta: d.blockchainTxid?.slice(0, 12) ?? undefined,
-          })),
-        });
-      }
-    }
-
-    if (allowed.has('tracks')) {
-      const trackOr: Prisma.ReleaseWhereInput[] = [
-        { title: { contains: query, mode: 'insensitive' } },
-        { slug: { contains: query, mode: 'insensitive' } },
-        { symbol: { contains: query, mode: 'insensitive' } },
-      ];
-      if (this.isUuid(query)) trackOr.push({ id: query });
-      const tracks = await this.prisma.release.findMany({
-        where: { deletedAt: null, OR: trackOr },
-        take: limit,
-        include: { releaseArtists: { include: { artist: true }, take: 1 } },
-      });
-      if (tracks.length) {
-        groups.push({
-          type: 'tracks',
-          title: GROUP_TITLES.tracks,
-          items: tracks.map((t) => ({
-            id: t.id,
-            title: t.title,
-            subtitle: t.releaseArtists[0]?.artist.name,
-            href: `/admin/tracks?search=${encodeURIComponent(t.title)}`,
-            status: t.status.toLowerCase(),
-          })),
-        });
-      }
-    }
-
-    if (allowed.has('rounds')) {
-      const roundOr: Prisma.PrimaryRaiseRoundWhereInput[] = [
-        { release: { title: { contains: query, mode: 'insensitive' } } },
-      ];
-      if (this.isUuid(query)) roundOr.unshift({ id: query });
-      const rounds = await this.prisma.primaryRaiseRound.findMany({
-        where: { OR: roundOr },
-        take: limit,
-        include: { release: true },
-      });
-      if (rounds.length) {
-        groups.push({
-          type: 'rounds',
-          title: GROUP_TITLES.rounds,
-          items: rounds.map((r) => ({
-            id: r.id,
-            title: r.release.title,
-            subtitle: `Раунд ${r.id.slice(0, 8)}`,
-            href: `/admin/rounds?search=${encodeURIComponent(r.id)}`,
-            status: r.status.toLowerCase(),
-          })),
-        });
-      }
-    }
-
-    if (allowed.has('trades')) {
-      const tradeOr: Prisma.TradeWhereInput[] = [
-        { release: { title: { contains: query, mode: 'insensitive' } } },
-        { buyer: { email: { contains: query, mode: 'insensitive' } } },
-        { seller: { email: { contains: query, mode: 'insensitive' } } },
-      ];
-      if (this.isUuid(query)) tradeOr.unshift({ id: query });
-      const trades = await this.prisma.trade.findMany({
-        where: { OR: tradeOr },
-        take: limit,
-        include: { release: true, buyer: true, seller: true },
-      });
-      if (trades.length) {
-        groups.push({
-          type: 'trades',
-          title: GROUP_TITLES.trades,
-          items: trades.map((t) => ({
-            id: t.id,
-            title: t.release.title,
-            subtitle: `${t.buyer.email} ↔ ${t.seller.email}`,
-            href: `/admin/secondary-market?search=${encodeURIComponent(t.id)}`,
-            status: t.settlementStatus.toLowerCase(),
-          })),
-        });
-      }
-    }
-
-    if (allowed.has('audit')) {
-      const auditOr: Prisma.AuditLogWhereInput[] = [
-        { action: { contains: query, mode: 'insensitive' } },
-        { entityType: { contains: query, mode: 'insensitive' } },
-      ];
-      if (this.isUuid(query)) auditOr.push({ entityId: query });
-      const logs = await this.prisma.auditLog.findMany({
-        where: { OR: auditOr },
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      });
-      if (logs.length) {
-        groups.push({
-          type: 'audit',
-          title: GROUP_TITLES.audit,
-          items: logs.map((l) => ({
-            id: l.id,
-            title: l.action,
-            subtitle: l.entityType,
-            href: `/admin/audit-log?search=${encodeURIComponent(l.action)}`,
-            meta: l.entityId?.slice(0, 8) ?? undefined,
-          })),
-        });
-      }
     }
 
     return { groups };
+  }
+
+  private buildHref(type: AdminSearchGroupType, row: AdminSearchRow): string {
+    const id = row.entity_id;
+    switch (type) {
+      case 'users':
+        return `/admin/users?search=${encodeURIComponent(row.subtitle ?? row.title)}`;
+      case 'withdrawals':
+        return `/admin/withdrawals?search=${encodeURIComponent(id)}`;
+      case 'deposits':
+        return `/admin/deposits?search=${encodeURIComponent(id)}`;
+      case 'tracks':
+        return `/admin/tracks?search=${encodeURIComponent(row.title)}`;
+      case 'rounds':
+        return `/admin/rounds?search=${encodeURIComponent(id)}`;
+      case 'trades':
+        return `/admin/secondary-market?search=${encodeURIComponent(id)}`;
+      case 'audit':
+        return `/admin/audit-log?search=${encodeURIComponent(row.title)}`;
+      case 'artists':
+        return `/admin/artists?search=${encodeURIComponent(row.title)}`;
+      case 'disputes':
+        return `/admin/disputes?dispute=${encodeURIComponent(id)}`;
+      case 'support':
+        return `/admin/support?search=${encodeURIComponent(row.title)}`;
+      case 'wallets':
+        return `/admin/wallets?search=${encodeURIComponent(id)}`;
+      case 'news':
+        return `/admin/news?search=${encodeURIComponent(row.title)}`;
+      default:
+        return '/admin';
+    }
+  }
+
+  private maskField(
+    value: string | undefined,
+    roles: string[],
+    type: AdminSearchGroupType,
+  ): string | undefined {
+    if (!value) return undefined;
+
+    const financialTypes: AdminSearchGroupType[] = [
+      'withdrawals',
+      'deposits',
+      'wallets',
+      'trades',
+    ];
+
+    if (roles.includes('CONTENT_MANAGER') && financialTypes.includes(type)) {
+      return '—';
+    }
+
+    if (roles.includes('SUPPORT') && value.includes('USDT')) {
+      return 'Сумма скрыта';
+    }
+
+    return value;
   }
 
   private allowedGroups(roles: string[]): Set<AdminSearchGroupType> {
@@ -292,11 +210,14 @@ export class AdminSearchService {
     ) {
       allowed.add('withdrawals');
       allowed.add('deposits');
+      allowed.add('wallets');
     }
 
     if (roles.includes('CONTENT_MANAGER')) {
       allowed.add('tracks');
       allowed.add('rounds');
+      allowed.add('artists');
+      allowed.add('news');
     }
 
     if (
@@ -315,6 +236,11 @@ export class AdminSearchService {
       allowed.add('audit');
     }
 
+    if (roles.some((r) => ['SUPPORT_MANAGER', 'COMPLIANCE', 'SUPPORT'].includes(r))) {
+      allowed.add('disputes');
+      allowed.add('support');
+    }
+
     if (allowed.size === 0) {
       throwAdminError(
         'ADMIN_FORBIDDEN',
@@ -324,15 +250,5 @@ export class AdminSearchService {
     }
 
     return allowed;
-  }
-
-  private maskFinancial(value: string, roles: string[]): string {
-    if (roles.includes('CONTENT_MANAGER')) {
-      return '—';
-    }
-    if (roles.includes('SUPPORT') && value.includes('USDT')) {
-      return 'Сумма скрыта';
-    }
-    return value;
   }
 }

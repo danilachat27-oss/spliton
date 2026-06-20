@@ -55,7 +55,7 @@ export function AdminLabelCombobox({
       setLoading(true);
       setError(null);
       try {
-        const rows = await listAdminLabels(search, client, { activeOnly: true });
+        const rows = await listAdminLabels({ search, status: "active" }, client);
         setItems(
           rows.map((r) => ({
             id: r.id,

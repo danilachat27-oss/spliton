@@ -11,21 +11,21 @@ export const PLATFORM_REVENUE_SOURCE_COLORS: Record<string, string> = {
 };
 
 export const PLATFORM_REVENUE_FIELD_TOOLTIPS = {
-  totalRevenue: "Сумма всех комиссий Spliton за всё время (таблица fees).",
+  totalRevenue: "Сумма всех комиссий Spliton за всё время.",
   periodRevenue: "Доход платформы за выбранный период фильтра.",
   delta: "Изменение суммы комиссий относительно предыдущего периода той же длины.",
-  primaryFee: "Комиссия с первичных покупок юнитов (primary_purchase_fee).",
+  primaryFee: "Комиссия с первичных покупок юнитов.",
   withdrawalFee: "Фиксированная или процентная комиссия с выводов USDT.",
   secondaryFee: "Комиссия со сделок вторичного рынка.",
-  avgFee: "Средняя сумма одной fee-транзакции за период.",
+  avgFee: "Средняя сумма одной комиссионной транзакции за период.",
 } as const;
 
 const SOURCE_LABELS: Record<string, string> = {
   primary_purchase_fee: "Комиссия первичной покупки",
   withdrawal_fee: "Комиссия вывода",
   secondary_market_fee: "Комиссия вторичного рынка",
-  premium: "Premium",
-  private_deals: "Private deals",
+  premium: "Премиум",
+  private_deals: "Частные сделки",
   manual: "Ручные начисления",
   other: "Другое",
   platform_fee: "Комиссия платформы",
@@ -33,7 +33,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 const SUBJECT_LABELS: Record<string, string> = {
-  primary_order: "Первичный order",
+  primary_order: "Первичный заказ",
   withdrawal: "Вывод",
   secondary_trade: "Сделка вторичного рынка",
   manual: "Ручное",

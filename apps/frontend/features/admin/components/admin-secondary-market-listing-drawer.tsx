@@ -312,7 +312,7 @@ export function AdminSecondaryMarketListingDrawer({
                   ))}
                 </ul>
               ) : (
-                <EmptyTab message="Записей wallet ledger нет" />
+                <EmptyTab message="Записей в журнале проводок нет" />
               )
             ) : null}
             {tab === "risk" ? (

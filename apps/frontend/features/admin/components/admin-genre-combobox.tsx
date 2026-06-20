@@ -59,7 +59,7 @@ export function AdminGenreCombobox({
       setLoading(true);
       setError(null);
       try {
-        const rows = await listAdminReleaseGenres(search, client, { activeOnly: true });
+        const rows = await listAdminReleaseGenres({ search, status: "active" }, client);
         setItems(
           rows.map((g) => ({
             id: g.id,
@@ -98,7 +98,6 @@ export function AdminGenreCombobox({
       dictionaryHref={dictionaryHref}
       referenceHintKind="genre"
       showDictionaryLink={showDictionaryLink}
-      helperText="Выберите жанр из справочника или создайте новый — название нормализуется автоматически."
       createLabel="Добавить жанр"
       loadingLabel="Загрузка жанров…"
       items={items}

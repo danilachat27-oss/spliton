@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Circle, HelpCircle, Archive, Check, Globe, Pause, Plus, Save, Send, X } from "@/lib/lucide";
+import { Archive, Check, GitCompare, Globe, HelpCircle, Pause, Plus, Save, Send, X } from "@/lib/lucide";
 import { SplitonLoader } from "@/components/ui/spliton-loader";
 
 import {
@@ -27,7 +27,9 @@ import {
   trackStatusLabel,
   validateTrackForm,
   type AdminTrackFormBody,
+  type TrackPublishChecklistItem,
 } from "@/features/admin/lib/admin-track-form";
+import { formatUnits } from "@/features/admin/lib/admin-format";
 import {
   adminFieldInput,
 } from "@/features/admin/lib/admin-ui";
@@ -39,6 +41,7 @@ import {
   AdminFormFooter,
   AdminLoadingState,
   AdminMediaUploadButton,
+  AdminStatusBadge,
   AdminTextarea,
   AdminCheckboxRow,
 } from "@/features/admin/ui";
@@ -48,7 +51,135 @@ import { cn } from "@/lib/utils";
 
 export type { AdminTrackFormBody };
 
-const STATUSES = ["draft", "review", "published", "active", "paused", "completed", "archived"] as const;
+const TRACK_CRM_PIPELINE = ["draft", "review", "published", "active"] as const;
+
+const TRACK_STATUS_TONE: Record<
+  string,
+  "neutral" | "success" | "warning" | "pending" | "danger"
+> = {
+  draft: "neutral",
+  review: "pending",
+  published: "pending",
+  active: "success",
+  paused: "warning",
+  completed: "success",
+  archived: "neutral",
+};
+
+type TrackCrmStepState = "done" | "current" | "upcoming" | "paused";
+
+function resolveTrackCrmProgress(status: string): {
+  activeStep: number;
+  overlay?: "paused" | "completed" | "archived";
+} {
+  const idx = TRACK_CRM_PIPELINE.indexOf(status as (typeof TRACK_CRM_PIPELINE)[number]);
+  if (idx >= 0) return { activeStep: idx };
+  if (status === "paused") return { activeStep: 3, overlay: "paused" };
+  if (status === "completed") return { activeStep: 3, overlay: "completed" };
+  if (status === "archived") return { activeStep: -1, overlay: "archived" };
+  return { activeStep: 0 };
+}
+
+function trackCrmStepState(index: number, progress: ReturnType<typeof resolveTrackCrmProgress>): TrackCrmStepState {
+  if (progress.overlay === "completed") return "done";
+  if (progress.overlay === "archived") return "upcoming";
+  if (progress.overlay === "paused") {
+    if (index < 3) return "done";
+    if (index === 3) return "paused";
+    return "upcoming";
+  }
+  if (index < progress.activeStep) return "done";
+  if (index === progress.activeStep) return "current";
+  return "upcoming";
+}
+
+function trackCrmConnectorDone(index: number, progress: ReturnType<typeof resolveTrackCrmProgress>): boolean {
+  if (progress.overlay === "completed") return index < TRACK_CRM_PIPELINE.length - 1;
+  if (progress.overlay === "paused") return index < 3;
+  if (progress.overlay === "archived") return false;
+  return index < progress.activeStep;
+}
+
+function TrackCrmStepDot({ state }: { state: TrackCrmStepState }) {
+  if (state === "done") {
+    return (
+      <span className="flex size-4 items-center justify-center rounded-full bg-[#B7F500] shadow-[0_0_8px_rgba(183,245,0,0.35)]">
+        <Check className="size-2.5 text-zinc-950" strokeWidth={3} aria-hidden />
+      </span>
+    );
+  }
+  if (state === "current") {
+    return (
+      <span className="flex size-4 items-center justify-center rounded-full bg-zinc-950 ring-2 ring-[#B7F500] shadow-[0_0_10px_rgba(183,245,0,0.25)]">
+        <span className="size-1.5 rounded-full bg-[#B7F500]" aria-hidden />
+      </span>
+    );
+  }
+  if (state === "paused") {
+    return (
+      <span className="flex size-4 items-center justify-center rounded-full bg-amber-500/20 ring-2 ring-amber-400/70">
+        <Pause className="size-2 text-amber-300" strokeWidth={2.5} aria-hidden />
+      </span>
+    );
+  }
+  return <span className="size-3 rounded-full bg-zinc-800 ring-1 ring-zinc-700/80" aria-hidden />;
+}
+
+function TrackCrmStatusProcess({
+  status,
+  currentLabel,
+  formatStatus,
+}: {
+  status: string;
+  currentLabel: string;
+  formatStatus: (status: string) => string;
+}) {
+  const progress = resolveTrackCrmProgress(status);
+  const badgeTone = TRACK_STATUS_TONE[status] ?? "neutral";
+
+  return (
+    <div className="rounded-2xl bg-zinc-900/45 px-4 py-4">
+      <ol className="flex items-start">
+        {TRACK_CRM_PIPELINE.map((step, index) => {
+          const state = trackCrmStepState(index, progress);
+          const label = formatStatus(step);
+          return (
+            <li key={step} className="flex min-w-0 flex-1 items-start last:flex-none">
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                <TrackCrmStepDot state={state} />
+                <span
+                  className={cn(
+                    "max-w-[4.5rem] text-center text-[10px] font-semibold uppercase leading-tight tracking-wide",
+                    state === "done" && "text-[#B7F500]",
+                    state === "current" && "text-zinc-100",
+                    state === "paused" && "text-amber-300",
+                    state === "upcoming" && "text-zinc-600",
+                  )}
+                >
+                  {label}
+                </span>
+              </div>
+              {index < TRACK_CRM_PIPELINE.length - 1 ? (
+                <div
+                  className={cn(
+                    "mt-2 h-0.5 min-w-3 flex-1 rounded-full transition-colors",
+                    trackCrmConnectorDone(index, progress) ? "bg-[#B7F500]/55" : "bg-zinc-800",
+                  )}
+                  aria-hidden
+                />
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-zinc-900/70 px-3 py-2.5">
+        <span className="text-xs text-zinc-500">{currentLabel}</span>
+        <AdminStatusBadge label={formatStatus(status)} tone={badgeTone} />
+      </div>
+    </div>
+  );
+}
 
 type AdminTrackDrawerProps = {
   open: boolean;
@@ -128,44 +259,436 @@ function resolveTrackFieldErrors(errors: string[]): Partial<Record<string, strin
   return out;
 }
 
+function parseSharePct(value: string): number {
+  const n = Number(String(value).trim().replace(",", "."));
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
 function ShareBar({ form }: { form: AdminTrackFormBody }) {
   const a = useAdminI18n();
   const total = shareSplitTotal(form);
-  const ok = Math.abs(total - 100) < 0.01;
+  const ok = Math.abs(total - 100) < 0.01 && total > 0;
+  const barMax = ok ? 100 : Math.max(100, total);
+  const remainder = !ok && total < 100 ? 100 - total : 0;
+  const overflow = !ok && total > 100 ? total - 100 : 0;
+
   const items = [
-    { label: a.t("admin.drawer.track.shareHolders"), value: form.holderSharePct, color: "bg-sky-500" },
-    { label: a.t("admin.drawer.track.shareArtist"), value: form.artistSharePct, color: "bg-violet-500" },
-    { label: a.t("admin.drawer.track.sharePlatform"), value: form.platformSharePct, color: "bg-zinc-500" },
-  ];
+    {
+      label: a.t("admin.drawer.track.shareHolders"),
+      value: parseSharePct(form.holderSharePct),
+      display: form.holderSharePct,
+      color: "bg-sky-400",
+      glow: "shadow-[0_0_10px_rgba(56,189,248,0.35)]",
+      text: "text-sky-300",
+    },
+    {
+      label: a.t("admin.drawer.track.shareArtist"),
+      value: parseSharePct(form.artistSharePct),
+      display: form.artistSharePct,
+      color: "bg-violet-400",
+      glow: "shadow-[0_0_10px_rgba(167,139,250,0.35)]",
+      text: "text-violet-300",
+    },
+    {
+      label: a.t("admin.drawer.track.sharePlatform"),
+      value: parseSharePct(form.platformSharePct),
+      display: form.platformSharePct,
+      color: "bg-zinc-500",
+      glow: "",
+      text: "text-zinc-400",
+    },
+  ] as const;
+
+  const segmentWidth = (value: number) => (barMax > 0 ? (value / barMax) * 100 : 0);
+
   return (
-    <div className="rounded-xl bg-zinc-900/60 p-3">
-      <div className="flex h-2 overflow-hidden rounded-full bg-zinc-800/70">
+    <div className="rounded-2xl bg-zinc-900/45 px-4 py-4">
+      <div
+        className="flex h-3 overflow-hidden rounded-full bg-black/50 ring-1 ring-inset ring-zinc-700/90"
+        role="progressbar"
+        aria-valuenow={Math.min(100, Math.round(total * 10) / 10)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={a.t("admin.drawer.track.section.revenue")}
+      >
         {items.map((item) => {
-          const pct = Math.max(0, Number(item.value) || 0);
+          const width = segmentWidth(item.value);
+          if (width <= 0) return null;
           return (
             <div
               key={item.label}
-              className={cn("h-full transition-all", item.color)}
-              style={{ width: `${Math.min(100, pct)}%` }}
-              title={`${item.label}: ${pct}%`}
+              className={cn(
+                "h-full min-w-[3px] transition-[width] duration-300 ease-out",
+                item.color,
+                item.glow,
+              )}
+              style={{ width: `${width}%` }}
+              title={`${item.label}: ${item.value}%`}
             />
           );
         })}
+        {remainder > 0 ? (
+          <div
+            className="h-full min-w-[3px] bg-zinc-800/90 transition-[width] duration-300 ease-out"
+            style={{ width: `${segmentWidth(remainder)}%` }}
+            title={`${remainder.toFixed(1)}%`}
+          />
+        ) : null}
+        {overflow > 0 ? (
+          <div
+            className="h-full min-w-[3px] bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)] transition-[width] duration-300 ease-out"
+            style={{ width: `${segmentWidth(overflow)}%` }}
+            title={`+${overflow.toFixed(1)}%`}
+          />
+        ) : null}
       </div>
+
+      <div className="mt-3 flex min-w-0">
+        {items.map((item) => {
+          const width = segmentWidth(item.value);
+          const flexBasis = width > 0 ? `${width}%` : undefined;
+          return (
+            <div
+              key={item.label}
+              className="min-w-0 shrink-0 px-0.5 first:pl-0 last:pr-0"
+              style={flexBasis ? { flexBasis, maxWidth: flexBasis } : { flex: "1 1 0" }}
+            >
+              <p className="truncate text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+                {item.label}
+              </p>
+              <p className={cn("mt-0.5 text-xs font-semibold tabular-nums", item.text)}>
+                {item.display.trim() || "0"}%
+              </p>
+            </div>
+          );
+        })}
+        {remainder > 0 ? (
+          <div
+            className="min-w-0 shrink-0 px-0.5"
+            style={{ flexBasis: `${segmentWidth(remainder)}%`, maxWidth: `${segmentWidth(remainder)}%` }}
+          >
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+              {a.t("admin.drawer.track.shareRemainder")}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold tabular-nums text-amber-400">
+              {remainder.toFixed(1)}%
+            </p>
+          </div>
+        ) : null}
+        {overflow > 0 ? (
+          <div
+            className="min-w-0 shrink-0 px-0.5"
+            style={{ flexBasis: `${segmentWidth(overflow)}%`, maxWidth: `${segmentWidth(overflow)}%` }}
+          >
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+              {a.t("admin.drawer.track.shareOverflow")}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold tabular-nums text-red-400">
+              +{overflow.toFixed(1)}%
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-zinc-900/70 px-3 py-2.5">
+        <span className="text-xs text-zinc-500">{a.t("admin.drawer.track.shareTotalLabel")}</span>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 text-xs font-semibold tabular-nums",
+            ok ? "text-emerald-400" : total > 100 ? "text-red-400" : "text-amber-400",
+          )}
+        >
+          {total.toFixed(1)}%
+          {ok ? <Check className="size-3.5 shrink-0" aria-hidden /> : null}
+          {!ok ? (
+            <span className="font-normal text-zinc-500">{a.t("admin.drawer.track.shareMustBe100")}</span>
+          ) : null}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function parseUnitCount(value: string): number {
+  const n = Number(String(value).replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? Math.max(0, n) : 0;
+}
+
+function unitsSoldProgressTone(pct: number): {
+  fill: string;
+  glow: string;
+  label: string;
+} {
+  if (pct >= 75) {
+    return {
+      fill: "bg-[#B7F500]",
+      glow: "shadow-[0_0_10px_rgba(183,245,0,0.45)]",
+      label: "text-[#B7F500]",
+    };
+  }
+  if (pct >= 40) {
+    return {
+      fill: "bg-amber-400",
+      glow: "shadow-[0_0_10px_rgba(251,191,36,0.35)]",
+      label: "text-amber-400",
+    };
+  }
+  if (pct > 0) {
+    return {
+      fill: "bg-red-500",
+      glow: "shadow-[0_0_10px_rgba(239,68,68,0.35)]",
+      label: "text-red-400",
+    };
+  }
+  return {
+    fill: "bg-zinc-600",
+    glow: "",
+    label: "text-zinc-500",
+  };
+}
+
+function UnitsPoolBar({ form, soldUnits }: { form: AdminTrackFormBody; soldUnits: string }) {
+  const a = useAdminI18n();
+  const total = parseUnitCount(form.totalUnits);
+  const available = parseUnitCount(form.availableUnits);
+  const sold = parseUnitCount(soldUnits);
+  const allocated = sold + available;
+  const poolOk = total > 0 && allocated <= total;
+  const barMax = total > 0 ? (poolOk ? total : Math.max(total, allocated)) : 1;
+  const remainder = total > 0 && allocated < total ? total - allocated : 0;
+  const overflow = total > 0 && allocated > total ? allocated - total : 0;
+  const soldPct = total > 0 ? Math.min(100, Math.round((sold / total) * 100)) : 0;
+  const tone = unitsSoldProgressTone(soldPct);
+
+  const segmentWidth = (value: number) => (barMax > 0 ? (value / barMax) * 100 : 0);
+
+  const items = [
+    {
+      label: a.t("admin.drawer.track.field.sold"),
+      value: sold,
+      color: tone.fill,
+      glow: tone.glow,
+      text: tone.label,
+    },
+    {
+      label: a.t("admin.drawer.track.unitsProgress.available"),
+      value: available,
+      color: "bg-sky-500/45",
+      glow: "",
+      text: "text-sky-300",
+    },
+    {
+      label: a.t("admin.drawer.track.field.totalUnits"),
+      value: total,
+      color: "bg-zinc-700",
+      glow: "",
+      text: "text-zinc-300",
+    },
+  ] as const;
+
+  return (
+    <div className="rounded-2xl bg-zinc-900/45 px-4 py-4">
+      <div
+        className="flex h-3 overflow-hidden rounded-full bg-black/50 ring-1 ring-inset ring-zinc-700/90"
+        role="progressbar"
+        aria-valuenow={soldPct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={a.t("admin.drawer.track.unitsProgress.label")}
+      >
+        {sold > 0 ? (
+          <div
+            className={cn(
+              "h-full min-w-[3px] transition-[width] duration-300 ease-out",
+              tone.fill,
+              tone.glow,
+            )}
+            style={{ width: `${segmentWidth(sold)}%` }}
+            title={`${a.t("admin.drawer.track.field.sold")}: ${formatUnits(sold)}`}
+          />
+        ) : null}
+        {available > 0 ? (
+          <div
+            className="h-full min-w-[3px] bg-sky-500/45 transition-[width] duration-300 ease-out"
+            style={{ width: `${segmentWidth(available)}%` }}
+            title={`${a.t("admin.drawer.track.unitsProgress.available")}: ${formatUnits(available)}`}
+          />
+        ) : null}
+        {remainder > 0 ? (
+          <div
+            className="h-full min-w-[3px] bg-zinc-800/90 transition-[width] duration-300 ease-out"
+            style={{ width: `${segmentWidth(remainder)}%` }}
+            title={`${formatUnits(remainder)}`}
+          />
+        ) : null}
+        {overflow > 0 ? (
+          <div
+            className="h-full min-w-[3px] bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)] transition-[width] duration-300 ease-out"
+            style={{ width: `${segmentWidth(overflow)}%` }}
+            title={`+${formatUnits(overflow)}`}
+          />
+        ) : null}
+      </div>
+
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        {items.map((item) => (
-          <div key={item.label} className="text-xs">
-            <span className="text-zinc-500">{item.label}</span>
-            <span className="ml-1 font-semibold tabular-nums text-zinc-200">{item.value || 0}%</span>
+        {items.map((item, index) => (
+          <div key={item.label} className="min-w-0">
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+              {item.label}
+            </p>
+            <p className={cn("mt-0.5 text-xs font-semibold tabular-nums", item.text)}>
+              {formatUnits(item.value)}
+              {total > 0 && index < 2 ? (
+                <span className="ml-1 font-normal text-zinc-600">
+                  · {Math.round((item.value / total) * 100)}%
+                </span>
+              ) : null}
+            </p>
           </div>
         ))}
       </div>
-      <p className={cn("mt-2 text-xs font-medium", ok ? "text-emerald-700" : "text-amber-700")}>
-        {a
-          .t("admin.drawer.track.shareTotal")
-          .replace("{total}", total.toFixed(1))
-          .replace("{ok}", ok ? "✓" : a.t("admin.drawer.track.shareMustBe100"))}
-      </p>
+
+      {remainder > 0 || overflow > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
+          {remainder > 0 ? (
+            <span className="text-zinc-500">
+              {a.t("admin.drawer.track.unitsProgress.remainder")}: {formatUnits(remainder)}
+            </span>
+          ) : null}
+          {overflow > 0 ? (
+            <span className="text-red-400">
+              {a.t("admin.drawer.track.unitsProgress.overflow")}: +{formatUnits(overflow)}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-zinc-900/70 px-3 py-2.5">
+        <span className="text-xs text-zinc-500">{a.t("admin.drawer.track.unitsProgress.label")}</span>
+        <span
+          className={cn(
+            "text-xs font-semibold tabular-nums",
+            total <= 0 ? "text-zinc-500" : poolOk ? tone.label : "text-red-400",
+          )}
+        >
+          {total > 0
+            ? a
+                .t("admin.drawer.track.unitsProgress.summary")
+                .replace("{sold}", formatUnits(sold))
+                .replace("{total}", formatUnits(total))
+                .replace("{pct}", String(soldPct))
+            : a.t("admin.drawer.track.unitsProgress.empty")}
+          {!poolOk && total > 0 ? (
+            <span className="ml-1.5 font-normal text-zinc-500">
+              {a.t("admin.drawer.track.unitsProgress.overLimit")}
+            </span>
+          ) : null}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TrackPublishChecklistNode({ done, current }: { done: boolean; current: boolean }) {
+  if (done) {
+    return (
+      <span className="flex size-4 items-center justify-center rounded-full bg-[#B7F500] shadow-[0_0_8px_rgba(183,245,0,0.35)]">
+        <Check className="size-2.5 text-zinc-950" strokeWidth={3} aria-hidden />
+      </span>
+    );
+  }
+  if (current) {
+    return (
+      <span className="flex size-4 items-center justify-center rounded-full bg-zinc-950 ring-2 ring-[#B7F500] shadow-[0_0_10px_rgba(183,245,0,0.25)]">
+        <span className="size-1.5 rounded-full bg-[#B7F500]" aria-hidden />
+      </span>
+    );
+  }
+  return (
+    <span className="flex size-4 items-center justify-center rounded-full bg-zinc-900 ring-1 ring-zinc-700/80">
+      <span className="size-1.5 rounded-full bg-zinc-600" aria-hidden />
+    </span>
+  );
+}
+
+function TrackPublishChecklistBranch({
+  items,
+  onNavigate,
+}: {
+  items: TrackPublishChecklistItem[];
+  onNavigate: (fieldId?: string) => void;
+}) {
+  const a = useAdminI18n();
+  const doneCount = items.filter((item) => item.ok).length;
+  const allDone = doneCount === items.length;
+  const firstPendingIndex = items.findIndex((item) => !item.ok);
+
+  return (
+    <div className="rounded-2xl bg-zinc-900/45 px-4 py-4">
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+        <div className="flex min-w-0 items-center gap-2 font-mono text-[11px]">
+          <GitCompare className="size-3.5 shrink-0 text-[#B7F500]" aria-hidden />
+          <span className="truncate text-zinc-500">{a.t("admin.drawer.track.publishChecklist.branch")}</span>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 rounded-md px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums",
+            allDone ? "bg-[#B7F500]/15 text-[#B7F500]" : "bg-zinc-800/90 text-zinc-400",
+          )}
+        >
+          {doneCount}/{items.length}
+        </span>
+      </div>
+
+      <ol>
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          const isCurrent = !item.ok && index === firstPendingIndex;
+
+          return (
+            <li key={item.id} className="relative flex gap-3">
+              <div className="flex w-4 shrink-0 flex-col items-center">
+                <TrackPublishChecklistNode done={item.ok} current={isCurrent} />
+                {!isLast ? (
+                  <span
+                    className={cn(
+                      "my-0.5 w-px flex-1 min-h-[18px]",
+                      item.ok ? "bg-[#B7F500]/50" : "bg-zinc-700/70",
+                    )}
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                className={cn(
+                  "group -mt-0.5 mb-3 flex min-w-0 flex-1 flex-col items-start gap-1 text-left transition",
+                  item.fieldId ? "cursor-pointer" : "cursor-default",
+                  isCurrent && "rounded-lg bg-zinc-800/30 px-2 py-1.5",
+                )}
+                onClick={() => onNavigate(item.fieldId)}
+                disabled={!item.fieldId}
+              >
+                <span
+                  className={cn(
+                    "block w-full text-sm leading-snug",
+                    item.ok ? "text-zinc-200" : isCurrent ? "font-medium text-zinc-100" : "text-zinc-500",
+                    item.fieldId && "group-hover:text-zinc-100",
+                  )}
+                >
+                  {item.label}
+                </span>
+                {isCurrent ? (
+                  <span className="block font-mono text-[10px] uppercase tracking-[0.12em] text-[#B7F500]">
+                    {a.t("admin.drawer.track.publishChecklist.head")}
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }
@@ -493,7 +1016,6 @@ export function AdminTrackDrawer({
                     label={a.t("admin.drawer.track.field.genre")}
                     htmlFor="tr-genre"
                     info={a.t("admin.drawer.track.info.genre")}
-                    hint={a.t("admin.drawer.track.field.genreHint")}
                     error={fe("genre")}
                   >
                     <AdminGenreCombobox
@@ -517,19 +1039,17 @@ export function AdminTrackDrawer({
                       disabled={readOnly}
                     />
                   </AdminFormField>
-                  <AdminStyledSelectField
+                  <AdminFormField
                     label={a.t("admin.drawer.track.field.crmStatus")}
-                    id="tr-status"
                     info={a.t("admin.drawer.track.info.crmStatus")}
-                    value={form.status}
-                    disabled
-                    hint={a.t("admin.drawer.track.field.statusHint")}
-                    options={STATUSES.map((s) => ({
-                      value: s,
-                      label: a.formatTrackStatus(s),
-                    }))}
-                    onChange={() => undefined}
-                  />
+                    className="sm:col-span-2"
+                  >
+                    <TrackCrmStatusProcess
+                      status={form.status}
+                      currentLabel={a.t("admin.drawer.track.statusProcess.current")}
+                      formatStatus={a.formatTrackStatus}
+                    />
+                  </AdminFormField>
                 </div>
               </Section>
 
@@ -906,15 +1426,13 @@ export function AdminTrackDrawer({
                       aria-invalid={Boolean(fe("availableUnits"))}
                     />
                   </AdminFormField>
-                  {track ? (
-                    <AdminFormField label={a.t("admin.drawer.track.field.sold")}>
-                      <Input
-                        className={cn("tabular-nums opacity-70", adminFieldInput)}
-                        value={track.soldUnits}
-                        readOnly
-                      />
-                    </AdminFormField>
-                  ) : null}
+                  <AdminFormField label={a.t("admin.drawer.track.field.sold")}>
+                    <Input
+                      className={cn("tabular-nums opacity-70", adminFieldInput)}
+                      value={track?.soldUnits ?? "0"}
+                      readOnly
+                    />
+                  </AdminFormField>
                   <AdminFormField
                     label={a.t("admin.drawer.track.field.unitPrice")}
                     htmlFor="tr-price"
@@ -960,6 +1478,7 @@ export function AdminTrackDrawer({
                     />
                   </AdminFormField>
                 </div>
+                <UnitsPoolBar form={form} soldUnits={track?.soldUnits ?? "0"} />
               </Section>
 
               <Section title={a.t("admin.drawer.track.section.financial")}>
@@ -1052,25 +1571,7 @@ export function AdminTrackDrawer({
               </Section>
 
               <Section title={a.t("admin.drawer.track.section.publish")}>
-                <ul className="space-y-2">
-                  {checklist.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded-lg px-1 py-0.5 text-left text-sm transition hover:bg-zinc-800/50"
-                        onClick={() => scrollToField(item.fieldId)}
-                        disabled={!item.fieldId}
-                      >
-                        {item.ok ? (
-                          <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
-                        ) : (
-                          <Circle className="size-4 shrink-0 text-zinc-300" />
-                        )}
-                        <span className={item.ok ? "text-zinc-300" : "text-zinc-500"}>{item.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <TrackPublishChecklistBranch items={checklist} onNavigate={scrollToField} />
                 <FieldHint text={TRACK_FIELD_TOOLTIPS.primaryRound} />
               </Section>
             </div>

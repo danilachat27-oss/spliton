@@ -66,7 +66,7 @@ export function LoginForm({ className }: { className?: string }) {
     try {
       const result = await login({ email, password, remember });
       setEmailValue(email);
-      if (result === "authenticated") {
+      if (result !== "2fa_required") {
         router.push(nextPath);
       }
     } catch (error) {

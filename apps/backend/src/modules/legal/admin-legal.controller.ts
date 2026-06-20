@@ -53,6 +53,12 @@ export class AdminLegalController {
     return this.policies.listAdmin({ status, type });
   }
 
+  @Get('policies/:id')
+  @Roles(...LEGAL_VIEW)
+  getOne(@Param('id') id: string) {
+    return this.policies.getAdminById(id);
+  }
+
   @Post('policies')
   @Roles(...LEGAL_MUTATE)
   async create(
@@ -85,7 +91,7 @@ export class AdminLegalController {
   async update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: { title?: string; content?: string; version?: string },
+    @Body() body: { title?: string; content?: string; version?: string; requiresUserConsent?: boolean },
     @Req() req: Request,
   ) {
     const row = await this.policies.updateDraft(id, body, user.id);

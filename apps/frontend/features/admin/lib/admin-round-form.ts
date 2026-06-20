@@ -23,6 +23,7 @@ export type RoundChecklistItem = {
   label: string;
   ok: boolean;
   required: boolean;
+  fieldId?: string;
 };
 
 export const ROUND_FIELD_TOOLTIPS = {
@@ -171,6 +172,7 @@ export function buildRoundPublishChecklist(
       label: "Релиз выбран",
       ok: Boolean(form.trackId.trim()),
       required: true,
+      fieldId: "rnd-track",
     },
     {
       id: "cover",
@@ -183,30 +185,35 @@ export function buildRoundPublishChecklist(
       label: "Название релиза заполнено",
       ok: Boolean(release?.title?.trim()),
       required: true,
+      fieldId: "rnd-track",
     },
     {
       id: "artist",
       label: "Артист указан",
       ok: Boolean(release?.artist?.trim() && release.artist !== "—"),
       required: true,
+      fieldId: "rnd-track",
     },
     {
       id: "unit_price",
       label: "Цена за юнит указана",
       ok: parseNum(form.unitPriceUsdt) > 0,
       required: true,
+      fieldId: "rnd-price",
     },
     {
       id: "total_units",
       label: "Всего юнитов в раунде указано",
       ok: parseNum(form.totalUnits) > 0,
       required: true,
+      fieldId: "rnd-total",
     },
     {
       id: "available",
       label: "Доступные юниты корректны",
       ok: roundAvailableUnits(form) >= 0 && parseNum(form.soldUnits) <= parseNum(form.totalUnits),
       required: true,
+      fieldId: "rnd-sold",
     },
     {
       id: "finance",
@@ -215,12 +222,14 @@ export function buildRoundPublishChecklist(
         parseNum(form.raiseTargetUsdt) > 0 &&
         (parseNum(form.hardCapUsdt) <= 0 || parseNum(form.hardCapUsdt) >= parseNum(form.raiseTargetUsdt)),
       required: true,
+      fieldId: "rnd-raise",
     },
     {
       id: "dates",
       label: "Даты раунда корректны",
       ok: Boolean(form.startDate) && (!form.endDate || form.endDate >= form.startDate),
       required: true,
+      fieldId: "rnd-start",
     },
     {
       id: "shares",

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Layers, Music2 } from "@/lib/lucide";
 
 import {
   AdminDrawerGhostButton,
@@ -10,13 +11,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { adminFieldInput } from "@/features/admin/lib/admin-ui";
+import { adminFieldInput, adminMetricLabel } from "@/features/admin/lib/admin-ui";
 import {
-  REVENUE_FIELD_TOOLTIPS,
-  REVENUE_SOURCE_OPTIONS,
+  revenueFieldTooltip,
   revenueSourceLabel,
+  revenueSourceOptions,
 } from "@/features/admin/lib/admin-revenue-i18n";
-import { formatUsdtAmount } from "@/features/admin/lib/admin-format";
+import { formatUsdtAmount, isAdminMetricEmpty } from "@/features/admin/lib/admin-format";
 import type { AdminRevenuePreview } from "@/features/admin/mocks/admin-revenue.mock";
 import {
   AdminConfirmDialog,
@@ -38,6 +39,7 @@ import {
   saveAdminDistributionPreview,
   submitAdminRevenueForReview,
 } from "@/services/admin/adminRevenue.service";
+import { cn } from "@/lib/utils";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -48,6 +50,84 @@ type AdminRevenueCreateDrawerProps = {
   onCreated?: () => void;
 };
 
+const drawerPanel = "rounded-2xl bg-zinc-900/40 p-4";
+const STEP_LABELS = ["Релиз", "Доход", "Preview", "Запуск"] as const;
+
+function StepProgress({ step }: { step: Step }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        {[1, 2, 3, 4].map((s) => (
+          <div
+            key={s}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-colors",
+              s <= step ? "bg-[#B7F500]" : "bg-zinc-800",
+            )}
+          />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {STEP_LABELS.map((label, index) => {
+          const stepNum = (index + 1) as Step;
+          return (
+            <span
+              key={label}
+              className={cn(
+                "rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors",
+                stepNum === step
+                  ? "bg-zinc-800 text-[#B7F500]"
+                  : stepNum < step
+                    ? "text-emerald-400"
+                    : "text-zinc-500",
+              )}
+            >
+              {stepNum}. {label}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type MetricTone = "neutral" | "success" | "info" | "muted";
+
+function PreviewMetric({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: MetricTone;
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-400"
+      : tone === "info"
+        ? "text-sky-400"
+        : tone === "muted"
+          ? "text-zinc-500"
+          : "text-zinc-100";
+  const compact = value.replace(/\s/g, "").length > 14;
+  return (
+    <div className="flex min-h-[5.5rem] min-w-0 flex-col rounded-2xl bg-zinc-900/40 p-3.5">
+      <p className={adminMetricLabel}>{label}</p>
+      <p
+        className={cn(
+          "mt-1 font-semibold tabular-nums tracking-tight break-words",
+          compact ? "text-base leading-snug sm:text-lg" : "text-lg sm:text-xl",
+          valueClass,
+        )}
+        title={value}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export function AdminRevenueCreateDrawer({
   open,
   onOpenChange,
@@ -55,6 +135,8 @@ export function AdminRevenueCreateDrawer({
   onCreated,
 }: AdminRevenueCreateDrawerProps) {
   const a = useAdminI18n();
+  const { locale } = a;
+  const sourceOptions = React.useMemo(() => revenueSourceOptions(locale), [locale]);
   const [step, setStep] = React.useState<Step>(1);
   const [trackSearch, setTrackSearch] = React.useState("");
   const [tracks, setTracks] = React.useState<Array<{ id: string; title: string; artist?: string }>>([]);
@@ -179,6 +261,9 @@ export function AdminRevenueCreateDrawer({
   }
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
+  const grossDisplay = isAdminMetricEmpty(form.grossRevenue)
+    ? "0,00 USDT"
+    : formatUsdtAmount(form.grossRevenue.replace(/\s/g, "").replace(",", "."));
 
   return (
     <>
@@ -186,6 +271,7 @@ export function AdminRevenueCreateDrawer({
         open={open}
         onOpenChange={onOpenChange}
         wide
+        borderless
         widthClassName="w-[min(720px,100vw)]"
         title={a.t("admin.drawer.revenueCreate.title")}
         subtitle={a.t("admin.drawer.revenueCreate.stepSubtitle").replace("{step}", String(step))}
@@ -196,21 +282,25 @@ export function AdminRevenueCreateDrawer({
                 <AdminDrawerSecondaryButton onClick={() => setStep((step - 1) as Step)}>
                   Назад
                 </AdminDrawerSecondaryButton>
-              ) : undefined
+              ) : (
+                <AdminDrawerGhostButton onClick={() => onOpenChange(false)}>
+                  {a.t("admin.drawer.common.close")}
+                </AdminDrawerGhostButton>
+              )
             }
             right={
               step === 1 ? (
                 <AdminDrawerPrimaryButton disabled={!selectedTrackId} onClick={() => setStep(2)}>
-                  Далее — доход
+                  К параметрам дохода
                 </AdminDrawerPrimaryButton>
               ) : step === 2 ? (
                 <AdminDrawerPrimaryButton disabled={submitting} onClick={() => void handleCreateDraft()}>
-                  Сохранить и перейти к preview
+                  {submitting ? a.t("admin.drawer.common.saving") : a.t("admin.drawer.revenueCreate.saveAndPreview")}
                 </AdminDrawerPrimaryButton>
               ) : step === 3 ? (
                 preview ? (
                   <AdminDrawerPrimaryButton disabled={!preview.holdersCount} onClick={() => setStep(4)}>
-                    Далее — подтверждение
+                    К подтверждению
                   </AdminDrawerPrimaryButton>
                 ) : (
                   <AdminDrawerPrimaryButton onClick={() => void handlePreview()} disabled={previewLoading}>
@@ -226,151 +316,205 @@ export function AdminRevenueCreateDrawer({
           />
         }
       >
-        <div className="mb-4 flex gap-2">
-          {[1, 2, 3, 4].map((s) => (
-            <div
-              key={s}
-              className={`h-1 flex-1 rounded-full ${s <= step ? "bg-zinc-900" : "bg-zinc-200"}`}
-            />
-          ))}
-        </div>
+        <div className="space-y-5 pb-4">
+          <StepProgress step={step} />
 
-        {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-        {step === 1 ? (
-          <div className="space-y-4 pb-4">
-            <AdminFormField
-              label={a.t("admin.drawer.revenueCreate.searchRelease")}
-              htmlFor="track-search"
-            >
-              <Input
-                id="track-search"
-                value={trackSearch}
-                onChange={(e) => setTrackSearch(e.target.value)}
-                placeholder={a.t("admin.drawer.revenueCreate.searchPlaceholder")}
-                className={adminFieldInput}
-              />
-            </AdminFormField>
-            {tracksLoading ? <AdminLoadingState /> : null}
-            <div className="max-h-64 space-y-2 overflow-y-auto">
-              {filteredTracks.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                    selectedTrackId === t.id
-                      ? "border-zinc-900 bg-zinc-50"
-                      : "border-zinc-800 hover:border-zinc-300"
-                  }`}
-                  onClick={() => setSelectedTrackId(t.id)}
-                >
-                  <p className="font-medium">{t.title}</p>
-                  {t.artist ? <p className="text-xs text-zinc-500">{t.artist}</p> : null}
-                </button>
-              ))}
-              {!tracksLoading && !filteredTracks.length ? (
-                <p className="py-4 text-center text-sm text-zinc-500">Релизы не найдены</p>
+          {step === 1 ? (
+            <div className={cn(drawerPanel, "space-y-4")}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Выбор релиза</p>
+              <AdminFormField
+                label={a.t("admin.drawer.revenueCreate.searchRelease")}
+                htmlFor="track-search"
+              >
+                <Input
+                  id="track-search"
+                  value={trackSearch}
+                  onChange={(e) => setTrackSearch(e.target.value)}
+                  placeholder={a.t("admin.drawer.revenueCreate.searchPlaceholder")}
+                  className={adminFieldInput}
+                />
+              </AdminFormField>
+              {tracksLoading ? (
+                <AdminLoadingState
+                  label={a.t("admin.empty.loading")}
+                  className="border-0 bg-transparent py-8 shadow-none"
+                />
+              ) : null}
+              <div className="max-h-72 space-y-2 overflow-y-auto revshare-scrollbar">
+                {filteredTracks.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left text-sm transition-colors",
+                      selectedTrackId === t.id
+                        ? "bg-zinc-800/80 ring-1 ring-[#B7F500]/35"
+                        : "bg-zinc-900/35 hover:bg-zinc-800/45",
+                    )}
+                    onClick={() => setSelectedTrackId(t.id)}
+                  >
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800/60 text-zinc-500">
+                      <Music2 className="size-4" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-zinc-100">{t.title}</p>
+                      {t.artist ? (
+                        <p className="truncate text-xs text-zinc-500">{t.artist}</p>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+                {!tracksLoading && !filteredTracks.length ? (
+                  <div className="flex flex-col items-center gap-2 py-8 text-center">
+                    <Layers className="size-8 text-zinc-600" strokeWidth={1.5} />
+                    <p className="text-sm text-zinc-500">Релизы не найдены</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="space-y-4">
+              {selectedTrack ? (
+                <div className={drawerPanel}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Релиз</p>
+                  <p className="mt-2 font-medium text-zinc-100">{selectedTrack.title}</p>
+                  {selectedTrack.artist ? (
+                    <p className="mt-0.5 text-sm text-zinc-500">{selectedTrack.artist}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className={cn(drawerPanel, "space-y-4")}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Параметры дохода</p>
+                <AdminStyledSelectField
+                  label={a.t("admin.drawer.revenueCreate.sourceLabel")}
+                  id="source"
+                  value={form.source}
+                  options={sourceOptions.filter((o) => o.value !== "all").map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  onChange={(source) => setForm({ ...form, source })}
+                />
+                <AdminFormField label="Gross amount (USDT)" htmlFor="gross">
+                  <Input
+                    id="gross"
+                    value={form.grossRevenue}
+                    onChange={(e) => setForm({ ...form, grossRevenue: e.target.value })}
+                    placeholder="12400.00"
+                    className={cn(adminFieldInput, "tabular-nums")}
+                  />
+                </AdminFormField>
+                <div className="grid grid-cols-2 gap-3">
+                  <AdminFormField label={a.t("admin.drawer.revenueCreate.periodFrom")} htmlFor="from">
+                    <AdminDatePicker
+                      id="from"
+                      value={form.periodFrom}
+                      onChange={(periodFrom) => setForm({ ...form, periodFrom })}
+                    />
+                  </AdminFormField>
+                  <AdminFormField label={a.t("admin.drawer.revenueCreate.periodTo")} htmlFor="to">
+                    <AdminDatePicker
+                      id="to"
+                      value={form.periodTo}
+                      onChange={(periodTo) => setForm({ ...form, periodTo })}
+                    />
+                  </AdminFormField>
+                </div>
+                <AdminFormField label={a.t("admin.drawer.revenueCreate.noteOptional")} htmlFor="note">
+                  <Input
+                    id="note"
+                    value={form.note}
+                    onChange={(e) => setForm({ ...form, note: e.target.value })}
+                    className={adminFieldInput}
+                  />
+                </AdminFormField>
+              </div>
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="space-y-4">
+              <div className={drawerPanel}>
+                <p className="text-sm text-zinc-400">
+                  Источник:{" "}
+                  <span className="font-medium text-zinc-200">{revenueSourceLabel(form.source, locale)}</span>
+                  {" · "}
+                  Gross: <span className="font-medium tabular-nums text-emerald-400">{grossDisplay}</span>
+                </p>
+                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{revenueFieldTooltip("preview", locale)}</p>
+              </div>
+              {previewLoading ? (
+                <AdminLoadingState
+                  label={a.t("admin.empty.loading")}
+                  className="border-0 bg-transparent py-8 shadow-none"
+                />
+              ) : null}
+              {preview ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <PreviewMetric
+                      label="Держателям"
+                      value={formatUsdtAmount(preview.holdersAmount)}
+                      tone="success"
+                    />
+                    <PreviewMetric
+                      label="Артисту"
+                      value={formatUsdtAmount(preview.artistAmount)}
+                      tone="info"
+                    />
+                    <PreviewMetric
+                      label="Платформе"
+                      value={formatUsdtAmount(preview.platformAmount)}
+                      tone="neutral"
+                    />
+                  </div>
+                  <AdminDataTable
+                    flat
+                    borderless
+                    className="[&_table]:min-w-[520px]"
+                    rowKey={(h) => h.userId}
+                    columns={[
+                      { key: "email", header: a.table.holder, render: (h) => h.userEmail },
+                      { key: "units", header: a.table.units, render: (h) => h.units },
+                      { key: "pct", header: "%", render: (h) => `${h.percentage}%` },
+                      {
+                        key: "pay",
+                        header: "Начисление",
+                        render: (h) => (
+                          <span className="tabular-nums text-emerald-400">{formatUsdtAmount(h.payoutAmount)}</span>
+                        ),
+                      },
+                    ]}
+                    rows={preview.holders}
+                  />
+                </>
               ) : null}
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {step === 2 ? (
-          <div className="space-y-4 pb-4">
-            {selectedTrack ? (
-              <p className="text-sm text-zinc-400">
-                Релиз: <span className="font-medium text-zinc-100">{selectedTrack.title}</span>
+          {step === 4 ? (
+            <div className={cn(drawerPanel, "space-y-4")}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Подтверждение</p>
+              <p className="text-sm leading-relaxed text-zinc-300">
+                Запуск распределения выполняется оператором. Средства будут зачислены держателям через wallet
+                ledger. Повторное начисление за один период защищено уникальным ограничением.
               </p>
-            ) : null}
-            <AdminStyledSelectField
-              label={a.t("admin.drawer.revenueCreate.sourceLabel")}
-              id="source"
-              value={form.source}
-              options={REVENUE_SOURCE_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
-                value: o.value,
-                label: o.label,
-              }))}
-              onChange={(source) => setForm({ ...form, source })}
-            />
-            <AdminFormField label="Gross amount (USDT)" htmlFor="gross">
-              <Input
-                id="gross"
-                value={form.grossRevenue}
-                onChange={(e) => setForm({ ...form, grossRevenue: e.target.value })}
-                placeholder="12400.00"
-                className={adminFieldInput}
-              />
-            </AdminFormField>
-            <div className="grid grid-cols-2 gap-3">
-              <AdminFormField label={a.t("admin.drawer.revenueCreate.periodFrom")} htmlFor="from">
-                <AdminDatePicker
-                  id="from"
-                  value={form.periodFrom}
-                  onChange={(periodFrom) => setForm({ ...form, periodFrom })}
-                />
-              </AdminFormField>
-              <AdminFormField label={a.t("admin.drawer.revenueCreate.periodTo")} htmlFor="to">
-                <AdminDatePicker
-                  id="to"
-                  value={form.periodTo}
-                  onChange={(periodTo) => setForm({ ...form, periodTo })}
-                />
-              </AdminFormField>
-            </div>
-            <AdminFormField label={a.t("admin.drawer.revenueCreate.noteOptional")} htmlFor="note">
-              <Input
-                id="note"
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-                className={adminFieldInput}
-              />
-            </AdminFormField>
-          </div>
-        ) : null}
-
-        {step === 3 ? (
-          <div className="space-y-4">
-            <p className="text-sm text-zinc-400">
-              Источник: {revenueSourceLabel(form.source)} · Gross: {form.grossRevenue || "—"} USDT
-            </p>
-            <p className="text-[11px] text-zinc-500">{REVENUE_FIELD_TOOLTIPS.preview}</p>
-            {previewLoading ? <AdminLoadingState /> : null}
-            {preview ? (
-              <>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div>Держателям: {formatUsdtAmount(preview.holdersAmount)}</div>
-                  <div>Артисту: {formatUsdtAmount(preview.artistAmount)}</div>
-                  <div>Платформе: {formatUsdtAmount(preview.platformAmount)}</div>
+              {preview ? (
+                <div className="rounded-2xl bg-zinc-900/35 px-4 py-3">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">К начислению</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-400">
+                    {formatUsdtAmount(preview.holdersAmount)}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-400">{preview.holdersCount} держателей</p>
                 </div>
-                <AdminDataTable
-                  className="border-0 shadow-none"
-                  rowKey={(h) => h.userId}
-                  columns={[
-                    { key: "email", header: a.table.holder, render: (h) => h.userEmail },
-                    { key: "units", header: a.table.units, render: (h) => h.units },
-                    { key: "pct", header: "%", render: (h) => `${h.percentage}%` },
-                    { key: "pay", header: "Начисление", render: (h) => formatUsdtAmount(h.payoutAmount) },
-                  ]}
-                  rows={preview.holders}
-                />
-              </>
-            ) : null}
-          </div>
-        ) : null}
-
-        {step === 4 ? (
-          <div className="space-y-4">
-            <p className="text-sm leading-relaxed text-zinc-300">
-              Запуск распределения выполняется оператором. Средства будут зачислены держателям через wallet
-              ledger. Повторное начисление за один период защищено уникальным ограничением.
-            </p>
-            {preview ? (
-              <p className="text-sm font-medium">
-                К начислению: {formatUsdtAmount(preview.holdersAmount)} · {preview.holdersCount} держателей
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </AdminDetailDrawer>
 
       <AdminConfirmDialog

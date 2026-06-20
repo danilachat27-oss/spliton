@@ -29,6 +29,7 @@ import {
   releaseStatusLabel,
   validateRoundForm,
   type AdminRoundFormBody,
+  type RoundChecklistItem,
 } from "@/features/admin/lib/admin-round-form";
 import { formatAdminDateShort, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import {
@@ -38,6 +39,7 @@ import {
   AdminFormField,
   AdminFormFooter,
   AdminLoadingState,
+  AdminRaiseProgress,
   AdminStatusBadge,
 } from "@/features/admin/ui";
 import { AdminCopyButton } from "@/features/admin/ui/admin-copy-button";
@@ -48,6 +50,14 @@ import { cn } from "@/lib/utils";
 export type { AdminRoundFormBody };
 
 const STATUSES = ["draft", "live", "paused", "completed", "cancelled"] as const;
+
+const ROUND_STATUS_TONE: Record<string, "neutral" | "success" | "warning" | "pending" | "danger"> = {
+  draft: "neutral",
+  live: "success",
+  paused: "warning",
+  completed: "pending",
+  cancelled: "danger",
+};
 
 type AdminRoundDrawerProps = {
   open: boolean;
@@ -120,6 +130,60 @@ function roundFieldError(validationError: string | null, field: string): string 
   return ROUND_VALIDATION_FIELD[validationError] === field ? validationError : null;
 }
 
+function RoundPublishChecklist({
+  items,
+  onNavigate,
+}: {
+  items: RoundChecklistItem[];
+  onNavigate: (fieldId?: string) => void;
+}) {
+  const a = useAdminI18n();
+  const doneCount = items.filter((item) => item.ok).length;
+  const allDone = doneCount === items.length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-zinc-500">
+          {a
+            .t("admin.rounds.checklist.progress")
+            .replace("{done}", String(doneCount))
+            .replace("{total}", String(items.length))}
+        </p>
+        {allDone ? (
+          <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+            {a.t("admin.rounds.checklist.ready")}
+          </span>
+        ) : null}
+      </div>
+      <ul className="divide-y divide-zinc-800/80 rounded-xl border border-zinc-800/80">
+        {items.map((item) => (
+          <li key={item.id}>
+            <button
+              type="button"
+              className={cn(
+                "flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition",
+                item.fieldId && "hover:bg-zinc-800/40",
+              )}
+              onClick={() => onNavigate(item.fieldId)}
+              disabled={!item.fieldId}
+            >
+              {item.ok ? (
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden />
+              ) : (
+                <Circle className="mt-0.5 size-4 shrink-0 text-zinc-600" aria-hidden />
+              )}
+              <span className={cn("text-sm leading-snug", item.ok ? "text-zinc-300" : "text-zinc-500")}>
+                {item.label}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ReleaseSummaryCard({ release }: { release: AdminTrackListItem }) {
   const a = useAdminI18n();
   return (
@@ -149,13 +213,13 @@ function ReleaseSummaryCard({ release }: { release: AdminTrackListItem }) {
           </span>
         </div>
         {!release.coverUrl?.trim() ? (
-          <p className="mt-2 flex items-center gap-1 text-[11px] text-amber-700">
+          <p className="mt-2 flex items-center gap-1 text-[11px] text-amber-300">
             <AlertTriangle className="size-3" />
             {a.t("admin.rounds.noCoverWarning")}
           </p>
         ) : null}
         {!release.artist?.trim() || release.artist === "—" ? (
-          <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-700">
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300">
             <AlertTriangle className="size-3" />
             {a.t("admin.rounds.noArtistWarning")}
           </p>
@@ -248,6 +312,11 @@ export function AdminRoundDrawer({
   const previewArtist = release?.artist ?? round?.trackArtist ?? "";
   const previewCover = release?.coverUrl ?? round?.trackCoverUrl ?? null;
   const previewGenre = release?.genre ?? round?.trackGenre ?? "—";
+
+  const scrollToField = React.useCallback((fieldId?: string) => {
+    if (!fieldId) return;
+    document.getElementById(fieldId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   return (
     <>
@@ -352,13 +421,10 @@ export function AdminRoundDrawer({
           )
         }
       >
-        {loading || saving ? (
-          <AdminLoadingState
-            label={loading ? a.t("admin.rounds.loading") : a.t("admin.rounds.saving")}
-          />
-        ) : null}
-
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        {loading ? (
+          <AdminLoadingState label={a.t("admin.rounds.loading")} />
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-5 pb-4">
             {round ? (
               <p className="inline-flex items-center gap-2 font-mono text-xs text-zinc-500">
@@ -386,7 +452,10 @@ export function AdminRoundDrawer({
                 </p>
               </div>
               {round || form.status ? (
-                <AdminStatusBadge label={a.formatRoundStatus(form.status)} tone="success" />
+                <AdminStatusBadge
+                  label={a.formatRoundStatus(form.status)}
+                  tone={ROUND_STATUS_TONE[form.status] ?? "neutral"}
+                />
               ) : null}
             </div>
 
@@ -630,15 +699,12 @@ export function AdminRoundDrawer({
                       />
                     </AdminFormField>
                     <AdminFormField label={a.t("admin.rounds.progress")}>
-                      <div>
-                        <div className="h-2 overflow-hidden rounded-full bg-zinc-200">
-                          <div
-                            className="h-full rounded-full bg-neutral-900 transition-all"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-xs tabular-nums text-zinc-500">{progress}%</p>
-                      </div>
+                      <AdminRaiseProgress
+                        variant="inline"
+                        pct={progress}
+                        raised={form.raisedAmountUsdt}
+                        target={form.raiseTargetUsdt}
+                      />
                     </AdminFormField>
                     <div className="sm:col-span-2 rounded-xl border border-zinc-800 bg-zinc-900/80 px-3 py-2">
                       <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
@@ -679,22 +745,11 @@ export function AdminRoundDrawer({
                 </Section>
 
                 <Section title={a.t("admin.rounds.section.checklist")}>
-                  <ul className="space-y-2">
-                    {checklist.map((item) => (
-                      <li key={item.id} className="flex items-start gap-2 text-sm">
-                        {item.ok ? (
-                          <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                        ) : (
-                          <Circle className="mt-0.5 size-4 shrink-0 text-zinc-300" />
-                        )}
-                        <span className={cn(item.ok ? "text-zinc-300" : "text-zinc-500")}>{item.label}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <RoundPublishChecklist items={checklist} onNavigate={scrollToField} />
                   {publishBlocked && canPublish ? (
-                    <p className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <p className="mt-3 flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
                       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                      Опубликовать нельзя: {publishBlocked}
+                      {a.t("admin.rounds.cannotPublish").replace("{reason}", publishBlocked)}
                     </p>
                   ) : null}
                 </Section>
@@ -717,12 +772,13 @@ export function AdminRoundDrawer({
               />
               {form.endDate ? (
                 <p className="text-center text-[11px] text-zinc-500">
-                  Окончание: {formatAdminDateShort(form.endDate)}
+                  {a.t("admin.rounds.endsAt").replace("{date}", formatAdminDateShort(form.endDate))}
                 </p>
               ) : null}
             </div>
           </div>
         </div>
+        )}
       </AdminDetailDrawer>
 
       <AdminConfirmDialog

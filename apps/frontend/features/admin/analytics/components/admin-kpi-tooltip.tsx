@@ -7,5 +7,5 @@ type AdminKpiTooltipProps = {
 };
 
 export function AdminKpiTooltip({ text }: AdminKpiTooltipProps) {
-  return <AdminInfoHint text={text} stopPropagation />;
+  return <AdminInfoHint text={text} stopPropagation placement="top-end" />;
 }

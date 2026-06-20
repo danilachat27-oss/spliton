@@ -12,10 +12,10 @@ import {
 import { Input } from "@/components/ui/input";
 import type { AdminRevenueDetail } from "@/features/admin/mocks/admin-revenue.mock";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
-import { adminFieldInput } from "@/features/admin/lib/admin-ui";
+import { adminAlertSurface, adminDrawerTab, adminFieldInput, adminMetricLabel } from "@/features/admin/lib/admin-ui";
 import {
   formatRevenuePeriod,
-  REVENUE_FIELD_TOOLTIPS,
+  revenueFieldTooltip,
   revenueSourceLabel,
   revenueStatusLabel,
   revenueStatusTone,
@@ -39,6 +39,12 @@ import { cn } from "@/lib/utils";
 
 type TabId = "overview" | "preview" | "payouts" | "ledger" | "errors" | "audit";
 
+const drawerPanel = "rounded-2xl bg-zinc-900/40 p-4 sm:p-5";
+const drawerLink =
+  "text-sm font-semibold text-zinc-100 transition-colors hover:text-[#B7F500]";
+
+type MetricTone = "neutral" | "success" | "warning" | "info" | "muted";
+
 type AdminRevenueDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,24 +61,65 @@ type AdminRevenueDrawerProps = {
 
 function FieldHint({ text }: { text: string }) {
   return (
-    <p className="mt-0.5 flex items-start gap-1 text-[11px] leading-relaxed text-zinc-500">
-      <HelpCircle className="mt-0.5 size-3 shrink-0" />
+    <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-zinc-500">
+      <HelpCircle className="mt-0.5 size-3 shrink-0 text-zinc-600" />
       {text}
     </p>
   );
 }
 
-function EmptyTab({ message }: { message: string }) {
-  return <p className="py-8 text-center text-sm text-zinc-500">{message}</p>;
+function metricValueClass(tone: MetricTone, value: string): string {
+  const compact = value.replace(/\s/g, "").length > 14;
+  const medium = value.replace(/\s/g, "").length > 10;
+  const size = compact ? "text-base leading-snug" : medium ? "text-lg" : "text-xl sm:text-2xl";
+  const toneClass: Record<MetricTone, string> = {
+    neutral: "text-zinc-100",
+    success: "text-emerald-400",
+    warning: "text-amber-400",
+    info: "text-sky-400",
+    muted: "text-zinc-500",
+  };
+  return cn(
+    "mt-1 font-semibold tabular-nums tracking-tight break-words",
+    tone === "muted" ? "text-sm font-medium" : size,
+    toneClass[tone],
+  );
 }
 
-function OverviewField({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+function Metric({
+  label,
+  value,
+  hint,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: MetricTone;
+}) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">{label}</p>
-      <div className="mt-0.5 text-sm text-zinc-100">{value}</div>
+    <div className="flex min-h-[7.25rem] min-w-0 flex-col rounded-2xl bg-zinc-900/40 p-3.5 sm:p-4">
+      <p className={adminMetricLabel}>{label}</p>
+      <p className={metricValueClass(tone, value)} title={value}>
+        {value}
+      </p>
       {hint ? <FieldHint text={hint} /> : null}
     </div>
+  );
+}
+
+function MetaField({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <p className={adminMetricLabel}>{label}</p>
+      <div className="text-sm text-zinc-200">{value}</div>
+    </div>
+  );
+}
+
+function EmptyTab({ message }: { message: string }) {
+  return (
+    <div className={cn(drawerPanel, "py-10 text-center text-sm text-zinc-500")}>{message}</div>
   );
 }
 
@@ -90,6 +137,10 @@ export function AdminRevenueDrawer({
   onApprove,
 }: AdminRevenueDrawerProps) {
   const a = useAdminI18n();
+  const { locale } = a;
+  const statusLabel = (status: string) => revenueStatusLabel(status, locale);
+  const sourceLabel = (source: string) => revenueSourceLabel(source, locale);
+  const tooltip = (field: Parameters<typeof revenueFieldTooltip>[0]) => revenueFieldTooltip(field, locale);
   const tabs: { id: TabId; label: string }[] = [
     { id: "overview", label: a.t("admin.drawer.common.overview") },
     { id: "preview", label: a.t("admin.drawer.revenue.tab.preview") },
@@ -140,8 +191,8 @@ export function AdminRevenueDrawer({
     }
   }
 
-  const visibleTabs = tabs.filter((t) => {
-    if (t.id === "errors") return isFailed;
+  const visibleTabs = tabs.filter((item) => {
+    if (item.id === "errors") return isFailed;
     return true;
   });
 
@@ -151,9 +202,14 @@ export function AdminRevenueDrawer({
         open={open}
         onOpenChange={onOpenChange}
         wide
+        borderless
         widthClassName="w-[min(960px,100vw)]"
-        title={event ? `Доход · ${event.trackTitle}` : "Доход релиза"}
-        subtitle={event ? formatRevenuePeriod(event.periodFrom, event.periodTo) : undefined}
+        title={
+          event
+            ? a.t("admin.drawer.revenue.titleWithTrack").replace("{track}", event.trackTitle)
+            : a.t("admin.drawer.revenue.title")
+        }
+        subtitle={event ? formatRevenuePeriod(event.periodFrom, event.periodTo, locale) : undefined}
         footer={
           event && canMutate && !isPaid ? (
             <div className="flex w-full flex-col gap-3">
@@ -161,7 +217,7 @@ export function AdminRevenueDrawer({
                 <AdminFormField
                   label={a.t("admin.drawer.revenue.runNote")}
                   htmlFor="rev-run-note"
-                  hint={REVENUE_FIELD_TOOLTIPS.distribution}
+                  hint={tooltip("distribution")}
                 >
                   <Input
                     id="rev-run-note"
@@ -183,7 +239,7 @@ export function AdminRevenueDrawer({
                           void onSubmitReview!().finally(() => setActionLoading(false));
                         }}
                       >
-                        Отправить на проверку
+                        {a.t("admin.drawer.revenue.action.submitReview")}
                       </AdminDrawerSecondaryButton>
                     ) : null}
                     {canApproveEvent ? (
@@ -194,13 +250,13 @@ export function AdminRevenueDrawer({
                           void onApprove!().finally(() => setActionLoading(false));
                         }}
                       >
-                        Одобрить распределение
+                        {a.t("admin.drawer.revenue.action.approve")}
                       </AdminDrawerSecondaryButton>
                     ) : null}
                     {isFailed && onRetry ? (
                       <AdminDrawerSecondaryButton onClick={() => void handleRetry()} disabled={actionLoading}>
                         <RefreshCw className="mr-1.5 size-3.5" />
-                        Вернуть в одобрено и запустить снова
+                        {a.t("admin.drawer.revenue.action.retry")}
                       </AdminDrawerSecondaryButton>
                     ) : null}
                   </>
@@ -208,7 +264,7 @@ export function AdminRevenueDrawer({
                 right={
                   canRun ? (
                     <AdminDrawerPrimaryButton onClick={() => setRunConfirm(true)} disabled={actionLoading}>
-                      Запустить начисление
+                      {a.t("admin.drawer.revenue.action.run")}
                     </AdminDrawerPrimaryButton>
                   ) : (
                     <AdminDrawerGhostButton onClick={() => onOpenChange(false)}>{a.t("admin.drawer.common.close")}</AdminDrawerGhostButton>
@@ -227,102 +283,122 @@ export function AdminRevenueDrawer({
       >
         {loading ? <AdminLoadingState /> : null}
         {!loading && event ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 border-b border-zinc-800 pb-2">
-              {visibleTabs.map((t) => (
+          <div className="space-y-6 pb-4">
+            <div className="flex flex-wrap gap-1">
+              {visibleTabs.map((item) => (
                 <button
-                  key={t.id}
+                  key={item.id}
                   type="button"
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    tab === t.id ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-100",
-                  )}
-                  onClick={() => setTab(t.id)}
+                  className={adminDrawerTab(tab === item.id)}
+                  onClick={() => setTab(item.id)}
                 >
-                  {t.label}
+                  {item.label}
                 </button>
               ))}
             </div>
 
             {tab === "overview" ? (
-              <div className="space-y-4">
-                <div className="flex items-start gap-4 rounded-xl border border-zinc-800 bg-zinc-50/50 p-4">
+              <div className="space-y-5">
+                <div className={cn(drawerPanel, "flex items-start gap-4 sm:gap-5")}>
                   {event.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={event.coverUrl} alt="" className="size-16 rounded-lg object-cover" />
+                    <img src={event.coverUrl} alt="" className="size-16 shrink-0 rounded-xl object-cover sm:size-20" />
                   ) : (
-                    <div className="flex size-16 items-center justify-center rounded-lg bg-zinc-200 text-xs text-zinc-500">
-                      cover
+                    <div className="flex size-16 shrink-0 items-center justify-center rounded-xl bg-zinc-800/80 text-[11px] text-zinc-500 sm:size-20">
+                      {a.t("admin.drawer.common.noCover")}
                     </div>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={ROUTES.adminTracks}
-                      className="text-base font-semibold hover:underline"
-                    >
-                      {event.trackTitle}
-                    </Link>
-                    {event.artistName ? (
-                      <p className="text-sm text-zinc-400">{event.artistName}</p>
-                    ) : null}
-                    <p className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-zinc-400">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <Link href={ROUTES.adminTracks} className={cn(drawerLink, "text-base sm:text-lg")}>
+                          {event.trackTitle}
+                        </Link>
+                        {event.artistName ? (
+                          <p className="text-sm text-zinc-500">{event.artistName}</p>
+                        ) : null}
+                      </div>
+                      <AdminStatusBadge
+                        label={statusLabel(event.status)}
+                        tone={revenueStatusTone(event.status)}
+                      />
+                    </div>
+                    <p className="inline-flex items-center gap-1 font-mono text-[10px] text-zinc-500">
                       {event.trackId.slice(0, 12)}…
                       <AdminCopyButton value={event.trackId} />
                     </p>
                   </div>
-                  <AdminStatusBadge
-                    label={revenueStatusLabel(event.status)}
-                    tone={revenueStatusTone(event.status)}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <Metric
+                    label={a.t("admin.drawer.revenue.field.gross")}
+                    value={formatUsdtAmount(event.grossRevenueUsdt)}
+                    hint={tooltip("grossRevenue")}
+                    tone="info"
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.revenue.field.holders")}
+                    value={formatUsdtAmount(event.holdersShareUsdt)}
+                    hint={tooltip("holdersShare")}
+                    tone="success"
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.revenue.field.artist")}
+                    value={formatUsdtAmount(event.artistShareUsdt)}
+                    hint={tooltip("artistShare")}
+                  />
+                  <Metric
+                    label={a.t("admin.drawer.revenue.field.platform")}
+                    value={formatUsdtAmount(event.platformShareUsdt)}
+                    hint={tooltip("platformShare")}
                   />
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <OverviewField
-                    label="Revenue event ID"
+                <div className={cn(drawerPanel, "grid gap-5 sm:grid-cols-2 lg:grid-cols-3")}>
+                  <MetaField
+                    label={a.t("admin.drawer.revenue.field.eventId")}
                     value={
-                      <span className="inline-flex items-center gap-1 font-mono text-xs">
-                        {event.id}
+                      <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-300">
+                        {event.id.slice(0, 18)}…
                         <AdminCopyButton value={event.id} />
                       </span>
                     }
                   />
-                  <OverviewField label={a.t("admin.drawer.revenue.field.source")} value={revenueSourceLabel(event.source)} />
-                  <OverviewField
+                  <MetaField label={a.t("admin.drawer.revenue.field.source")} value={sourceLabel(event.source)} />
+                  <MetaField
                     label={a.t("admin.drawer.revenue.field.period")}
-                    value={formatRevenuePeriod(event.periodFrom, event.periodTo)}
+                    value={formatRevenuePeriod(event.periodFrom, event.periodTo, locale)}
                   />
-                  <OverviewField
-                    label={a.t("admin.drawer.revenue.field.gross")}
-                    value={formatUsdtAmount(event.grossRevenueUsdt)}
-                    hint={REVENUE_FIELD_TOOLTIPS.grossRevenue}
+                  <MetaField
+                    label={a.t("admin.drawer.revenue.field.holdersCount")}
+                    value={
+                      <span className={event.holdersCount > 0 ? "text-emerald-400" : "text-amber-400"}>
+                        {String(event.holdersCount)}
+                      </span>
+                    }
                   />
-                  <OverviewField
-                    label={a.t("admin.drawer.revenue.field.holders")}
-                    value={formatUsdtAmount(event.holdersShareUsdt)}
-                    hint={REVENUE_FIELD_TOOLTIPS.holdersShare}
+                  <MetaField
+                    label={a.t("admin.drawer.revenue.field.createdBy")}
+                    value={
+                      event.createdBy && event.createdBy !== "system"
+                        ? event.createdBy
+                        : a.t("admin.drawer.common.systemActor")
+                    }
                   />
-                  <OverviewField
-                    label={a.t("admin.drawer.revenue.field.artist")}
-                    value={formatUsdtAmount(event.artistShareUsdt)}
-                    hint={REVENUE_FIELD_TOOLTIPS.artistShare}
-                  />
-                  <OverviewField
-                    label={a.t("admin.drawer.revenue.field.platform")}
-                    value={formatUsdtAmount(event.platformShareUsdt)}
-                    hint={REVENUE_FIELD_TOOLTIPS.platformShare}
-                  />
-                  <OverviewField label={a.t("admin.drawer.revenue.field.holdersCount")} value={String(event.holdersCount)} />
-                  <OverviewField label={a.t("admin.drawer.revenue.field.createdBy")} value={event.createdBy ?? "system"} />
-                  <OverviewField label={a.table.created} value={formatAdminDate(event.createdAt)} />
+                  <MetaField label={a.table.created} value={formatAdminDate(event.createdAt)} />
                   {event.completedAt ? (
-                    <OverviewField label={a.t("admin.drawer.revenue.field.completed")} value={formatAdminDate(event.completedAt)} />
+                    <MetaField
+                      label={a.t("admin.drawer.revenue.field.completed")}
+                      value={formatAdminDate(event.completedAt)}
+                    />
                   ) : null}
                   {event.distributionId ? (
-                    <OverviewField
-                      label="Distribution ID"
+                    <MetaField
+                      label={a.t("admin.drawer.revenue.field.distributionId")}
                       value={
-                        <span className="inline-flex items-center gap-1 font-mono text-xs">
-                          {event.distributionId}
+                        <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-300">
+                          {event.distributionId.slice(0, 18)}…
                           <AdminCopyButton value={event.distributionId} />
                         </span>
                       }
@@ -331,74 +407,85 @@ export function AdminRevenueDrawer({
                 </div>
 
                 {event.errorMessage ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-950/30 px-3 py-2 text-sm text-red-800">
+                  <div className={cn(drawerPanel, adminAlertSurface("danger"), "flex items-start gap-2")}>
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                    {event.errorMessage}
+                    <p className="text-sm leading-relaxed">{event.errorMessage}</p>
                   </div>
                 ) : null}
 
                 {event.note ? (
-                  <p className="text-sm text-zinc-400">
-                    <span className="font-medium">Note:</span> {event.note}
-                  </p>
+                  <div className={drawerPanel}>
+                    <p className={adminMetricLabel}>{a.t("admin.drawer.revenue.field.note")}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-300">{event.note}</p>
+                  </div>
                 ) : null}
               </div>
             ) : null}
 
             {tab === "preview" ? (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {onRefreshPreview ? (
                   <AdminDrawerSecondaryButton onClick={() => void onRefreshPreview()}>
-                    Пересчитать начисления
+                    {a.t("admin.drawer.revenue.action.recalculate")}
                   </AdminDrawerSecondaryButton>
                 ) : null}
                 {event.preview ? (
                   <>
-                    <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6 text-xs">
-                      <div className="rounded-lg border border-zinc-800 p-2">
-                        <p className="text-zinc-400">Gross</p>
-                        <p className="font-medium tabular-nums">{formatUsdtAmount(event.preview.grossRevenue)}</p>
-                      </div>
-                      <div className="rounded-lg border border-zinc-800 p-2">
-                        <p className="text-zinc-400">Держателям</p>
-                        <p className="font-medium tabular-nums">{formatUsdtAmount(event.preview.holdersAmount)}</p>
-                      </div>
-                      <div className="rounded-lg border border-zinc-800 p-2">
-                        <p className="text-zinc-400">Артисту</p>
-                        <p className="font-medium tabular-nums">{formatUsdtAmount(event.preview.artistAmount)}</p>
-                      </div>
-                      <div className="rounded-lg border border-zinc-800 p-2">
-                        <p className="text-zinc-400">Платформе</p>
-                        <p className="font-medium tabular-nums">{formatUsdtAmount(event.preview.platformAmount)}</p>
-                      </div>
-                      <div className="rounded-lg border border-zinc-800 p-2">
-                        <p className="text-zinc-400">Юнитов</p>
-                        <p className="font-medium">{event.preview.totalUnits}</p>
-                      </div>
-                      <div className="rounded-lg border border-zinc-800 p-2">
-                        <p className="text-zinc-400">Держателей</p>
-                        <p className="font-medium">{event.preview.holdersCount}</p>
-                      </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                      <Metric
+                        label={a.t("admin.drawer.revenue.preview.gross")}
+                        value={formatUsdtAmount(event.preview.grossRevenue)}
+                        tone="info"
+                      />
+                      <Metric
+                        label={a.t("admin.drawer.revenue.field.holders")}
+                        value={formatUsdtAmount(event.preview.holdersAmount)}
+                        tone="success"
+                      />
+                      <Metric
+                        label={a.t("admin.drawer.revenue.field.artist")}
+                        value={formatUsdtAmount(event.preview.artistAmount)}
+                      />
+                      <Metric
+                        label={a.t("admin.drawer.revenue.field.platform")}
+                        value={formatUsdtAmount(event.preview.platformAmount)}
+                      />
+                      <Metric label={a.table.units} value={String(event.preview.totalUnits)} />
+                      <Metric
+                        label={a.t("admin.drawer.revenue.field.holdersCount")}
+                        value={String(event.preview.holdersCount)}
+                        tone={event.preview.holdersCount > 0 ? "success" : "warning"}
+                      />
                       {event.preview.roundingDelta != null ? (
                         <div
                           className={cn(
-                            "rounded-lg border p-2 sm:col-span-2",
+                            "flex min-h-[7.25rem] flex-col rounded-2xl p-3.5 sm:col-span-2 sm:p-4",
                             event.preview.reconciliationOk === false
-                              ? "border-red-200 bg-red-950/30"
-                              : "border-zinc-800",
+                              ? "bg-rose-500/10"
+                              : "bg-zinc-900/40",
                           )}
                         >
-                          <p className="text-zinc-400">Округление (delta)</p>
-                          <p className="font-medium tabular-nums">
+                          <p className={adminMetricLabel}>{a.t("admin.drawer.revenue.preview.rounding")}</p>
+                          <p
+                            className={metricValueClass(
+                              event.preview.reconciliationOk === false ? "warning" : "success",
+                              formatUsdtAmount(event.preview.roundingDelta),
+                            )}
+                          >
                             {formatUsdtAmount(event.preview.roundingDelta)}
-                            {event.preview.reconciliationOk === false ? " · не сходится" : " · OK"}
+                            {event.preview.reconciliationOk === false
+                              ? a.t("admin.drawer.revenue.preview.reconciliationFail")
+                              : a.t("admin.drawer.revenue.preview.reconciliationOk")}
                           </p>
                         </div>
                       ) : null}
                     </div>
-                    <FieldHint text={REVENUE_FIELD_TOOLTIPS.preview} />
+                    <div className={drawerPanel}>
+                      <FieldHint text={tooltip("preview")} />
+                    </div>
                     <AdminDataTable
-                      className="border-0 shadow-none"
+                      borderless
+                      className="shadow-none"
                       rowKey={(h) => h.userId}
                       columns={[
                         {
@@ -418,7 +505,7 @@ export function AdminRevenueDrawer({
                         { key: "pct", header: "%", render: (h) => `${h.percentage}%` },
                         {
                           key: "payout",
-                          header: "Начисление",
+                          header: a.t("admin.drawer.revenue.column.payout"),
                           render: (h) => formatUsdtAmount(h.payoutAmount),
                         },
                         {
@@ -436,7 +523,7 @@ export function AdminRevenueDrawer({
                         },
                         {
                           key: "bal",
-                          header: "Баланс",
+                          header: a.t("admin.drawer.revenue.column.balance"),
                           render: (h) => formatUsdtAmount(h.availableBalance),
                         },
                       ]}
@@ -444,7 +531,7 @@ export function AdminRevenueDrawer({
                     />
                   </>
                 ) : (
-                  <EmptyTab message="Предпросмотр ещё не рассчитан. Нажмите «Пересчитать начисления»." />
+                  <EmptyTab message={a.t("admin.drawer.revenue.empty.preview")} />
                 )}
               </div>
             ) : null}
@@ -452,13 +539,14 @@ export function AdminRevenueDrawer({
             {tab === "payouts" ? (
               event.payouts?.length ? (
                 <AdminDataTable
-                  className="border-0 shadow-none"
+                  borderless
+                  className="shadow-none"
                   rowKey={(p) => p.id}
                   columns={[
                     { key: "email", header: a.table.holder, render: (p) => p.userEmail },
                     { key: "units", header: a.table.units, render: (p) => p.units },
                     { key: "pct", header: "%", render: (p) => `${p.percentage}%` },
-                    { key: "amt", header: "Сумма", render: (p) => formatUsdtAmount(p.amountUsdt) },
+                    { key: "amt", header: a.table.amount, render: (p) => formatUsdtAmount(p.amountUsdt) },
                     {
                       key: "tx",
                       header: a.t("admin.table.walletTx"),
@@ -476,7 +564,7 @@ export function AdminRevenueDrawer({
                       key: "status",
                       header: a.table.status,
                       render: (p) => (
-                        <AdminStatusBadge label={revenueStatusLabel(p.status)} tone={revenueStatusTone(p.status)} />
+                        <AdminStatusBadge label={statusLabel(p.status)} tone={revenueStatusTone(p.status)} />
                       ),
                     },
                     {
@@ -491,8 +579,8 @@ export function AdminRevenueDrawer({
                 <EmptyTab
                   message={
                     event.status === "completed"
-                      ? "Начисления не найдены."
-                      : "Начисления появятся после запуска distribution."
+                      ? a.t("admin.drawer.revenue.empty.payoutsNotFound")
+                      : a.t("admin.drawer.revenue.empty.payoutsPending")
                   }
                 />
               )
@@ -500,10 +588,13 @@ export function AdminRevenueDrawer({
 
             {tab === "ledger" ? (
               event.ledger?.length ? (
-                <>
-                  <FieldHint text={REVENUE_FIELD_TOOLTIPS.walletLedger} />
+                <div className="space-y-4">
+                  <div className={drawerPanel}>
+                    <FieldHint text={tooltip("walletLedger")} />
+                  </div>
                   <AdminDataTable
-                    className="border-0 shadow-none"
+                    borderless
+                    className="shadow-none"
                     rowKey={(l) => l.id}
                     columns={[
                       {
@@ -516,7 +607,7 @@ export function AdminRevenueDrawer({
                           </span>
                         ),
                       },
-                      { key: "op", header: "Тип", render: (l) => l.operationType },
+                      { key: "op", header: a.t("admin.drawer.revenue.column.type"), render: (l) => l.operationType },
                       { key: "amt", header: a.table.amount, render: (l) => formatUsdtAmount(l.amountUsdt) },
                       { key: "status", header: a.table.status, render: (l) => l.status },
                       { key: "user", header: a.table.user, render: (l) => l.userEmail ?? "—" },
@@ -524,45 +615,48 @@ export function AdminRevenueDrawer({
                     ]}
                     rows={event.ledger}
                   />
-                </>
+                </div>
               ) : (
-                <EmptyTab message="Связанные wallet transactions появятся после run distribution." />
+                <EmptyTab message={a.t("admin.drawer.revenue.empty.ledger")} />
               )
             ) : null}
 
             {tab === "errors" && isFailed ? (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-red-200 bg-red-950/30 p-4">
-                  <p className="text-sm font-medium text-red-900">Причина ошибки</p>
-                  <p className="mt-1 text-sm text-red-800">{event.errorMessage ?? "Неизвестная ошибка"}</p>
+              <div className="space-y-5">
+                <div className={cn(drawerPanel, adminAlertSurface("danger"))}>
+                  <p className="text-sm font-medium">{a.t("admin.drawer.revenue.errors.reason")}</p>
+                  <p className="mt-2 text-sm leading-relaxed opacity-90">
+                    {event.errorMessage ?? a.t("admin.drawer.revenue.errors.unknown")}
+                  </p>
                 </div>
-                <ul className="list-inside list-disc space-y-1 text-sm text-zinc-400">
-                  <li>{a.t("admin.drawer.revenue.errorHint1")}</li>
-                  <li>{a.t("admin.drawer.revenue.errorHint2")}</li>
-                  <li>{a.t("admin.drawer.revenue.errorHint3")}</li>
-                  <li>
-                    <Link href={ROUTES.adminAudit} className="text-sky-700 hover:underline">
-                      Открыть audit log
+                <div className={cn(drawerPanel, "space-y-2 text-sm text-zinc-400")}>
+                  <p>{a.t("admin.drawer.revenue.errorHint1")}</p>
+                  <p>{a.t("admin.drawer.revenue.errorHint2")}</p>
+                  <p>{a.t("admin.drawer.revenue.errorHint3")}</p>
+                  <p>
+                    <Link href={ROUTES.adminAudit} className={drawerLink}>
+                      {a.t("admin.drawer.revenue.errors.openAudit")}
                     </Link>
-                  </li>
-                </ul>
+                  </p>
+                </div>
               </div>
             ) : null}
 
             {tab === "audit" ? (
               event.audit?.length ? (
                 <AdminDataTable
-                  className="border-0 shadow-none"
+                  borderless
+                  className="shadow-none"
                   rowKey={(a) => a.id}
                   columns={[
-                    { key: "action", header: "Действие", render: (a) => a.action },
-                    { key: "actor", header: "Кто", render: (a) => a.actorEmail ?? "system" },
+                    { key: "action", header: a.t("admin.drawer.revenue.column.action"), render: (row) => row.action },
+                    { key: "actor", header: a.t("admin.drawer.revenue.column.actor"), render: (row) => row.actorEmail ?? "—" },
                     { key: "at", header: a.table.created, render: (a) => formatAdminDate(a.createdAt) },
                   ]}
                   rows={event.audit}
                 />
               ) : (
-                <EmptyTab message="Записи audit по этому событию пока отсутствуют." />
+                <EmptyTab message={a.t("admin.drawer.revenue.empty.audit")} />
               )
             ) : null}
           </div>

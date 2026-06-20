@@ -13,7 +13,7 @@ import { ROUTES } from "@/constants/routes";
 import { hasAdminAccess } from "@/features/admin/lib/admin-access";
 import { markAdminAccessVerified } from "@/features/admin/lib/admin-access-cache";
 import { verifyAdminAccess } from "@/services/admin.service";
-import { ApiError } from "@/services/auth.service";
+import { ApiError, meRequest } from "@/services/auth.service";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { useApiErrorMessage } from "@/hooks/use-api-error-message";
 import { cn } from "@/lib/utils";
@@ -24,8 +24,7 @@ export function AdminLoginForm() {
   const a = useAdminI18n();
   const { messageFor } = useApiErrorMessage();
   const router = useRouter();
-  const { login, verify2fa, pendingTwoFactorChallenge, loadMe, refreshSession, logout } =
-    useAuth();
+  const { login, verify2fa, pendingTwoFactorChallenge, logout } = useAuth();
   const [state, setState] = React.useState<AdminLoginFormState>("idle");
   const [message, setMessage] = React.useState<string | null>(null);
   const [twoFactorCode, setTwoFactorCode] = React.useState("");
@@ -36,7 +35,12 @@ export function AdminLoginForm() {
       setMessage(a.t("admin.login.error.sessionFailed"));
       return;
     }
-    const me = await loadMe();
+    let me = null;
+    try {
+      me = await meRequest(token);
+    } catch {
+      me = null;
+    }
     if (!me || !hasAdminAccess(me.roles)) {
       setState("denied");
       setMessage(a.t("admin.login.error.noStaffRole"));
@@ -61,13 +65,12 @@ export function AdminLoginForm() {
     setMessage(null);
     setState("loading");
     try {
-      const status = await login({ email, password, remember: true });
-      if (status === "2fa_required") {
+      const tokenOr2fa = await login({ email, password, remember: true });
+      if (tokenOr2fa === "2fa_required") {
         setState("2fa");
         return;
       }
-      const token = (await refreshSession()) ?? null;
-      await finishStaffGate(token);
+      await finishStaffGate(tokenOr2fa);
     } catch (error) {
       setState("error");
       if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
@@ -88,13 +91,12 @@ export function AdminLoginForm() {
     setMessage(null);
     setState("loading");
     try {
-      await verify2fa({
+      setTwoFactorCode("");
+      const token = await verify2fa({
         challengeId: pendingTwoFactorChallenge.challengeId,
         code: twoFactorCode.trim(),
         method: "totp",
       });
-      setTwoFactorCode("");
-      const token = (await refreshSession()) ?? null;
       await finishStaffGate(token);
     } catch {
       setState("error");

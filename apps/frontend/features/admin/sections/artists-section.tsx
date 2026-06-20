@@ -9,6 +9,7 @@ import {
   AdminDrawerPrimaryButton,
   AdminDrawerSecondaryButton,
 } from "@/features/admin/components/admin-drawer-buttons";
+import { AdminArtistPlatformSearch } from "@/features/admin/components/admin-artist-platform-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
@@ -33,7 +34,6 @@ import {
   AdminFormFooter,
   AdminKpiValue,
   AdminReadOnlyBanner,
-  AdminSectionInfoHint,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -231,6 +231,7 @@ export function ArtistsSection() {
     <AdminSectionShell
       sectionId="artists"
       title={a.adminSectionLabel("artists")}
+      infoHint={a.t("admin.artists.infoHint")}
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <AdminSectionRefreshButton onClick={load} />
@@ -254,8 +255,6 @@ export function ArtistsSection() {
           {feedback}
         </p>
       ) : null}
-
-      <AdminSectionInfoHint>{a.t("admin.artists.infoHint")}</AdminSectionInfoHint>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
@@ -393,6 +392,7 @@ export function ArtistsSection() {
               onChange={(e) => setName(e.target.value)}
             />
           </AdminFormField>
+          <AdminArtistPlatformSearch artistName={name} />
           <AdminFormField label={a.t("admin.artists.field.slug")} htmlFor="artist-slug">
             <Input
               id="artist-slug"

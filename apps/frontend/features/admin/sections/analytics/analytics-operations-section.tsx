@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminSectionRefreshButton } from "@/features/admin/components/admin-section-layout";
 import { adminBtnOutline, adminBtnSecondary } from "@/features/admin/lib/admin-ui";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -26,7 +27,7 @@ import { formatAdminDateShort } from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { SUPPORT_PRIORITY_LABELS, SUPPORT_STATUS_LABELS, labelFromMap } from "@/features/admin/lib/admin-status-maps";
 import { ANALYTICS_OPERATIONS_TABS } from "@/features/admin/analytics/config/analytics-page-tabs";
-import { AdminAnalyticsPageShell } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
+import { AdminAnalyticsPageShell, AdminAnalyticsPageError, AdminAnalyticsPageLoading } from "@/features/admin/analytics/ui/admin-analytics-page-shell";
 import { AdminAnalyticsTabPanel } from "@/features/admin/analytics/ui/admin-analytics-tab-panel";
 import { isBusinessAnalyst } from "@/features/admin/config/admin-rbac";
 import {
@@ -56,8 +57,6 @@ import {
 } from "@/services/admin/adminSupportAnalytics.service";
 import {
   AdminDataTable,
-  AdminErrorState,
-  AdminLoadingState,
   type AdminColumn,
 } from "@/features/admin/ui";
 import { cn } from "@/lib/utils";
@@ -232,11 +231,11 @@ export function AnalyticsOperationsSection() {
   }, [load]);
 
   if (loading && !summary) {
-    return <AdminLoadingState label={a.t("admin.analytics.operations.loading")} centered />;
+    return <AdminAnalyticsPageLoading label={a.t("admin.analytics.operations.loading")} />;
   }
 
   if (error) {
-    return <AdminErrorState onRetry={load} />;
+    return <AdminAnalyticsPageError onRetry={load} />;
   }
 
   const s = pickOpsSummary(summary as Record<string, unknown> | null);
@@ -488,9 +487,7 @@ export function AnalyticsOperationsSection() {
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap items-center justify-end gap-2">
             <AdminPeriodSelector value={period} onChange={setPeriod} customFrom={customFrom} customTo={customTo} onCustomDatesChange={setCustomDates} />
-            <Button type="button" size="sm" variant="ghost" className={adminBtnOutline} onClick={load} disabled={loading}>
-              {loading ? a.t("admin.analytics.common.refreshing") : a.t("admin.analytics.common.refresh")}
-            </Button>
+            <AdminSectionRefreshButton onClick={load} loading={loading} />
             <AdminAnalyticsExportButton
               reportType="support_tickets"
               label={a.t("admin.analytics.common.generateReport")}
@@ -510,7 +507,7 @@ export function AnalyticsOperationsSection() {
       {(tab) => (
         <>
         <AdminAnalyticsTabPanel activeTab={tab} tabId="overview">
-        <div className={cn(ADMIN_SECTION_TILE, "p-5", healthBannerClass)}>
+        <div className={cn(ADMIN_SECTION_TILE, healthBannerClass)}>
           <h2 className={cn("text-sm font-semibold", adminAnalyticsHealthBannerTitleClass(health.tone))}>
             {health.title}
           </h2>
@@ -529,15 +526,16 @@ export function AnalyticsOperationsSection() {
                 href={ROUTES.adminSupport}
                 trend={createdTrend}
                 deltaPct={s.deltas.createdPct}
+                activeTone={s.openTickets > 0 ? "warning" : "neutral"}
               />
               <AdminMetricTrendCard label={op("kpi.inProgress")} value={String(s.inProgressTickets)} tooltip={OPS_KPI_TOOLTIPS.inProgress} />
               <AdminMetricTrendCard label={op("kpi.waitingUser")} value={String(s.waitingUserTickets)} tooltip={OPS_KPI_TOOLTIPS.waiting} />
               <AdminMetricTrendCard label={op("kpi.unassigned")} value={String(s.unassignedOpen)} href={ROUTES.adminSupport} />
-              <AdminMetricTrendCard label={op("kpi.escalated")} value={String(s.escalatedTickets)} tooltip={OPS_KPI_TOOLTIPS.escalated} />
+              <AdminMetricTrendCard label={op("kpi.escalated")} value={String(s.escalatedTickets)} tooltip={OPS_KPI_TOOLTIPS.escalated} activeTone={s.escalatedTickets > 0 ? "warning" : "neutral"} />
             </AdminAnalyticsKpiGroup>
 
             <AdminAnalyticsKpiGroup title={op("kpiGroup.sla")}>
-              <AdminMetricTrendCard label={op("kpi.overdueSla")} value={String(s.overdueSla)} tooltip={OPS_KPI_TOOLTIPS.overdue} href={ROUTES.adminSupport} />
+              <AdminMetricTrendCard label={op("kpi.overdueSla")} value={String(s.overdueSla)} tooltip={OPS_KPI_TOOLTIPS.overdue} href={ROUTES.adminSupport} activeTone={s.overdueSla > 0 ? "danger" : "neutral"} />
               <AdminMetricTrendCard
                 label={op("col.firstResponse")}
                 value={formatDurationRu(s.averageFirstResponseMinutes)}
@@ -765,7 +763,7 @@ export function AnalyticsOperationsSection() {
 
         <AdminAnalyticsTabPanel activeTab={tab} tabId="quality">
           <div className="space-y-4">
-            <div className={cn(ADMIN_SECTION_TILE, "border p-4")}>
+            <div className={cn(ADMIN_SECTION_TILE)}>
               <h3 className="text-sm font-semibold text-zinc-100">{op("qualityTitle")}</h3>
               <p className="mt-1 text-xs text-zinc-500">{resolution?.note}</p>
               <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">

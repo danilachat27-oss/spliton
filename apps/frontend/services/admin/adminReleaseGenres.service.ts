@@ -1,6 +1,12 @@
 import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import type { AdminApiClient } from "@/features/admin/api/admin-api-client";
+import {
+  applyAdminGenresListFilters,
+  type AdminGenresListQuery,
+} from "@/features/admin/lib/admin-genres-list";
 import { assertLiveAdminClient } from "./admin-service.util";
+
+export type { AdminGenresListQuery };
 
 export type AdminReleaseGenreListItem = {
   id: string;
@@ -18,19 +24,20 @@ export type AdminReleaseGenreBody = {
 };
 
 export async function listAdminReleaseGenres(
-  search: string | undefined,
+  query: AdminGenresListQuery | string | undefined,
   client: AdminApiClient | undefined,
-  options?: { activeOnly?: boolean },
 ): Promise<AdminReleaseGenreListItem[]> {
   assertLiveAdminClient(client);
-  const params = new URLSearchParams();
-  if (search?.trim()) params.set("search", search.trim());
-  if (options?.activeOnly) params.set("activeOnly", "true");
-  const qs = params.toString() ? `?${params.toString()}` : "";
+  const params =
+    typeof query === "string" ? { search: query } : query ?? {};
+  const qsParams = new URLSearchParams();
+  if (params.search?.trim()) qsParams.set("search", params.search.trim());
+  if (params.status === "active") qsParams.set("activeOnly", "true");
+  const qs = qsParams.toString() ? `?${qsParams.toString()}` : "";
   const res = await client.get<{ items: AdminReleaseGenreListItem[] }>(
     `${ADMIN_API_PATHS.releaseGenres}${qs}`,
   );
-  return res.items;
+  return applyAdminGenresListFilters(res.items, params);
 }
 
 export async function getAdminReleaseGenre(

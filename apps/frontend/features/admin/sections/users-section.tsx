@@ -20,7 +20,6 @@ import type { AdminListQuery } from "@/features/admin/api/types";
 import type { AdminUserListItem } from "@/features/admin/mocks/admin-users.mock";
 import { formatAdminDate, formatUsdtAmount } from "@/features/admin/lib/admin-format";
 import { ROUTES } from "@/constants/routes";
-import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import {
   AdminDataTable,
   AdminDetailDrawer,
@@ -29,6 +28,8 @@ import {
   AdminPagination,
   AdminReadOnlyBanner,
   AdminRoleBadge,
+  AdminSectionKpiCard,
+  AdminSectionKpiCardSkeleton,
   AdminStatusBadge,
   type AdminColumn,
 } from "@/features/admin/ui";
@@ -46,15 +47,6 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "pending"> 
   SUSPENDED: "warning",
   BANNED: "danger",
 };
-
-function KpiCard({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className={cn(ADMIN_SECTION_TILE, "px-4 py-3")}>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-100">{value}</p>
-    </div>
-  );
-}
 
 export function UsersSection() {
   const a = useAdminI18n();
@@ -164,15 +156,29 @@ export function UsersSection() {
     >
       {readOnly ? <AdminReadOnlyBanner area={a.adminSectionLabel("users")} /> : null}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid min-w-0 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {statsLoading ? (
-          <p className="col-span-full text-sm text-zinc-500">Загрузка KPI…</p>
+          <>
+            <AdminSectionKpiCardSkeleton />
+            <AdminSectionKpiCardSkeleton />
+            <AdminSectionKpiCardSkeleton />
+            <AdminSectionKpiCardSkeleton />
+          </>
         ) : stats ? (
           <>
-            <KpiCard label={a.t("admin.kpi.users.total")} value={stats.total} />
-            <KpiCard label={a.t("admin.kpi.users.active")} value={stats.active} />
-            <KpiCard label={a.t("admin.kpi.users.blocked")} value={stats.blocked} />
-            <KpiCard label="Staff" value={stats.staff} />
+            <AdminSectionKpiCard label={a.t("admin.kpi.users.total")} value={stats.total} />
+            <AdminSectionKpiCard
+              label={a.t("admin.kpi.users.active")}
+              value={stats.active}
+              activeTone="success"
+            />
+            <AdminSectionKpiCard
+              label={a.t("admin.kpi.users.blocked")}
+              value={stats.blocked}
+              activeTone="danger"
+              hint={a.t("admin.kpi.users.blockedHint")}
+            />
+            <AdminSectionKpiCard label={a.t("admin.kpi.users.staff")} value={stats.staff} activeTone="neutral" />
           </>
         ) : null}
       </div>

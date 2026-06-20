@@ -10,8 +10,9 @@ import {
 } from "@/features/admin/components/admin-drawer-buttons";
 import { Input } from "@/components/ui/input";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
-import { AdminDetailDrawer, AdminFormField, AdminFormFooter, AdminMediaUploadButton } from "@/features/admin/ui";
+import { AdminDetailDrawer, AdminFormField, AdminFormFooter, AdminLoadingState, AdminMediaUploadButton } from "@/features/admin/ui";
 import { AdminLocalizedStatusBadge } from "@/features/admin/ui";
+import { AdminCheckboxRow } from "@/features/admin/ui/admin-checkbox-row";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { fieldErrorMap, fieldErrorMessage } from "@/features/admin/lib/admin-form-field-errors";
 import { adminFieldInput, adminFieldTextarea } from "@/features/admin/lib/admin-ui";
@@ -109,6 +110,8 @@ const NEWS_FIELD_ERRORS = {
   "admin.drawer.news.error.slugInvalid": "slug",
   "admin.drawer.news.error.contentRequired": "content",
 } as const;
+
+const drawerPanel = "rounded-2xl bg-zinc-900/40 p-4";
 
 type AdminNewsDrawerProps = {
   open: boolean;
@@ -211,6 +214,7 @@ export function AdminNewsDrawer({
       title={mode === "create" ? a.t("admin.drawer.news.createTitle") : a.t("admin.drawer.news.editTitle")}
       subtitle={post ? `${post.slug} · ${post.id.slice(0, 8)}…` : undefined}
       wide
+      borderless
       widthClassName="w-[min(720px,100vw)]"
       footer={
         <AdminFormFooter
@@ -250,10 +254,12 @@ export function AdminNewsDrawer({
       }
     >
       {loading ? (
-        <p className="py-8 text-center text-sm text-zinc-500">{a.t("admin.drawer.common.loading")}</p>
+        <AdminLoadingState label={a.t("admin.drawer.common.loading")} className="border-0 bg-transparent shadow-none" />
       ) : (
         <div className="space-y-5 pb-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={drawerPanel}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Контент</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <AdminFormField
               label={a.t("admin.drawer.news.field.title")}
               htmlFor="news-title"
@@ -316,10 +322,12 @@ export function AdminNewsDrawer({
                 aria-invalid={Boolean(fe("content"))}
               />
             </AdminFormField>
+            </div>
           </div>
 
-          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div className={drawerPanel}>
             <p className="text-sm font-medium text-zinc-100">{a.t("admin.drawer.news.field.cover")}</p>
+            <div className="mt-3 space-y-3">
             {!readOnly ? (
               <AdminFormField
                 label={a.t("admin.drawer.news.field.uploadImage")}
@@ -356,9 +364,12 @@ export function AdminNewsDrawer({
                 <img src={form.coverUrl.trim()} alt="" className="size-full object-cover" />
               </div>
             ) : null}
+            </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={drawerPanel}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">Публикация</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <AdminStyledSelectField
               label={a.t("admin.drawer.news.field.audience")}
               id="news-audience"
@@ -377,36 +388,34 @@ export function AdminNewsDrawer({
                 readOnly={readOnly}
               />
             </AdminFormField>
-          </div>
+            </div>
 
-          <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+            <div className="mt-4 space-y-2">
+              <AdminCheckboxRow
+                id="news-pinned"
+                label={a.t("admin.drawer.news.pinned")}
                 checked={form.pinned}
                 disabled={readOnly}
-                onChange={(e) => set("pinned", e.target.checked)}
+                onCheckedChange={(checked) => set("pinned", checked)}
+                className="border-0 bg-zinc-900/35"
               />
-              {a.t("admin.drawer.news.pinned")}
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <AdminCheckboxRow
+                id="news-homepage"
+                label={a.t("admin.drawer.news.showOnHomepage")}
                 checked={form.showOnHomepage}
                 disabled={readOnly}
-                onChange={(e) => set("showOnHomepage", e.target.checked)}
+                onCheckedChange={(checked) => set("showOnHomepage", checked)}
+                className="border-0 bg-zinc-900/35"
               />
-              {a.t("admin.drawer.news.showOnHomepage")}
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <AdminCheckboxRow
+                id="news-dashboard"
+                label={a.t("admin.drawer.news.showInDashboard")}
                 checked={form.showInDashboard}
                 disabled={readOnly}
-                onChange={(e) => set("showInDashboard", e.target.checked)}
+                onCheckedChange={(checked) => set("showInDashboard", checked)}
+                className="border-0 bg-zinc-900/35"
               />
-              {a.t("admin.drawer.news.showInDashboard")}
-            </label>
+            </div>
           </div>
         </div>
       )}
