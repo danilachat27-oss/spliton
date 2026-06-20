@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { X } from "@/lib/lucide";
 
 import { authFieldClassName } from "@/components/auth/auth-field-classes";
 import { EmailSuggestionLabel } from "@/components/auth/register/email-suggestion-label";
@@ -12,7 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ROUTES } from "@/constants/routes";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { BRAND } from "@/constants/brand";
 import { signInWithGoogle } from "@/services/auth.service";
+import { tf } from "@/lib/i18n/auth-messages";
 import { cn } from "@/lib/utils";
 
 export type RegisterEmailStepProps = {
@@ -52,20 +55,20 @@ export function RegisterEmailStep({
   isRequestingOtp,
   onContinue,
 }: RegisterEmailStepProps) {
+  const { t } = useI18n();
   return (
     <>
       <h2 className="text-[2.25rem] font-semibold leading-none tracking-tight sm:text-[2.5rem]">
-        Укажите электронную почту
+        {t("auth.register.emailTitle")}
       </h2>
       <p className="mt-3 text-[15px] leading-relaxed text-neutral-600">
-        Этот адрес электронной почты будет использоваться для входа в аккаунт и доступа к сервисам
-        RevShare.
+        {tf(t("auth.register.emailBody"), { brand: BRAND.name })}
       </p>
 
       <div className="mt-8 space-y-5">
         <div className="space-y-2">
           <Label htmlFor="register-email" className="text-sm font-medium text-neutral-800">
-            Адрес электронной почты
+            {t("auth.register.emailLabel")}
           </Label>
           <div ref={emailFieldRef} className="relative">
             <Input
@@ -96,7 +99,7 @@ export function RegisterEmailStep({
               <button
                 type="button"
                 className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
-                aria-label="Очистить поле"
+                aria-label={t("auth.register.clearField")}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   setEmail("");
@@ -164,17 +167,17 @@ export function RegisterEmailStep({
           )}
           disabled={!emailValid || isRequestingOtp}
         >
-          {isRequestingOtp ? "Отправляем код…" : "Продолжить"}
+          {isRequestingOtp ? t("auth.register.continueSending") : t("auth.register.continue")}
         </Button>
       </div>
 
       <p className="mt-8 text-center text-[15px] text-neutral-600">
-        Уже есть аккаунт?{" "}
+        {t("auth.register.hasAccount")}{" "}
         <Link
           href={ROUTES.login}
           className="font-semibold text-neutral-900 underline decoration-neutral-900 underline-offset-4"
         >
-          Войти
+          {t("auth.register.signIn")}
         </Link>
       </p>
 
@@ -182,7 +185,7 @@ export function RegisterEmailStep({
         <Separator className="bg-neutral-200" />
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <span className="bg-white px-3 text-xs font-medium text-neutral-500">
-            Альтернативный способ
+            {t("auth.login.altMethod")}
           </span>
         </div>
       </div>
@@ -195,12 +198,12 @@ export function RegisterEmailStep({
             try {
               await signInWithGoogle();
             } catch {
-              // Replace with toast when OAuth is wired.
+              /* Replace with toast when OAuth is wired. */
             }
           }}
         >
           <GoogleMark className="size-[18px] shrink-0" />
-          Продолжить через Google
+          {t("auth.login.google")}
         </button>
       </div>
     </>

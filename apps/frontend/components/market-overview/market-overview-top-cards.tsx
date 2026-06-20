@@ -2,11 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, X } from "@/lib/lucide";
 
 import { MarketTopCardInteractiveChart } from "./ui/market-top-card-interactive-chart";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { MARKET_TOP_CARD_DEFS, MARKET_TOP_CARD_METRICS } from "@/constants/market-overview/page";
 import { ROUTES } from "@/constants/routes";
+import { buildLiveTopCardMetrics } from "@/lib/market-overview/market-overview-live-mappers";
+import type { MarketOverviewChartsApi, MarketOverviewStatsApi } from "@/services/market-overview.service";
 import { cn } from "@/lib/utils";
 import type { MarketOverviewPeriod, MarketRowTrend } from "@/types/market-overview";
 
@@ -108,8 +111,37 @@ function CardMetricBlock({
   );
 }
 
-export function MarketOverviewTopCards({ period }: { period: MarketOverviewPeriod }) {
-  const m = MARKET_TOP_CARD_METRICS[period];
+export function MarketOverviewTopCards({
+  period,
+  live,
+  stats,
+  charts,
+  loading,
+}: {
+  period: MarketOverviewPeriod;
+  live?: boolean;
+  stats?: MarketOverviewStatsApi | null;
+  charts?: MarketOverviewChartsApi | null;
+  loading?: boolean;
+}) {
+  const { t } = useI18n();
+
+  if (live && loading && !stats) {
+    return (
+      <div className="mx-auto w-full max-w-[1400px] px-4 pt-4 md:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[142px] animate-pulse rounded-xl bg-white/[0.04]" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const m =
+    live && stats
+      ? buildLiveTopCardMetrics(stats, charts ?? null, period)
+      : MARKET_TOP_CARD_METRICS[period];
   const [expandedId, setExpandedId] = React.useState<CardId | null>(null);
 
   const ordered = React.useMemo(() => {
@@ -161,9 +193,13 @@ export function MarketOverviewTopCards({ period }: { period: MarketOverviewPerio
                       slim && "xl:line-clamp-3 xl:text-[12px] xl:leading-snug",
                     )}
                   >
-                    {def.title}
+                    {t(`marketOverview.topCard.${def.id}.title`)}
                   </h2>
-                  {!slim ? <p className="mt-1 text-[12px] leading-snug text-zinc-500">{def.subtitle}</p> : null}
+                  {!slim ? (
+                    <p className="mt-1 text-[12px] leading-snug text-zinc-500">
+                      {t(`marketOverview.topCard.${def.id}.subtitle`)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {expanded ? (
@@ -172,7 +208,7 @@ export function MarketOverviewTopCards({ period }: { period: MarketOverviewPerio
                         type="button"
                         onClick={() => setExpandedId(null)}
                         className="flex size-7 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white/10 hover:text-zinc-200"
-                        aria-label="Свернуть карточку"
+                        aria-label={t("marketOverview.topCard.collapseAria")}
                       >
                         <X className="size-3.5" strokeWidth={2} />
                       </button>
@@ -203,7 +239,7 @@ export function MarketOverviewTopCards({ period }: { period: MarketOverviewPerio
                       onKeyDown={(e) => e.stopPropagation()}
                       className="pointer-events-auto mt-3 inline-flex items-center gap-0.5 text-[12px] font-medium text-zinc-500 transition-colors hover:text-[#c4f570] focus-visible:rounded focus-visible:ring-2 focus-visible:ring-[#B7F500]/35"
                     >
-                      Подробнее
+                      {t("marketOverview.topCard.more")}
                       <ChevronRight className="size-3" strokeWidth={2} aria-hidden />
                     </Link>
                   ) : null}

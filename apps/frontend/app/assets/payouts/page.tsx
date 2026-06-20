@@ -1,26 +1,22 @@
-import type { Metadata } from "next";
+import { PayoutsAccrualChartSection } from "@/components/dashboard/assets/payouts-accrual-chart-section";
+import { PayoutsOverviewSummary } from "@/components/dashboard/assets/payouts-overview-summary";
+import { LocalizedSubpageHero } from "@/components/dashboard/assets/localized-subpage-hero";
+import { pageMetaAsync } from "@/lib/i18n/page-metadata";
 
-import { PayoutsAccrualChart } from "@/components/dashboard/assets/payouts-accrual-chart";
-import { PayoutsSectionHeader } from "@/components/dashboard/assets/payouts-section-header";
-import { PayoutsSubpageHero } from "@/components/dashboard/assets/payouts-subpage-hero";
-
-export const metadata: Metadata = {
-  title: "Выплаты",
-  description: "Динамика начислений USDT по релизам.",
-};
+export async function generateMetadata() {
+  return pageMetaAsync("meta.payouts.title", "meta.payouts.description");
+}
 
 export default function AssetsPayoutsPage() {
   return (
-    <div className="space-y-10 pb-8 sm:space-y-12">
-      <PayoutsSectionHeader />
+    <div className="space-y-8 pb-8 sm:space-y-10">
+      <LocalizedSubpageHero eyebrowKey="meta.payouts.overviewEyebrow" titleKey="meta.payouts.overviewTitle" />
 
-      <div className="space-y-8 sm:space-y-10">
-        <PayoutsSubpageHero eyebrow="USDT · TRC20 · Payouts" title="Обзор выплат" />
+      <PayoutsOverviewSummary />
 
-        <section className="scroll-mt-24">
-          <PayoutsAccrualChart />
-        </section>
-      </div>
+      <section className="scroll-mt-24">
+        <PayoutsAccrualChartSection />
+      </section>
     </div>
   );
 }

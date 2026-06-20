@@ -10,6 +10,10 @@ export type EmailSignUpPayload = {
   email: string;
   password: string;
   acceptedTerms: boolean;
+  acceptedPrivacy: boolean;
+  referralCode?: string;
+  utmSource?: string;
+  utmCampaign?: string;
 };
 
 export type SafeUser = {
@@ -18,7 +22,9 @@ export type SafeUser = {
   status: "ACTIVE" | "PENDING_EMAIL_VERIFICATION" | "SUSPENDED" | "BANNED" | "DELETED";
   profile: {
     displayName: string | null;
+    preferredLocale?: "ru" | "en" | "es" | "pt" | null;
   } | null;
+  preferredLocale?: "ru" | "en" | "es" | "pt";
   roles: string[];
   createdAt: string;
 };

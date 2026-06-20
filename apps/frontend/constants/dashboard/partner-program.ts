@@ -18,7 +18,7 @@ export const PARTNER_TAB_META: Record<
 > = {
   about: {
     documentTitle: "О программе",
-    surfaceTitle: "Партнёрская программа RevShare",
+    surfaceTitle: "Партнёрская программа Spliton",
     surfaceSubtitle:
       "Медиа, сообщества, лейблы и стратегические коллаборации — отдельный контур от пользовательской реферальной программы. Форматы, преимущества и зачем вступать.",
     zoneLabel: "Partners",

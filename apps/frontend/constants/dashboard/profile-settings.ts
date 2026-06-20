@@ -1,8 +1,10 @@
-/** Лейблы для селектов на странице «Настройки» (MVP, без i18n). */
+/** Labels for settings page selects — values align with SUPPORTED_LOCALES. */
 
 export const SETTINGS_LANGUAGE_OPTIONS = [
-  { value: "ru", label: "Русский" },
-  { value: "en", label: "English" },
+  { value: "ru", label: "🇷🇺 Русский" },
+  { value: "en", label: "🇬🇧 English" },
+  { value: "es", label: "🇪🇸 Español" },
+  { value: "pt", label: "🇵🇹 Português" },
 ] as const;
 
 export const SETTINGS_TIMEZONE_OPTIONS = [

@@ -1,44 +1,67 @@
+"use client";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import { RELEASE_PARAMETERS_GRID } from "@/constants/release-parameters/page";
 
 import { ReleaseSectionShell } from "./ui/release-section-shell";
 
+const GRID_SLUG: Record<string, string> = {
+  Units: "units",
+  "Investor share": "investorShare",
+  "Raise target": "raiseTarget",
+  "Hard cap": "hardCap",
+  "Available units": "availableUnits",
+  "Payout model": "payoutModel",
+  "Статус релиза": "status",
+  "Secondary market": "secondaryMarket",
+};
+
 export function ReleaseParametersGrid() {
+  const { t } = useI18n();
+
   return (
     <ReleaseSectionShell
       id="rp-params"
-      kicker="Словарь полей"
-      title="Ключевые параметры"
-      subtitle="Ниже — восемь полей карточки каталога. Сначала «что это простыми словами», затем «на что смотреть при сравнении двух релизов»."
+      title={t("catalog.releaseParameters.grid.title")}
+      subtitle={t("catalog.releaseParameters.grid.subtitle")}
     >
-      <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
-        {RELEASE_PARAMETERS_GRID.map((p, i) => (
-          <article
-            key={p.title}
-            className="flex min-h-full flex-col rounded-2xl bg-[#111111] p-5 transition-colors hover:bg-[#141414] md:p-6"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-wide text-sky-400/90">{p.title}</p>
-                <h3 className="mt-1 text-lg font-semibold tracking-tight text-white md:text-xl">{p.titleRu}</h3>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {RELEASE_PARAMETERS_GRID.map((p, i) => {
+          const slug = GRID_SLUG[p.title] ?? "units";
+          return (
+            <article key={p.title} className="guide-panel px-4 py-4 sm:px-5 sm:py-5">
+              <div className="flex items-start gap-3">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-[#B7F500]/35 bg-[#B7F500]/8 font-mono text-[10px] font-semibold text-[#c4f570]">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold tracking-tight text-white">
+                    {t(`catalog.releaseParameters.grid.${slug}.titleRu`)}
+                  </h3>
+                  <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-zinc-600">{p.title}</p>
+                </div>
               </div>
-              <span className="shrink-0 font-mono text-[11px] font-semibold tabular-nums text-zinc-600">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-            </div>
 
-            <div className="mt-4 flex-1 rounded-xl bg-[#0a0a0a] px-4 py-3.5">
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Что это</p>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-300 md:text-[15px]">{p.definition}</p>
-            </div>
+              <div className="mt-3">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                  {t("catalog.releaseParameters.grid.whatIs")}
+                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-zinc-300">
+                  {t(`catalog.releaseParameters.grid.${slug}.definition`)}
+                </p>
+              </div>
 
-            <div className="mt-3">
-              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                При сравнении в каталоге
-              </p>
-              <p className="mt-2 text-[13px] leading-relaxed text-zinc-500 md:text-sm">{p.why}</p>
-            </div>
-          </article>
-        ))}
+              <div className="mt-3">
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                  {t("catalog.releaseParameters.grid.whenComparing")}
+                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-zinc-500">
+                  {t(`catalog.releaseParameters.grid.${slug}.why`)}
+                </p>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </ReleaseSectionShell>
   );

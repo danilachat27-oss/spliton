@@ -20,6 +20,12 @@ export type MarketOverviewRow = {
   title: string;
   artist: string;
   segment: string;
+  /**
+   * Последняя цена 1 юнита во вторичном рынке, USDT TRC20.
+   * В не-live режимах может отсутствовать (или быть null).
+   */
+  lastPriceUsdt?: number | null;
+  volume24hUsdt?: number | null;
   yieldPct: number;
   payoutsUsdt: number;
   activityScore: number;
@@ -27,11 +33,15 @@ export type MarketOverviewRow = {
   /** Цена 1 unit в первичном раунде, USDT TRC20 (мок каталога; одна позиция — одно значение). */
   primaryUnitPriceUsdt: number;
   secondaryLabel: "Высокий" | "Средний" | "Низкий" | "—";
-  liquidityLabel: "Deep" | "Mid" | "Thin";
+  liquidityLabel: "Deep" | "Mid" | "Thin" | "Высокая" | "Средняя" | "Низкая";
   trend: MarketRowTrend;
   sparkline: number[];
   status: "Активен" | "Пауза" | "Закрыт" | "Новый";
   /** Для фильтра «Выплаты» в UI */
   payoutFreq: "monthly" | "biweekly";
   categories: MarketOverviewCategory[];
+
+  activeListingsCount?: number | null;
+  spreadPercent?: number | null;
+  spreadUsdt?: number | null;
 };

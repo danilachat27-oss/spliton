@@ -1,8 +1,33 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import {
+  buildMarketOverviewUrlSearchParams,
+  parseMarketOverviewSearchParams,
+  type MarketOverviewListQueryParams,
+} from "@/lib/market-overview/market-overview-api-query";
+import {
+  adaptMarketOverviewRow,
+  marketOverviewQueryFromState,
+} from "@/lib/market-overview/market-overview-adapter";
 import { MARKET_OVERVIEW_ROWS } from "@/mocks/market-overview-rows";
+import {
+  fetchMarketOverviewCharts,
+  fetchMarketOverviewDepth,
+  fetchMarketOverviewList,
+  fetchMarketOverviewListings,
+  fetchMarketOverviewStats,
+  fetchMarketOverviewTrades,
+  isLiveMarketOverviewEnabled,
+  type MarketOverviewChartsApi,
+  type MarketOverviewDepthApi,
+  type MarketOverviewListingApi,
+  type MarketOverviewPagination,
+  type MarketOverviewStatsApi,
+  type MarketOverviewTradeApi,
+} from "@/services/market-overview.service";
 import type {
   MarketOverviewCategory,
   MarketOverviewPeriod,
@@ -24,6 +49,10 @@ const defaultFilters: MarketOverviewFilters = {
   availability: "all",
 };
 
+const LIVE_DEBOUNCE_MS = 300;
+const DEFAULT_PAGE_SIZE = 24;
+const FEED_PAGE_SIZE = 12;
+
 function segmentSlug(segment: string): string {
   const s = segment.toLowerCase();
   if (s.includes("hip")) return "hiphop";
@@ -43,7 +72,10 @@ function statusSlug(status: MarketOverviewRow["status"]): string {
 }
 
 function liquiditySlug(label: MarketOverviewRow["liquidityLabel"]): string {
-  return label.toLowerCase() as "deep" | "mid" | "thin";
+  if (label === "Высокая" || label === "Deep") return "deep";
+  if (label === "Средняя" || label === "Mid") return "mid";
+  if (label === "Низкая" || label === "Thin") return "thin";
+  return "all";
 }
 
 function passesFilters(row: MarketOverviewRow, f: MarketOverviewFilters): boolean {
@@ -74,15 +106,107 @@ function sortRows(rows: MarketOverviewRow[], key: MarketTableSortKey, dir: "asc"
   });
 }
 
+function filtersFromUrl(
+  parsed: Partial<MarketOverviewListQueryParams>,
+): MarketOverviewFilters {
+  return {
+    genre: parsed.genre ?? "all",
+    status: parsed.status ?? "all",
+    payoutFreq: parsed.payoutFreq ?? "all",
+    liquidity: parsed.liquidity ?? "all",
+    yield: parsed.yield ?? "all",
+    availability: parsed.availability ?? "all",
+  };
+}
+
 export function useMarketOverviewState() {
-  const [period, setPeriod] = React.useState<MarketOverviewPeriod>("7d");
-  const [categoryTab, setCategoryTab] = React.useState<MarketOverviewCategory>("all");
-  const [filters, setFilters] = React.useState<MarketOverviewFilters>(defaultFilters);
-  const [sort, setSort] = React.useState<MarketTableSortKey>("activity");
-  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlState = React.useMemo(
+    () => parseMarketOverviewSearchParams(searchParams),
+    [searchParams],
+  );
+
+  const live = isLiveMarketOverviewEnabled();
+
+  const [period, setPeriodState] = React.useState<MarketOverviewPeriod>(urlState.period ?? "7d");
+  const [search, setSearchState] = React.useState(urlState.search ?? "");
+  const [categoryTab, setCategoryTabState] = React.useState<MarketOverviewCategory>(
+    urlState.category ?? "all",
+  );
+  const [filters, setFilters] = React.useState<MarketOverviewFilters>(() => filtersFromUrl(urlState));
+  const [sort, setSort] = React.useState<MarketTableSortKey>(urlState.sort ?? "activity");
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">(urlState.sortDir ?? "desc");
+  const [page, setPageState] = React.useState(urlState.page ?? 1);
+
+  const [liveRows, setLiveRows] = React.useState<MarketOverviewRow[] | null>(null);
+  const [pagination, setPagination] = React.useState<MarketOverviewPagination | null>(null);
+  const [stats, setStats] = React.useState<MarketOverviewStatsApi | null>(null);
+  const [charts, setCharts] = React.useState<MarketOverviewChartsApi | null>(null);
+  const [depth, setDepth] = React.useState<MarketOverviewDepthApi | null>(null);
+  const [listings, setListings] = React.useState<MarketOverviewListingApi[]>([]);
+  const [trades, setTrades] = React.useState<MarketOverviewTradeApi[]>([]);
+  const [liveUpdatedAt, setLiveUpdatedAt] = React.useState<string | null>(null);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const [feedError, setFeedError] = React.useState(false);
+  const [loading, setLoading] = React.useState(live);
+  const [feedLoading, setFeedLoading] = React.useState(live);
+
+  const listQuery = React.useMemo((): MarketOverviewListQueryParams => {
+    return {
+      period,
+      search,
+      category: categoryTab,
+      genre: filters.genre,
+      status: filters.status,
+      payoutFreq: filters.payoutFreq,
+      liquidity: filters.liquidity,
+      yield: filters.yield,
+      availability: filters.availability,
+      sort,
+      sortDir,
+      page,
+      pageSize: DEFAULT_PAGE_SIZE,
+      release: urlState.release,
+    };
+  }, [period, search, categoryTab, filters, sort, sortDir, page, urlState.release]);
+
+  const syncUrl = React.useCallback(
+    (next: MarketOverviewListQueryParams) => {
+      const sp = buildMarketOverviewUrlSearchParams(next);
+      const qs = sp.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router],
+  );
+
+  React.useEffect(() => {
+    syncUrl(listQuery);
+  }, [listQuery, syncUrl]);
 
   const setFilter = React.useCallback((id: keyof MarketOverviewFilters, value: string) => {
     setFilters((prev) => ({ ...prev, [id]: value }));
+    setPageState(1);
+  }, []);
+
+  const setPeriod = React.useCallback((p: MarketOverviewPeriod) => {
+    setPeriodState(p);
+    setPageState(1);
+  }, []);
+
+  const setCategoryTab = React.useCallback((tab: MarketOverviewCategory) => {
+    setCategoryTabState(tab);
+    setPageState(1);
+  }, []);
+
+  const setSearch = React.useCallback((value: string) => {
+    setSearchState(value);
+    setPageState(1);
+  }, []);
+
+  const setPage = React.useCallback((next: number) => {
+    setPageState(next);
   }, []);
 
   const handleSort = React.useCallback(
@@ -92,30 +216,145 @@ export function useMarketOverviewState() {
         setSort(key);
         setSortDir("desc");
       }
+      setPageState(1);
     },
     [sort],
   );
 
   const resetFilters = React.useCallback(() => {
     setFilters(defaultFilters);
-    setCategoryTab("all");
+    setCategoryTabState("all");
+    setSearchState("");
+    setPageState(1);
   }, []);
 
-  const filteredRows = React.useMemo(() => {
-    const base = MARKET_OVERVIEW_ROWS.filter((r) => passesCategory(r, categoryTab) && passesFilters(r, filters));
-    return sortRows(base, sort, sortDir);
-  }, [categoryTab, filters, sort, sortDir]);
+  const feedParams = React.useMemo(
+    () => ({
+      period,
+      page: "1",
+      limit: String(FEED_PAGE_SIZE),
+      ...(search.trim() ? { search: search.trim() } : {}),
+      ...(filters.genre !== "all" ? { genre: filters.genre } : {}),
+    }),
+    [period, search, filters.genre],
+  );
 
-  const lastUpdated = new Date().toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const loadLive = React.useCallback(async () => {
+    if (!live) return;
+    setLoading(true);
+    setFeedLoading(true);
+    setLoadError(null);
+    setFeedError(false);
+    const query = marketOverviewQueryFromState({
+      period: listQuery.period,
+      search: listQuery.search,
+      categoryTab: listQuery.category,
+      filters,
+      sort: listQuery.sort,
+      sortDir: listQuery.sortDir,
+      page: listQuery.page,
+      pageSize: listQuery.pageSize,
+    });
+
+    try {
+      const [listRes, statsRes, chartsRes, depthRes, listingsRes, tradesRes] = await Promise.all([
+        fetchMarketOverviewList(query),
+        fetchMarketOverviewStats(listQuery.period ?? "7d"),
+        fetchMarketOverviewCharts(listQuery.period ?? "7d"),
+        fetchMarketOverviewDepth(listQuery.period ?? "7d"),
+        fetchMarketOverviewListings(feedParams),
+        fetchMarketOverviewTrades(feedParams),
+      ]);
+      setLiveRows(listRes.items.map(adaptMarketOverviewRow));
+      setPagination(listRes.pagination);
+      setStats(statsRes ?? listRes.stats ?? null);
+      setCharts(chartsRes);
+      setDepth(depthRes);
+      setListings(listingsRes.items);
+      setTrades(tradesRes.items);
+      const updated = listRes.updatedAt ?? statsRes?.updatedAt;
+      setLiveUpdatedAt(
+        updated
+          ? new Date(updated).toLocaleString("ru-RU", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : null,
+      );
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Не удалось загрузить обзор рынка");
+      setLiveRows([]);
+      setPagination(null);
+      setStats(null);
+      setCharts(null);
+      setDepth(null);
+      setListings([]);
+      setTrades([]);
+      setFeedError(true);
+    } finally {
+      setLoading(false);
+      setFeedLoading(false);
+    }
+  }, [live, listQuery, filters, feedParams]);
+
+  React.useEffect(() => {
+    if (!live) {
+      setLiveRows(null);
+      setPagination(null);
+      setStats(null);
+      setCharts(null);
+      setDepth(null);
+      setListings([]);
+      setTrades([]);
+      setLoading(false);
+      setFeedLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void loadLive();
+    }, LIVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [live, loadLive]);
+
+  const filteredRows = React.useMemo(() => {
+    if (live) {
+      return liveRows ?? [];
+    }
+    const base = MARKET_OVERVIEW_ROWS.filter(
+      (r) => passesCategory(r, categoryTab) && passesFilters(r, filters),
+    );
+    const q = search.trim().toLowerCase();
+    const searched = q
+      ? base.filter(
+          (r) =>
+            r.title.toLowerCase().includes(q) ||
+            r.artist.toLowerCase().includes(q) ||
+            r.symbol.toLowerCase().includes(q),
+        )
+      : base;
+    return sortRows(searched, sort, sortDir);
+  }, [live, liveRows, categoryTab, filters, sort, sortDir, search]);
+
+  const lastUpdated =
+    live && liveUpdatedAt
+      ? liveUpdatedAt
+      : new Date().toLocaleString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+  const totalCount = live ? (pagination?.total ?? filteredRows.length) : MARKET_OVERVIEW_ROWS.length;
+  const totalPages = live ? (pagination?.totalPages ?? 1) : 1;
 
   return {
     period,
     setPeriod,
+    search,
+    setSearch,
     categoryTab,
     setCategoryTab,
     filters,
@@ -126,5 +365,21 @@ export function useMarketOverviewState() {
     filteredRows,
     lastUpdated,
     resetFilters,
+    live,
+    loading,
+    feedLoading,
+    loadError,
+    feedError,
+    stats,
+    charts,
+    depth,
+    listings,
+    trades,
+    pagination,
+    page,
+    setPage,
+    totalCount,
+    totalPages,
+    reload: loadLive,
   };
 }

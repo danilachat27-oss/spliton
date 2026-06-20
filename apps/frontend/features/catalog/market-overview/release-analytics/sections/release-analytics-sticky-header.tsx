@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "@/lib/lucide";
 
 import { ROUTES, analyticsReleaseDetailPath, catalogBuyUnitsPath } from "@/constants/routes";
 import { cn } from "@/lib/utils";

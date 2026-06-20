@@ -13,7 +13,7 @@ import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 export const metadata: Metadata = {
   title: "Кабинет",
   description:
-    "Кабинет RevShare: баланс USDT, доли в треках, выплаты, каталог релизов и вторичный рынок в одном лендинге.",
+    "Кабинет Spliton: баланс USDT, доли в треках, выплаты, каталог релизов и вторичный рынок в одном лендинге.",
 };
 
 export default function DashboardPage() {

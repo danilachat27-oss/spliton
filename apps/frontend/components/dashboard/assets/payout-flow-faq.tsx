@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/lib/lucide";
 import { useCallback, useId, useState } from "react";
 
 import type { PayoutFaqItem } from "@/components/dashboard/assets/payout-flow-mock-data";
@@ -10,7 +10,7 @@ export type { PayoutFaqItem };
 
 type PayoutFlowFaqListProps = {
   items: PayoutFaqItem[];
-  /** id первого раскрытого пункта; если не задан — все свёрнуты до клика */
+  /** id of the initially expanded item; if omitted, all items start collapsed */
   defaultOpenId?: string | null;
 };
 

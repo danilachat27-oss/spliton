@@ -1,13 +1,33 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { Info } from "@/lib/lucide";
 import { useCallback, useId, useMemo, useRef, useState, type MouseEvent } from "react";
 
+import { useI18n } from "@/components/providers/i18n-provider";
+import { formatNumber, formatPercent, formatUsdtAmount, intlLocaleFor } from "@/lib/i18n/formatters";
+import { widgetMonthLabels } from "@/lib/i18n/widget-month-labels";
+import { tf } from "@/lib/i18n/widget-messages";
+import {
+  assetsCardClass,
+  assetsPanelClass,
+  assetsSegmentActiveClass,
+  assetsSegmentIdleClass,
+} from "@/components/dashboard/assets/assets-ui";
+import { SectionUnavailableState } from "@/components/shared/data-states/section-unavailable-state";
+import { useReadOnlySectionError } from "@/hooks/use-read-only-section-error";
 import { cn } from "@/lib/utils";
 
 const VIEW_W = 960;
 const VIEW_H = 300;
 const PAD = { top: 26, right: 20, bottom: 46, left: 56 };
+
+const RANGE_IDS = ["7d", "30d", "90d", "1y"] as const;
+const RANGE_KEYS: Record<(typeof RANGE_IDS)[number], string> = {
+  "7d": "chart.range7d",
+  "30d": "chart.range30d",
+  "90d": "chart.range90d",
+  "1y": "chart.range1y",
+};
 
 function hash01(seed: number, i: number) {
   const x = Math.sin(seed * 127.1 + i * 311.7) * 10000;
@@ -16,8 +36,7 @@ function hash01(seed: number, i: number) {
 
 export type MetricsPoint = { label: string; primary: number; secondary?: number };
 
-function buildBalanceSeries(n: number, seed: number): MetricsPoint[] {
-  const months = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+function buildBalanceSeries(n: number, seed: number, months: string[]): MetricsPoint[] {
   let bal = 6200 + hash01(seed, 0) * 200;
   let dep = 0;
   const out: MetricsPoint[] = [];
@@ -31,8 +50,7 @@ function buildBalanceSeries(n: number, seed: number): MetricsPoint[] {
   return out;
 }
 
-function buildPnlSeries(n: number, seed: number): MetricsPoint[] {
-  const months = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+function buildPnlSeries(n: number, seed: number, months: string[]): MetricsPoint[] {
   let v = 0;
   const out: MetricsPoint[] = [];
   for (let i = 0; i < n; i++) {
@@ -44,24 +62,22 @@ function buildPnlSeries(n: number, seed: number): MetricsPoint[] {
   return out;
 }
 
-function fmtAxis(n: number, pct: boolean) {
-  if (pct) return `${(n * 100).toFixed(2).replace(".", ",")}%`;
-  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(2).replace(".", ",")}k`;
-  return n.toFixed(3).replace(".", ",");
+function fmtAxis(n: number, pct: boolean, locale: string) {
+  if (pct) {
+    return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n * 100)}%`;
+  }
+  if (Math.abs(n) >= 1000) {
+    return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n / 1000)}k`;
+  }
+  return new Intl.NumberFormat(locale, { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(n);
 }
-
-type RangeOpt = { id: string; label: string };
 
 type DetailChartProps = {
   series: MetricsPoint[];
-  /** вторая линия (например накопленные депозиты) */
   showSecondary?: boolean;
   valueIsPercent?: boolean;
-  /** Подпись метрики в тултипе (по умолчанию «PnL» / «Значение») */
   tooltipPrimaryLabel?: string;
-  /** Суффикс значения в тултипе (по умолчанию пусто для % и « USDT» иначе) */
   tooltipValueSuffix?: string;
-  /** Кастомное отображение значения в тултипе вместо fmtAxis */
   tooltipFormatPrimary?: (n: number) => string;
 };
 
@@ -73,6 +89,8 @@ export function MetricsDetailChart({
   tooltipValueSuffix,
   tooltipFormatPrimary,
 }: DetailChartProps) {
+  const { t, locale } = useI18n();
+  const intlTag = intlLocaleFor(locale);
   const chartRef = useRef<HTMLDivElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const gid = useId().replace(/:/g, "");
@@ -109,9 +127,9 @@ export function MetricsDetailChart({
       const svgY = ((clientY - r.top) / r.height) * VIEW_H;
       if (svgX < PAD.left - 4 || svgX > VIEW_W - PAD.right + 4) return null;
       if (svgY < PAD.top - 2 || svgY > PAD.top + innerH + 2) return null;
-      const t = (svgX - PAD.left) / innerW;
-      if (Number.isNaN(t)) return null;
-      return Math.round(Math.min(1, Math.max(0, t)) * (n <= 1 ? 0 : n - 1));
+      const tVal = (svgX - PAD.left) / innerW;
+      if (Number.isNaN(tVal)) return null;
+      return Math.round(Math.min(1, Math.max(0, tVal)) * (n <= 1 ? 0 : n - 1));
     },
     [innerH, innerW, n],
   );
@@ -119,7 +137,7 @@ export function MetricsDetailChart({
   const onMove = (e: MouseEvent<HTMLDivElement>) => setHoverIdx(pickHover(e.clientX, e.clientY));
   const onLeave = () => setHoverIdx(null);
 
-  const tipLabel = tooltipPrimaryLabel ?? (valueIsPercent ? "PnL" : "Значение");
+  const tipLabel = tooltipPrimaryLabel ?? (valueIsPercent ? t("metrics.pnlAbs") : t("metrics.tooltipValue"));
   const tipSuffix = tooltipValueSuffix ?? (valueIsPercent ? "" : " USDT");
 
   const linePrimary = useMemo(() => {
@@ -145,7 +163,7 @@ export function MetricsDetailChart({
   return (
     <div
       ref={chartRef}
-      className="relative min-w-0 cursor-crosshair overflow-hidden rounded-2xl bg-neutral-50/90 px-2 py-2 ring-1 ring-neutral-100 sm:px-3"
+      className="relative min-w-0 cursor-crosshair overflow-hidden rounded-2xl bg-neutral-50 px-2 py-2 sm:px-3"
       onMouseMove={onMove}
       onMouseLeave={onLeave}
     >
@@ -171,7 +189,7 @@ export function MetricsDetailChart({
             <g key={`h-${i}`}>
               <line x1={PAD.left} x2={VIEW_W - PAD.right} y1={y} y2={y} stroke="#e5e5e5" strokeDasharray="2 6" />
               <text x={PAD.left - 8} y={y + 3} textAnchor="end" fill="#a3a3a3" fontSize="10" style={{ fontFamily: "var(--font-app-mono), ui-monospace, monospace", fontVariantNumeric: "tabular-nums" }}>
-                {fmtAxis(v, Boolean(valueIsPercent))}
+                {fmtAxis(v, Boolean(valueIsPercent), intlTag)}
               </text>
             </g>
           );
@@ -226,7 +244,7 @@ export function MetricsDetailChart({
               const y = yS(v);
               return (
                 <text key={`sr-${i}`} x={VIEW_W - 8} y={y + 3} textAnchor="end" fill="#94a3b8" fontSize="9" style={{ fontFamily: "var(--font-app-mono), monospace" }}>
-                  {fmtAxis(v, false)}
+                  {fmtAxis(v, false, intlTag)}
                 </text>
               );
             })
@@ -238,17 +256,21 @@ export function MetricsDetailChart({
       </svg>
 
       {hoverIdx !== null && series[hoverIdx] && (
-        <div className="pointer-events-none absolute left-3 top-10 z-10 max-w-[220px] rounded-xl border border-neutral-200 bg-white/95 px-3 py-2 text-xs shadow-lg ring-1 ring-neutral-100">
-          <p className="font-semibold text-neutral-900">{series[hoverIdx]!.label || `Точка ${hoverIdx + 1}`}</p>
+        <div className="pointer-events-none absolute left-3 top-10 z-10 max-w-[220px] rounded-xl bg-white px-3 py-2 text-xs">
+          <p className="font-semibold text-neutral-900">
+            {series[hoverIdx]!.label || tf(t("metrics.tooltipPoint"), { n: String(hoverIdx + 1) })}
+          </p>
           <p className="mt-1 font-mono text-neutral-800">
             {tipLabel}:{" "}
             {tooltipFormatPrimary != null
               ? tooltipFormatPrimary(series[hoverIdx]!.primary)
-              : fmtAxis(series[hoverIdx]!.primary, Boolean(valueIsPercent))}
+              : fmtAxis(series[hoverIdx]!.primary, Boolean(valueIsPercent), intlTag)}
             {tipSuffix}
           </p>
           {showSecondary && series[hoverIdx]!.secondary != null ? (
-            <p className="font-mono text-neutral-500">Ввод: {fmtAxis(series[hoverIdx]!.secondary!, false)} USDT</p>
+            <p className="font-mono text-neutral-500">
+              {t("metrics.inputLabel")} {fmtAxis(series[hoverIdx]!.secondary!, false, intlTag)} USDT
+            </p>
           ) : null}
         </div>
       )}
@@ -256,81 +278,76 @@ export function MetricsDetailChart({
   );
 }
 
-const RANGE_PRESETS: RangeOpt[] = [
-  { id: "7d", label: "7 дн." },
-  { id: "30d", label: "30 дн." },
-  { id: "90d", label: "90 дн." },
-  { id: "1y", label: "1 г." },
-];
-
 export function MetricsResultsChart() {
-  const [range, setRange] = useState("30d");
+  const { t, locale } = useI18n();
+  const months = useMemo(() => widgetMonthLabels(t), [t]);
+  const [range, setRange] = useState<(typeof RANGE_IDS)[number]>("30d");
   const [pnlMode, setPnlMode] = useState<"abs" | "pct">("abs");
 
   const series = useMemo(() => {
     const n = range === "7d" ? 12 : range === "30d" ? 22 : range === "90d" ? 18 : 26;
     const seed = range === "7d" ? 2 : range === "30d" ? 5 : range === "90d" ? 8 : 13;
-    const raw = buildPnlSeries(n, seed);
+    const raw = buildPnlSeries(n, seed, months);
     if (pnlMode === "pct") return raw;
     return raw.map((p, i) => ({ ...p, primary: p.primary * 4200 + i * 12 }));
-  }, [range, pnlMode]);
+  }, [range, pnlMode, months]);
 
   const headline =
     pnlMode === "pct"
-      ? `${(series[series.length - 1]!.primary * 100).toFixed(2).replace(".", ",")}%`
-      : `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(series[series.length - 1]!.primary * 1000))} USDT`;
+      ? formatPercent(series[series.length - 1]!.primary * 100, locale)
+      : formatUsdtAmount(series[series.length - 1]!.primary * 1000, locale);
 
   return (
-    <section className="space-y-6 rounded-3xl bg-white px-5 py-6 sm:space-y-8 sm:px-7 sm:py-8" aria-label="Результаты PnL">
+    <section className={cn(assetsCardClass, "space-y-6")} aria-label={t("metrics.pnlAria")}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex items-center gap-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Metrics · PnL</p>
-            <span className="text-neutral-400" title="Мок-ряд для интерфейса.">
+            <span className="text-neutral-400" title={t("metrics.mockHint")}>
               <Info className="size-3.5" strokeWidth={2} aria-hidden />
             </span>
           </div>
-          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">Результаты</h3>
-          <p className="text-sm text-neutral-500">Совокупный PnL за выбранный период</p>
+          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">{t("metrics.pnlTitle")}</h3>
+          <p className="text-sm text-neutral-500">{t("metrics.pnlSubtitle")}</p>
           <p className="font-mono text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 sm:text-[2.25rem]">{headline}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label="Шкала PnL">
+          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label={t("metrics.pnlScaleAria")}>
             {(
               [
-                { id: "abs" as const, label: "PnL" },
-                { id: "pct" as const, label: "PnL %" },
+                { id: "abs" as const, label: t("metrics.pnlAbs") },
+                { id: "pct" as const, label: t("metrics.pnlPct") },
               ] as const
-            ).map((t) => (
+            ).map((item) => (
               <button
-                key={t.id}
+                key={item.id}
                 type="button"
                 role="tab"
-                aria-selected={pnlMode === t.id}
-                onClick={() => setPnlMode(t.id)}
+                aria-selected={pnlMode === item.id}
+                onClick={() => setPnlMode(item.id)}
                 className={cn(
                   "rounded-lg px-3 py-2 text-[11px] font-semibold transition-colors",
-                  pnlMode === t.id ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
+                  pnlMode === item.id ? assetsSegmentActiveClass : assetsSegmentIdleClass,
                 )}
               >
-                {t.label}
+                {item.label}
               </button>
             ))}
           </div>
-          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label="Интервал">
-            {RANGE_PRESETS.map((r) => (
+          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label={t("metrics.intervalAria")}>
+            {RANGE_IDS.map((id) => (
               <button
-                key={r.id}
+                key={id}
                 type="button"
                 role="tab"
-                aria-selected={range === r.id}
-                onClick={() => setRange(r.id)}
+                aria-selected={range === id}
+                onClick={() => setRange(id)}
                 className={cn(
                   "rounded-lg px-3 py-2 text-[11px] font-semibold transition-colors",
-                  range === r.id ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
+                  range === id ? assetsSegmentActiveClass : assetsSegmentIdleClass,
                 )}
               >
-                {r.label}
+                {t(RANGE_KEYS[id])}
               </button>
             ))}
           </div>
@@ -347,69 +364,185 @@ export function MetricsResultsChart() {
   );
 }
 
-export function MetricsAssetDynamicsChart() {
-  const [range, setRange] = useState("30d");
+export function MetricsAssetDynamicsChart({
+  liveSeries,
+  liveLoading,
+  liveEmpty,
+  liveError,
+  onRetry,
+  isLiveMode = false,
+  cashflowTotals,
+  cashflowLoading,
+  cashflowError,
+  dataSourceLabel,
+  compact = false,
+}: {
+  liveSeries?: MetricsPoint[] | null;
+  liveLoading?: boolean;
+  liveEmpty?: boolean;
+  liveError?: string | null;
+  onRetry?: () => void;
+  isLiveMode?: boolean;
+  cashflowTotals?: { deposits30d: number; withdrawals30d: number } | null;
+  cashflowLoading?: boolean;
+  cashflowError?: string | null;
+  dataSourceLabel?: string;
+  compact?: boolean;
+} = {}) {
+  const { t, locale } = useI18n();
+  const months = useMemo(() => widgetMonthLabels(t), [t]);
+  const [range, setRange] = useState<(typeof RANGE_IDS)[number]>("30d");
 
-  const series = useMemo(() => {
+  const mockSeries = useMemo(() => {
     const n = range === "7d" ? 14 : range === "30d" ? 24 : range === "90d" ? 20 : 28;
     const seed = 17;
-    return buildBalanceSeries(n, seed);
-  }, [range]);
+    return buildBalanceSeries(n, seed, months);
+  }, [range, months]);
 
-  const tvl = Math.round(series[series.length - 1]!.primary);
+  const useLive = isLiveMode && liveSeries != null && liveSeries.length > 0;
+  const showMock = !isLiveMode;
+  const series = useLive ? liveSeries! : showMock ? mockSeries : [];
+
+  const tvl = useLive
+    ? Math.round(series[series.length - 1]?.primary ?? 0)
+    : showMock
+      ? Math.round(mockSeries[mockSeries.length - 1]?.primary ?? 0)
+      : 0;
+
+  useReadOnlySectionError("metrics-asset-dynamics-chart", liveError, onRetry);
 
   return (
-    <section className="space-y-6 rounded-3xl bg-white px-5 py-6 sm:space-y-8 sm:px-7 sm:py-8" aria-label="Динамика активов">
+    <section
+      className={cn(compact ? assetsCardClass : assetsCardClass, "space-y-5 sm:space-y-6")}
+      aria-label={t("metrics.balanceAria")}
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
-          <div className="flex items-center gap-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Metrics · Balance</p>
-            <span className="text-neutral-400" title="Мок: оценка баланса и накопленный ввод.">
-              <Info className="size-3.5" strokeWidth={2} aria-hidden />
-            </span>
-          </div>
-          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">Динамика активов</h3>
-          <p className="text-sm text-neutral-500">Расчётный общий баланс holdings</p>
+          {!compact ? (
+            <div className="flex items-center gap-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Metrics · Balance</p>
+              {!useLive && showMock ? (
+                <span className="text-neutral-400" title={t("metrics.demoWalletHint")}>
+                  <Info className="size-3.5" strokeWidth={2} aria-hidden />
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+          <h3 className={cn("font-semibold tracking-tight text-neutral-900", compact ? "text-base sm:text-lg" : "text-lg sm:text-xl")}>
+            {t("metrics.balanceTitle")}
+          </h3>
+          {!compact ? (
+            <p className="text-sm text-neutral-500">
+              {dataSourceLabel ??
+                (useLive
+                  ? t("metrics.balanceSubtitleLive")
+                  : showMock
+                    ? t("metrics.balanceSubtitleDemo")
+                    : t("metrics.balanceSubtitleLive"))}
+            </p>
+          ) : (
+            <p className="text-sm text-neutral-500">{t("overview.estimatedBalanceLabel")}</p>
+          )}
           <p className="font-mono text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 sm:text-[2.25rem]">
-            {new Intl.NumberFormat("ru-RU").format(tvl)} <span className="text-base font-sans font-medium text-neutral-400">USDT</span>
+            {tvl > 0 ? (
+              <>
+                {formatNumber(tvl, locale)}{" "}
+                <span className="text-base font-sans font-medium text-neutral-400">USDT</span>
+              </>
+            ) : (
+              <span className="text-base font-sans font-medium text-neutral-400">—</span>
+            )}
           </p>
         </div>
-        <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label="Интервал">
-          {RANGE_PRESETS.map((r) => (
+        <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label={t("metrics.intervalAria")}>
+          {RANGE_IDS.map((id) => (
             <button
-              key={r.id}
+              key={id}
               type="button"
               role="tab"
-              aria-selected={range === r.id}
-              onClick={() => setRange(r.id)}
+              aria-selected={range === id}
+              onClick={() => setRange(id)}
               className={cn(
                 "rounded-lg px-3 py-2 text-[11px] font-semibold transition-colors",
-                range === r.id ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
+                range === id ? assetsSegmentActiveClass : assetsSegmentIdleClass,
               )}
             >
-              {r.label}
+              {t(RANGE_KEYS[id])}
             </button>
           ))}
         </div>
       </div>
 
-      <MetricsDetailChart series={series} showSecondary valueIsPercent={false} />
+      {liveLoading ? (
+        <p className="py-12 text-center text-sm text-neutral-500">{t("assets.loadingChart")}</p>
+      ) : liveError ? (
+        <SectionUnavailableState onRetry={onRetry} />
+      ) : isLiveMode && liveEmpty && !useLive ? (
+        <p className={cn(assetsPanelClass, "px-4 py-10 text-center text-sm text-neutral-500")}>
+          {t("chart.noHistory")} {t("chart.noHistoryHint")}
+        </p>
+      ) : series.length > 0 ? (
+        <MetricsDetailChart series={series} showSecondary={showMock && !useLive} valueIsPercent={false} />
+      ) : (
+        <p className={cn(assetsPanelClass, "px-4 py-10 text-center text-sm text-neutral-500")}>
+          {t("chart.noHistory")}
+        </p>
+      )}
 
       <div className="grid gap-4 border-t border-neutral-100 pt-4 sm:grid-cols-2">
-        <div className="rounded-2xl bg-neutral-50/90 px-4 py-4 ring-1 ring-neutral-100">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Депозиты (30 дн.)</p>
-          <p className="mt-2 font-mono text-xl font-semibold tabular-nums text-neutral-900">+1 240,00 USDT</p>
+        <div className={cn(assetsPanelClass, "px-4 py-4")}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{t("chart.deposits30d")}</p>
+          <p className="mt-2 font-mono text-xl font-semibold tabular-nums text-neutral-900">
+            {showMock ? (
+              <>+1 240,00 USDT</>
+            ) : cashflowLoading ? (
+              "…"
+            ) : cashflowError ? (
+              "—"
+            ) : cashflowTotals ? (
+              <>+{formatUsdtAmount(cashflowTotals.deposits30d, locale).replace(" USDT", "")} USDT</>
+            ) : (
+              "—"
+            )}
+          </p>
+          {showMock ? <p className="mt-1 text-[10px] text-neutral-400">{t("assets.demoLabel")}</p> : null}
+          {!showMock && cashflowError ? (
+            <p className="mt-1 text-[10px] text-neutral-500">{t("chart.dataUnavailable")}</p>
+          ) : null}
         </div>
-        <div className="rounded-2xl bg-neutral-50/90 px-4 py-4 ring-1 ring-neutral-100">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Выводы (30 дн.)</p>
-          <p className="mt-2 font-mono text-xl font-semibold tabular-nums text-neutral-900">−860,00 USDT</p>
+        <div className={cn(assetsPanelClass, "px-4 py-4")}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{t("chart.withdrawals30d")}</p>
+          <p className="mt-2 font-mono text-xl font-semibold tabular-nums text-neutral-900">
+            {showMock ? (
+              <>−860,00 USDT</>
+            ) : cashflowLoading ? (
+              "…"
+            ) : cashflowError ? (
+              "—"
+            ) : cashflowTotals ? (
+              <>−{formatUsdtAmount(cashflowTotals.withdrawals30d, locale).replace(" USDT", "")} USDT</>
+            ) : (
+              "—"
+            )}
+          </p>
+          {showMock ? <p className="mt-1 text-[10px] text-neutral-400">{t("assets.demoLabel")}</p> : null}
+          {!showMock && cashflowError ? (
+            <p className="mt-1 text-[10px] text-neutral-500">{t("chart.dataUnavailable")}</p>
+          ) : null}
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-neutral-500">
-        <span>19.03.2026</span>
-        <span>17.04.2026</span>
-      </div>
+      {showMock ? (
+        <div className="flex items-center justify-between text-[11px] text-neutral-500">
+          <span>19.03.2026</span>
+          <span>17.04.2026</span>
+        </div>
+      ) : cashflowTotals ? (
+        <div className="flex items-center justify-between text-[11px] text-neutral-500">
+          <span>{t("chart.last30days")}</span>
+          <span>{t("assets.metrics.walletActivity")}</span>
+        </div>
+      ) : null}
     </section>
   );
 }

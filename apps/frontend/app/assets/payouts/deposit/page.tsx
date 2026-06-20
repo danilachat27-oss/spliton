@@ -1,17 +1,13 @@
-import type { Metadata } from "next";
+﻿import { PayoutDepositCard } from "@/components/dashboard/assets/payout-deposit-card";
+import { pageMetaAsync } from "@/lib/i18n/page-metadata";
 
-import { PayoutDepositCard } from "@/components/dashboard/assets/payout-deposit-card";
-import { PayoutsSectionHeader } from "@/components/dashboard/assets/payouts-section-header";
-
-export const metadata: Metadata = {
-  title: "Пополнить USDT",
-  description: "Пополнение баланса USDT (TRC20) для выплат и операций в RevShare.",
-};
+export async function generateMetadata() {
+  return pageMetaAsync("meta.payouts.deposit.title", "meta.payouts.deposit.description");
+}
 
 export default function AssetsPayoutsDepositPage() {
   return (
-    <div className="space-y-10 pb-8 sm:space-y-12">
-      <PayoutsSectionHeader />
+    <div className="pb-8">
       <PayoutDepositCard />
     </div>
   );

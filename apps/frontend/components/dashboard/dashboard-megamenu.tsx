@@ -1,19 +1,77 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import {
+  Activity,
+  ArrowDownToLine,
+  ArrowRight,
+  ArrowUpFromLine,
+  BarChart3,
+  BookOpen,
+  Calculator,
+  CircleHelp,
+  ChevronRight,
+  Compass,
+  FileText,
+  GitCompare,
+  Handshake,
+  History,
+  LayoutDashboard,
+  LayoutGrid,
+  MessageSquarePlus,
+  Mic2,
+  Newspaper,
+  Percent,
+  PieChart,
+  Scale,
+  ShieldCheck,
+  SlidersHorizontal,
+  Settings,
+  Lock,
+  LogOut,
+  UserRound,
+  TrendingUp,
+  UserPlus,
+  type LucideIcon,
+} from "@/lib/lucide";
+import { useEffect, useState, type ReactNode } from "react";
 
+import {
+  CabinetMegamenuPagePreview,
+  isCabinetMegamenuPreviewHref,
+} from "@/components/dashboard/cabinet-megamenu-page-preview";
+import { MegamenuImagePreview } from "@/components/dashboard/megamenu-image-preview";
+import {
+  ProfileMegamenuPagePreview,
+  isProfileMegamenuPreviewHref,
+} from "@/components/dashboard/profile-megamenu-page-preview";
+import { ServicesMegamenuPagePreview } from "@/components/dashboard/services-megamenu-page-preview";
 import type {
   DashboardNavBadge,
   DashboardNavItem,
   DashboardNavSubItem,
 } from "@/components/dashboard/dashboard-nav";
+import {
+  SupportMegamenuPagePreview,
+  isSupportMegamenuPreviewHref,
+} from "@/components/dashboard/support-megamenu-page-preview";
+import { SUPPORT_QUICK_ACTIONS } from "@/constants/support-hub-config";
 import { profileDashboardHref } from "@/constants/dashboard/profile-page";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { useLocalizedProfileMenuItems, useLocalizedSupportMenuItems } from "@/hooks/use-shell-i18n";
 import { cn } from "@/lib/utils";
 
 export const DASHBOARD_MEGAMENU_PANEL_ID = "dashboard-header-megamenu";
+
+export const SPLIT_MEGAMENU_IDS = ["catalog", "holdings", "payouts", "misc"] as const;
+
+export function isSplitMegamenuId(id: string): boolean {
+  return (SPLIT_MEGAMENU_IDS as readonly string[]).includes(id);
+}
 
 /** Волны внутри каждой карточки (нижняя зона) */
 function CardInnerWaves({ className }: { className?: string }) {
@@ -113,13 +171,31 @@ function MegamenuLineArt({ variant, className }: { variant: number; className?: 
   );
 }
 
-function SubnavBadge({ badge }: { badge: DashboardNavBadge }) {
-  const styles: Record<DashboardNavBadge, string> = {
-    new: "border border-white/18 bg-white/[0.1] text-[10px] font-bold uppercase tracking-wide text-zinc-100",
-    free: "border border-white/10 bg-zinc-900 text-[10px] font-semibold uppercase tracking-wide text-white/85",
-    hot: "border border-amber-400/22 bg-amber-500/10 text-[10px] font-semibold uppercase tracking-wide text-amber-100/95",
+function SubnavBadge({
+  badge,
+  variant = "dark",
+}: {
+  badge: DashboardNavBadge;
+  variant?: "dark" | "light";
+}) {
+  const { t } = useI18n();
+  const styles: Record<DashboardNavBadge, string> =
+    variant === "light"
+      ? {
+          new: "border border-zinc-200 bg-zinc-100 text-[10px] font-bold uppercase tracking-wide text-zinc-800",
+          free: "border border-zinc-200 bg-white text-[10px] font-semibold uppercase tracking-wide text-zinc-700",
+          hot: "border border-amber-300/60 bg-amber-50 text-[10px] font-semibold uppercase tracking-wide text-amber-800",
+        }
+      : {
+          new: "border border-white/18 bg-white/[0.1] text-[10px] font-bold uppercase tracking-wide text-zinc-100",
+          free: "border border-white/10 bg-zinc-900 text-[10px] font-semibold uppercase tracking-wide text-white/85",
+          hot: "border border-amber-400/22 bg-amber-500/10 text-[10px] font-semibold uppercase tracking-wide text-amber-100/95",
+        };
+  const text: Record<DashboardNavBadge, string> = {
+    new: t("navigation.badge.new"),
+    free: t("navigation.badge.free"),
+    hot: t("navigation.badge.hot"),
   };
-  const text: Record<DashboardNavBadge, string> = { new: "NEW", free: "FREE", hot: "HOT" };
   return (
     <span className={cn("shrink-0 rounded-full px-2 py-0.5", styles[badge])} aria-hidden>
       {text[badge]}
@@ -132,15 +208,19 @@ function SubItemIcon({ sub, className }: { sub: DashboardNavSubItem; className?:
 
   if (sub.iconSrc) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- произвольные пути из public
-      <img
-        src={sub.iconSrc}
-        alt=""
+      <div
         className={cn(
-          "relative z-[2] max-h-10 w-auto max-w-[78%] object-contain opacity-[0.38] grayscale transition-all duration-300 group-hover:scale-[1.04] group-hover:opacity-100 group-hover:grayscale-0",
-          className
+          "relative z-[2] h-[96px] w-[92%] overflow-hidden rounded-lg bg-black/40",
+          className,
         )}
-      />
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- произвольные пути из public */}
+        <img
+          src={sub.iconSrc}
+          alt=""
+          className="h-full w-full object-cover object-center brightness-125 contrast-125 saturate-110 transition-transform duration-300 group-hover:scale-[1.04]"
+        />
+      </div>
     );
   }
 
@@ -185,24 +265,36 @@ function MegamenuFeaturedGraphic() {
 
 function MegamenuIntroCard({
   title,
-  teaser,
   href,
   onNavigate,
+  imageSrc,
 }: {
   title: string;
-  teaser: string;
   href: string;
   onNavigate: () => void;
+  imageSrc?: string;
 }) {
   return (
     <Link href={href} onClick={onNavigate} className={cn(cardShell, cardHover, "p-3 sm:p-3.5")}>
+      {imageSrc ? (
+        <div className="pointer-events-none absolute inset-0">
+          <Image
+            src={imageSrc}
+            alt=""
+            fill
+            className="object-cover object-center brightness-75"
+          />
+          <div className="absolute inset-0 bg-black/55" />
+        </div>
+      ) : null}
       <div className="pointer-events-none absolute inset-0 opacity-[0.25]">
         <CardInnerWaves className="absolute inset-x-0 bottom-0 h-24 w-full" />
       </div>
       <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
         <h2 className="text-sm font-bold leading-tight tracking-tight text-white sm:text-[15px]">{title}</h2>
-        <p className="mt-1.5 text-[12px] leading-snug text-neutral-500">{teaser}</p>
-        <MegamenuFeaturedGraphic />
+        {!imageSrc ? (
+          <MegamenuFeaturedGraphic />
+        ) : null}
       </div>
     </Link>
   );
@@ -282,9 +374,22 @@ function MegamenuLinkCard({
           "p-3 sm:p-3.5",
         )}
       >
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 opacity-25">
-          <CardInnerWaves className="size-full" />
-        </div>
+        {sub.iconSrc ? (
+          <div className="pointer-events-none absolute inset-0">
+            <Image
+              src={sub.iconSrc}
+              alt=""
+              fill
+              className="object-cover object-center brightness-[0.85] saturate-110"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-black/75" />
+          </div>
+        ) : null}
+        {!sub.iconSrc ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 opacity-25">
+            <CardInnerWaves className="size-full" />
+          </div>
+        ) : null}
 
         <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
           <div className="flex items-start justify-between gap-2">
@@ -301,23 +406,24 @@ function MegamenuLinkCard({
           <p
             className={cn(
               "mt-2 line-clamp-3 text-[11px] leading-relaxed sm:text-xs",
-              "text-neutral-500",
+              sub.iconSrc ? "text-neutral-400" : "text-neutral-500",
             )}
           >
             {sub.description}
           </p>
 
-          <div
-            className={cn(
-              "relative mt-2 flex min-h-[88px] flex-1 flex-col justify-end overflow-hidden rounded-lg py-3",
-              "bg-black/25",
-            )}
-          >
-            <MegamenuLineArt variant={index} className="absolute inset-0 size-full opacity-75" />
-            <div className="relative flex flex-1 items-center justify-center py-3">
-              <SubItemIcon sub={sub} />
+          {!sub.iconSrc ? (
+            <div
+              className={cn(
+                "relative mt-2 flex min-h-[88px] flex-1 flex-col justify-end overflow-hidden rounded-lg bg-black/25 py-3",
+              )}
+            >
+              <MegamenuLineArt variant={index} className="absolute inset-0 size-full opacity-75" />
+              <div className="relative flex flex-1 items-center justify-center py-3">
+                <SubItemIcon sub={sub} />
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </Link>
     </div>
@@ -325,70 +431,579 @@ function MegamenuLinkCard({
 }
 
 export const DASHBOARD_PROFILE_MEGAMENU_ID = "dashboard-profile-megamenu";
+export const DASHBOARD_SUPPORT_MEGAMENU_ID = "dashboard-support-megamenu";
 
 /** Пункты меню профиля — те же карточки, что и в mega-menu разделов. */
 export const PROFILE_MEGAMENU_ITEMS: DashboardNavSubItem[] = [
   {
-    label: "Мой профиль",
-    description: "Личные данные, отображение и контакты в кабинете.",
+    label: "",
+    description: "",
     href: profileDashboardHref("overview"),
-    iconHint: "ПР",
+    iconHint: "PR",
   },
   {
-    label: "Верификация",
-    description: "KYC, документы и статус проверки аккаунта.",
+    label: "",
+    description: "",
     href: profileDashboardHref("verification"),
     iconHint: "KYC",
   },
   {
-    label: "Безопасность",
-    description: "Пароль, активные сессии и дополнительная защита.",
+    label: "",
+    description: "",
     href: profileDashboardHref("security"),
     iconHint: "2F",
   },
   {
-    label: "Настройки",
-    description: "Уведомления, язык и параметры интерфейса.",
+    label: "",
+    description: "",
     href: profileDashboardHref("settings"),
-    iconHint: "НС",
+    iconHint: "NS",
   },
   {
-    label: "Выйти",
-    description: "Завершить сеанс на этом устройстве.",
+    label: "",
+    description: "",
     href: ROUTES.login,
     iconHint: "OUT",
     danger: true,
   },
 ];
 
-export function DashboardProfileMegamenuPanel({ onNavigate }: { onNavigate: () => void }) {
-  const count = PROFILE_MEGAMENU_ITEMS.length;
-  const gridCols = `repeat(${count}, minmax(0, 1fr))`;
+const SERVICE_MENU_ICONS: Record<string, LucideIcon> = {
+  [ROUTES.calculator]: Calculator,
+  [ROUTES.fees]: Percent,
+  [ROUTES.systemStatus]: Activity,
+  [ROUTES.news]: Newspaper,
+  [ROUTES.referralProgram]: UserPlus,
+  [ROUTES.partnerProgram]: Handshake,
+  [ROUTES.dashboardArtist]: Mic2,
+  [ROUTES.dashboardDisputes]: Scale,
+  [ROUTES.dashboardStatements]: FileText,
+  [ROUTES.trust]: ShieldCheck,
+};
+
+const CATALOG_MENU_ICONS: Record<string, LucideIcon> = {
+  [ROUTES.dashboardCatalog]: BookOpen,
+  [ROUTES.analyticsReleases]: BarChart3,
+  [ROUTES.guideSelection]: Compass,
+  [ROUTES.catalogReleaseParameters]: SlidersHorizontal,
+  [ROUTES.catalogMarketOverview]: LayoutGrid,
+};
+
+const HOLDINGS_MENU_ICONS: Record<string, LucideIcon> = {
+  [ROUTES.myAssetsOverview]: LayoutDashboard,
+  [ROUTES.myAssetsMetrics]: BarChart3,
+  [ROUTES.myAssetsOperations]: Activity,
+  [ROUTES.myAssetsPositionsStructure]: LayoutGrid,
+};
+
+const PAYOUTS_MENU_ICONS: Record<string, LucideIcon> = {
+  [ROUTES.dashboardPayouts]: PieChart,
+  [ROUTES.dashboardPayoutsComparison]: GitCompare,
+  [ROUTES.dashboardPayoutsHistory]: History,
+  [`${ROUTES.dashboardPayouts}/deposit`]: ArrowDownToLine,
+  [`${ROUTES.dashboardPayouts}/withdraw`]: ArrowUpFromLine,
+};
+
+const PROFILE_MENU_ICONS: Record<string, LucideIcon> = {
+  [profileDashboardHref("overview")]: UserRound,
+  [profileDashboardHref("verification")]: ShieldCheck,
+  [profileDashboardHref("security")]: Lock,
+  [profileDashboardHref("settings")]: Settings,
+  [ROUTES.login]: LogOut,
+};
+
+const SUPPORT_MENU_ICONS: Record<string, LucideIcon> = {
+  [ROUTES.support]: CircleHelp,
+  [ROUTES.dashboardSupport]: MessageSquarePlus,
+  [ROUTES.systemStatus]: Activity,
+  [`${ROUTES.dashboardProfile}?tab=security`]: ShieldCheck,
+  ...Object.fromEntries(SUPPORT_QUICK_ACTIONS.map((action) => [action.href, action.icon])),
+};
+
+export const SUPPORT_MEGAMENU_ITEMS: DashboardNavSubItem[] = [
+  {
+    label: "",
+    description: "",
+    href: ROUTES.support,
+    iconHint: "HC",
+  },
+  {
+    label: "",
+    description: "",
+    href: ROUTES.dashboardSupport,
+    iconHint: "TK",
+  },
+  {
+    label: "",
+    description: "",
+    href: ROUTES.systemStatus,
+    iconHint: "ST",
+  },
+  {
+    label: "",
+    description: "",
+    href: `${ROUTES.dashboardProfile}?tab=security`,
+    iconHint: "SC",
+  },
+];
+
+export const MEGAMENU_ICON_MAPS: Record<string, Record<string, LucideIcon>> = {
+  misc: SERVICE_MENU_ICONS,
+  catalog: CATALOG_MENU_ICONS,
+  holdings: HOLDINGS_MENU_ICONS,
+  payouts: PAYOUTS_MENU_ICONS,
+};
+
+function renderSplitMegamenuPreview(openItemId: string, sub: DashboardNavSubItem): ReactNode {
+  if (openItemId === "misc") {
+    return <ServicesMegamenuPagePreview href={sub.href} label={sub.label} />;
+  }
+  if (isCabinetMegamenuPreviewHref(sub.href)) {
+    return <CabinetMegamenuPagePreview href={sub.href} label={sub.label} />;
+  }
+  return <MegamenuImagePreview sub={sub} />;
+}
+
+function renderProfileMegamenuPreview(sub: DashboardNavSubItem): ReactNode {
+  if (isProfileMegamenuPreviewHref(sub.href)) {
+    return <ProfileMegamenuPagePreview href={sub.href} label={sub.label} />;
+  }
+  return null;
+}
+
+function renderSupportMegamenuPreview(sub: DashboardNavSubItem): ReactNode {
+  if (isSupportMegamenuPreviewHref(sub.href)) {
+    return <SupportMegamenuPagePreview href={sub.href} label={sub.label} />;
+  }
+  return null;
+}
+
+function SplitMegamenuNavRow({
+  sub,
+  index,
+  active,
+  onActivate,
+  onNavigate,
+  Icon,
+  dangerAction,
+}: {
+  sub: DashboardNavSubItem;
+  index: number;
+  active: boolean;
+  onActivate: (index: number) => void;
+  onNavigate: () => void;
+  Icon: LucideIcon;
+  dangerAction?: () => void | Promise<void>;
+}) {
+  const danger = Boolean(sub.danger);
+  const shell = cn(
+    "group flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors sm:px-3.5 sm:py-3",
+    active ? "bg-zinc-100" : "hover:bg-zinc-50",
+    danger && active && "bg-fuchsia-50 hover:bg-fuchsia-50",
+    danger && !active && "hover:bg-fuchsia-50/70",
+  );
+  const iconShell = cn(
+    "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors",
+    danger
+      ? active
+        ? "border-fuchsia-200 bg-white text-fuchsia-700"
+        : "border-transparent bg-fuchsia-50 text-fuchsia-600 group-hover:border-fuchsia-200 group-hover:bg-white"
+      : active
+        ? "border-zinc-200 bg-white text-zinc-900"
+        : "border-transparent bg-zinc-100 text-zinc-700 group-hover:border-zinc-200 group-hover:bg-white",
+  );
+  const labelClass = cn(
+    "text-[14px] font-semibold leading-snug",
+    danger ? "text-fuchsia-900" : "text-zinc-900",
+  );
+  const inner = (
+    <>
+      <span className={iconShell}>
+        <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className={labelClass}>{sub.label}</span>
+          {sub.badge ? <SubnavBadge badge={sub.badge} variant="light" /> : null}
+        </span>
+        {sub.description ? (
+          <p
+            className={cn(
+              "mt-0.5 line-clamp-2 text-[12px] leading-snug",
+              danger ? "text-fuchsia-700/75" : "text-zinc-500",
+            )}
+          >
+            {sub.description}
+          </p>
+        ) : null}
+      </span>
+      <ChevronRight
+        className={cn(
+          "mt-1 size-4 shrink-0 text-zinc-300 transition-colors",
+          active && (danger ? "text-fuchsia-400" : "text-zinc-500"),
+        )}
+        strokeWidth={2}
+        aria-hidden
+      />
+    </>
+  );
+
+  if (danger && dangerAction) {
+    return (
+      <button
+        type="button"
+        onClick={dangerAction}
+        onMouseEnter={() => onActivate(index)}
+        onFocus={() => onActivate(index)}
+        className={shell}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={sub.href}
+      onClick={onNavigate}
+      onMouseEnter={() => onActivate(index)}
+      onFocus={() => onActivate(index)}
+      className={shell}
+    >
+      {inner}
+    </Link>
+  );
+}
+
+function SplitMegamenuPreviewPanel({
+  sub,
+  onNavigate,
+  preview,
+  dangerAction,
+}: {
+  sub: DashboardNavSubItem;
+  onNavigate: () => void;
+  preview: ReactNode;
+  dangerAction?: () => void | Promise<void>;
+}) {
+  const { t } = useI18n();
+  const danger = Boolean(sub.danger);
+
+  if (danger && dangerAction) {
+    return (
+      <div className="flex h-full min-h-[340px] flex-col p-4 sm:p-5">
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={dangerAction}
+          className="mt-4 inline-flex h-9 items-center justify-center gap-2 self-start rounded-lg bg-fuchsia-700 px-4 text-sm font-semibold text-white transition hover:bg-fuchsia-600"
+        >
+          {sub.label}
+          <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-[340px] flex-col p-4 sm:p-5">
+      {preview}
+      <div className="flex-1" />
+
+      <Link
+        href={sub.href}
+        onClick={onNavigate}
+        className="mt-4 inline-flex h-9 items-center justify-center gap-2 self-start rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+      >
+        {t("navigation.megamenu.servicesGo")}
+        <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
+      </Link>
+    </div>
+  );
+}
+
+/** Двухколоночный flyout (master-detail) — как «Сервисы». */
+export function SplitMegamenuFlyout({
+  openItem,
+  onNavigate,
+  className,
+}: {
+  openItem: DashboardNavItem;
+  onNavigate: () => void;
+  className?: string;
+}) {
+  const children = openItem.children ?? [];
+  const isLongList = children.length > 6;
+  const iconMap = MEGAMENU_ICON_MAPS[openItem.id] ?? {};
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    setActiveIdx(0);
+  }, [openItem.id]);
+
+  const active = children[activeIdx] ?? children[0];
+  if (!active) return null;
+
+  return (
+    <div
+      id={DASHBOARD_MEGAMENU_PANEL_ID}
+      role="region"
+      aria-labelledby={`nav-trigger-${openItem.id}`}
+      className={cn("pointer-events-auto", className)}
+    >
+      <div
+        key={openItem.id}
+        className="animate-dashboard-megamenu-in flex w-[min(calc(100vw-1.5rem),760px)] overflow-hidden rounded-2xl bg-white shadow-[0_24px_56px_-16px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06]"
+      >
+        <div className="flex min-h-[420px] max-h-[min(72vh,620px)] w-[min(56%,360px)] shrink-0 flex-col border-r border-zinc-100">
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <p className="text-sm font-semibold text-zinc-900">{openItem.label}</p>
+          </div>
+          <ul
+            className={cn(
+              "min-h-0 flex-1 gap-1.5 overflow-y-auto p-2 [scrollbar-color:rgb(212_212_216)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar]:w-1.5",
+              isLongList ? "flex flex-col" : "grid auto-rows-min",
+            )}
+          >
+            {children.map((sub, i) => {
+              const Icon = iconMap[sub.href] ?? BookOpen;
+              return (
+                <li key={sub.href} className="shrink-0">
+                  <SplitMegamenuNavRow
+                    sub={sub}
+                    index={i}
+                    active={activeIdx === i}
+                    onActivate={setActiveIdx}
+                    onNavigate={onNavigate}
+                    Icon={Icon}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="hidden min-w-0 flex-1 bg-zinc-50/50 sm:block">
+          <SplitMegamenuPreviewPanel
+            key={active.href}
+            sub={active}
+            onNavigate={onNavigate}
+            preview={renderSplitMegamenuPreview(openItem.id, active)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** @deprecated Используйте {@link SplitMegamenuFlyout}. */
+export function ServicesSplitMegamenuFlyout({
+  openItem,
+  onNavigate,
+  className,
+}: {
+  openItem: DashboardNavItem;
+  onNavigate: () => void;
+  className?: string;
+}) {
+  return <SplitMegamenuFlyout openItem={openItem} onNavigate={onNavigate} className={className} />;
+}
+
+export function ProfileMegamenuFlyout({
+  onNavigate,
+  className,
+}: {
+  onNavigate: () => void;
+  className?: string;
+}) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const { logout } = useAuth();
+  const profileItems = useLocalizedProfileMenuItems();
+  const isLongList = profileItems.length > 6;
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const handleLogout = async () => {
+    await logout();
+    onNavigate();
+    router.push(ROUTES.login);
+  };
+
+  const active = profileItems[activeIdx] ?? profileItems[0];
+  if (!active) return null;
 
   return (
     <div
       id={DASHBOARD_PROFILE_MEGAMENU_ID}
       role="region"
-      aria-label="Меню профиля"
-      className="border-t border-white/[0.05] bg-black/90 backdrop-blur-md supports-backdrop-filter:bg-black/80"
+      aria-label={t("navigation.megamenu.profileAria")}
+      className={cn("pointer-events-auto", className)}
     >
-      <div className="w-full px-3 py-2 sm:px-4 sm:py-2 lg:px-5 lg:py-2.5">
-        <div
-          className="animate-dashboard-megamenu-in relative z-[1] hidden gap-2 min-[1180px]:grid"
-          style={{ gridTemplateColumns: gridCols }}
-        >
-          {PROFILE_MEGAMENU_ITEMS.map((sub, i) => (
-            <MegamenuLinkCard key={sub.label} sub={sub} index={i} onNavigate={onNavigate} />
-          ))}
+      <div className="animate-dashboard-megamenu-in flex w-[min(calc(100vw-1.5rem),760px)] overflow-hidden rounded-2xl bg-white shadow-[0_24px_56px_-16px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06]">
+        <div className="flex min-h-[420px] max-h-[min(72vh,620px)] w-[min(56%,360px)] shrink-0 flex-col border-r border-zinc-100">
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <p className="text-sm font-semibold text-zinc-900">{t("navigation.header.profile")}</p>
+            <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-zinc-500">
+              {t("navigation.profile.overview.desc")}
+            </p>
+          </div>
+          <ul
+            className={cn(
+              "min-h-0 flex-1 gap-1.5 overflow-y-auto p-2 [scrollbar-color:rgb(212_212_216)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar]:w-1.5",
+              isLongList ? "flex flex-col" : "grid auto-rows-min",
+            )}
+          >
+            {profileItems.map((sub, i) => {
+              const Icon = PROFILE_MENU_ICONS[sub.href] ?? UserRound;
+              return (
+                <li key={sub.href} className="shrink-0">
+                  <SplitMegamenuNavRow
+                    sub={sub}
+                    index={i}
+                    active={activeIdx === i}
+                    onActivate={setActiveIdx}
+                    onNavigate={onNavigate}
+                    Icon={Icon}
+                    dangerAction={sub.danger ? handleLogout : undefined}
+                  />
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
-        <div className="relative z-[1] flex snap-x snap-mandatory gap-2 overflow-x-auto pb-0.5 min-[1180px]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {PROFILE_MEGAMENU_ITEMS.map((sub, i) => (
-            <div key={sub.label} className="w-[min(240px,78vw)] flex-none snap-start">
-              <MegamenuLinkCard sub={sub} index={i} onNavigate={onNavigate} />
-            </div>
-          ))}
+        <div className="hidden min-w-0 flex-1 bg-zinc-50/50 sm:block">
+          <SplitMegamenuPreviewPanel
+            key={active.href}
+            sub={active}
+            onNavigate={onNavigate}
+            preview={renderProfileMegamenuPreview(active)}
+            dangerAction={active.danger ? handleLogout : undefined}
+          />
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function SupportMegamenuFlyout({
+  onNavigate,
+  className,
+}: {
+  onNavigate: () => void;
+  className?: string;
+}) {
+  const { t } = useI18n();
+  const supportItems = useLocalizedSupportMenuItems();
+  const isLongList = supportItems.length > 6;
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const active = supportItems[activeIdx] ?? supportItems[0];
+  if (!active) return null;
+
+  return (
+    <div
+      id={DASHBOARD_SUPPORT_MEGAMENU_ID}
+      role="region"
+      aria-label={t("navigation.header.help")}
+      className={cn("pointer-events-auto", className)}
+    >
+      <div className="animate-dashboard-megamenu-in flex w-[min(calc(100vw-1.5rem),760px)] overflow-hidden rounded-2xl bg-white shadow-[0_24px_56px_-16px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06]">
+        <div className="flex min-h-[420px] max-h-[min(72vh,620px)] w-[min(56%,360px)] shrink-0 flex-col border-r border-zinc-100">
+          <div className="border-b border-zinc-100 px-4 py-3">
+            <p className="text-sm font-semibold text-zinc-900">{t("support.hero.title")}</p>
+            <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-zinc-500">{t("support.hero.subtitle")}</p>
+          </div>
+          <ul
+            className={cn(
+              "min-h-0 flex-1 gap-1.5 overflow-y-auto p-2 [scrollbar-color:rgb(212_212_216)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-300 [&::-webkit-scrollbar]:w-1.5",
+              isLongList ? "flex flex-col" : "grid auto-rows-min",
+            )}
+          >
+            {supportItems.map((sub, i) => {
+              const Icon = SUPPORT_MENU_ICONS[sub.href] ?? CircleHelp;
+              return (
+                <li key={sub.href} className="shrink-0">
+                  <SplitMegamenuNavRow
+                    sub={sub}
+                    index={i}
+                    active={activeIdx === i}
+                    onActivate={setActiveIdx}
+                    onNavigate={onNavigate}
+                    Icon={Icon}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="hidden min-w-0 flex-1 bg-zinc-50/50 sm:block">
+          <SplitMegamenuPreviewPanel
+            key={active.href}
+            sub={active}
+            onNavigate={onNavigate}
+            preview={renderSupportMegamenuPreview(active)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** @deprecated Используйте {@link ProfileMegamenuFlyout}. */
+export function DashboardProfileMegamenuPanel({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <ProfileMegamenuFlyout
+      onNavigate={onNavigate}
+      className="border-t border-white/[0.05] bg-black/90 backdrop-blur-md supports-backdrop-filter:bg-black/80"
+    />
+  );
+}
+
+function MobileMegamenuScroll({
+  openItem,
+  onNavigate,
+}: {
+  openItem: DashboardNavItem;
+  onNavigate: () => void;
+}) {
+  const { t } = useI18n();
+  const showIntro = openItem.id !== "holdings";
+  const introTitle =
+    openItem.id === "catalog"
+      ? t("navigation.megamenu.catalogCta")
+      : openItem.id === "holdings"
+        ? t("navigation.megamenu.holdingsCta")
+        : openItem.label;
+
+  return (
+    <div className="w-full px-3 py-2 sm:px-4 sm:py-2">
+      <div
+        key={openItem.id}
+        className="animate-dashboard-megamenu-in relative z-[1] flex snap-x snap-mandatory gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {showIntro ? (
+          <div className="w-[min(260px,85vw)] flex-none snap-start">
+            <MegamenuIntroCard
+              title={introTitle}
+              href={openItem.href}
+              onNavigate={onNavigate}
+              imageSrc={
+                openItem.id === "catalog"
+                  ? "/images/catalog/1.png"
+                  : openItem.id === "payouts"
+                    ? "/images/payouts-menu/6.png"
+                    : undefined
+              }
+            />
+          </div>
+        ) : null}
+        {openItem.children?.map((sub, i) => (
+          <div key={sub.label} className="w-[min(240px,78vw)] flex-none snap-start">
+            <MegamenuLinkCard sub={sub} index={i} onNavigate={onNavigate} />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -401,13 +1016,33 @@ export function DashboardMegamenuPanel({
   openItem: DashboardNavItem | undefined;
   onNavigate: () => void;
 }) {
+  const { t } = useI18n();
+
   if (!openItem?.children?.length) return null;
 
+  /** Split flyout на desktop — полноширинная панель только на mobile (кроме «Сервисы»). */
+  if (isSplitMegamenuId(openItem.id)) {
+    if (openItem.id === "misc") return null;
+
+    return (
+      <div
+        id={DASHBOARD_MEGAMENU_PANEL_ID}
+        role="region"
+        aria-labelledby={`nav-trigger-${openItem.id}`}
+        className="border-t border-white/[0.05] bg-black/90 backdrop-blur-md supports-backdrop-filter:bg-black/80 lg:hidden"
+      >
+        <MobileMegamenuScroll openItem={openItem} onNavigate={onNavigate} />
+      </div>
+    );
+  }
+
   const showIntro = openItem.id !== "holdings";
-  const teaser =
-    openItem.megaTeaser ?? "Выберите пункт ниже или откройте весь раздел на странице.";
   const introTitle =
-    openItem.id === "catalog" ? "Каталог релизов" : openItem.id === "holdings" ? "Обзор" : openItem.label;
+    openItem.id === "catalog"
+      ? t("navigation.megamenu.catalogCta")
+      : openItem.id === "holdings"
+        ? t("navigation.megamenu.holdingsCta")
+        : openItem.label;
 
   const count = openItem.children.length;
   /** Одна строка, равные колонки — без отдельного большого «второго» контейнера */
@@ -429,9 +1064,15 @@ export function DashboardMegamenuPanel({
           {showIntro ? (
             <MegamenuIntroCard
               title={introTitle}
-              teaser={teaser}
               href={openItem.href}
               onNavigate={onNavigate}
+              imageSrc={
+                openItem.id === "catalog"
+                  ? "/images/catalog/1.png"
+                  : openItem.id === "payouts"
+                    ? "/images/payouts-menu/6.png"
+                    : undefined
+              }
             />
           ) : null}
           {openItem.children.map((sub, i) => (
@@ -444,9 +1085,15 @@ export function DashboardMegamenuPanel({
             <div className="w-[min(260px,85vw)] flex-none snap-start">
               <MegamenuIntroCard
                 title={introTitle}
-                teaser={teaser}
                 href={openItem.href}
                 onNavigate={onNavigate}
+                imageSrc={
+                  openItem.id === "catalog"
+                    ? "/images/catalog/1.png"
+                    : openItem.id === "payouts"
+                      ? "/images/payouts-menu/6.png"
+                      : undefined
+                }
               />
             </div>
           ) : null}

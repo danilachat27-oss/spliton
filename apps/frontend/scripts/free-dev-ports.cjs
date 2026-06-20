@@ -1,5 +1,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const killPort = require("kill-port");
+let killPort;
+try {
+  killPort = require("kill-port");
+} catch {
+  console.warn(
+    "[free-dev-ports] kill-port is not installed; run `pnpm install` in apps/frontend. Skipping port cleanup.",
+  );
+  process.exit(0);
+}
 
 const ports = process.argv
   .slice(2)

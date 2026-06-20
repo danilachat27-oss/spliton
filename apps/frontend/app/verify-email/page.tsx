@@ -1,30 +1,19 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
+﻿import { Suspense } from "react";
 
 import { BrandPanel } from "@/components/auth/brand-panel";
+import { VerifyEmailPageFallback } from "@/components/auth/verify-email-page-fallback";
 import { VerifyEmailScreen } from "@/components/auth/verify-email-screen";
 import { AuthSplitLayout } from "@/components/layout/auth-split-layout";
+import { criticalPageMetaAsync } from "@/lib/i18n/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Подтверждение email",
-  description: "Подтверждение электронной почты для входа в аккаунт RevShare.",
-};
+export async function generateMetadata() {
+  return criticalPageMetaAsync("meta.auth.verify.title", "meta.auth.verify.description");
+}
 
 export default function VerifyEmailPage() {
   return (
     <AuthSplitLayout brand={<BrandPanel />}>
-      <Suspense
-        fallback={
-          <div className="w-full text-neutral-900">
-            <h2 className="text-[2.25rem] font-semibold leading-none tracking-tight sm:text-[2.5rem]">
-              Подтверждение email
-            </h2>
-            <p className="mt-6 text-[15px] leading-relaxed text-neutral-600">
-              Подготавливаем страницу подтверждения...
-            </p>
-          </div>
-        }
-      >
+      <Suspense fallback={<VerifyEmailPageFallback />}>
         <VerifyEmailScreen />
       </Suspense>
     </AuthSplitLayout>

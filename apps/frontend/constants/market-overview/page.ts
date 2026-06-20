@@ -13,8 +13,8 @@ export const MARKET_CATEGORY_TABS: { id: MarketOverviewCategory; label: string }
   { id: "yield", label: "Доходные" },
   { id: "stable", label: "Стабильные выплаты" },
   { id: "demand", label: "Высокий спрос" },
-  { id: "secondary", label: "Secondary" },
-  { id: "premium", label: "Premium" },
+  { id: "secondary", label: "Вторичный рынок" },
+  { id: "premium", label: "Премиум" },
   { id: "archive", label: "Архив" },
 ];
 
@@ -62,9 +62,9 @@ export const MARKET_FILTER_GROUPS: {
     label: "Ликвидность",
     options: [
       { value: "all", label: "Все" },
-      { value: "deep", label: "Deep" },
-      { value: "mid", label: "Mid" },
-      { value: "thin", label: "Thin" },
+      { value: "deep", label: "Высокая" },
+      { value: "mid", label: "Средняя" },
+      { value: "thin", label: "Низкая" },
     ],
   },
   {
@@ -205,9 +205,9 @@ export const MARKET_SUMMARY_PANELS = [
   {
     id: "segments-primary",
     title: "Новые первичные раунды",
-    caption: "Относительный поток заявок, усл. ед. · mock",
+    caption: "Относительный поток заявок, усл. ед.",
     series: [24, 25, 26, 26, 27, 28, 29, 28, 30, 29, 31, 30, 32, 31, 33, 32, 34, 33, 34, 35],
-    foot: "Ряд — суммарный поток по окну; строки — доля по жанрам (mock).",
+    foot: "Ряд суммарный поток по окну; строки доля по жанрам.",
     bars: [
       { label: "Pop", value: 28, widthPct: 88 },
       { label: "Electronic", value: 34, widthPct: 100 },
@@ -218,9 +218,9 @@ export const MARKET_SUMMARY_PANELS = [
   {
     id: "genre-activity",
     title: "Активность по жанрам",
-    caption: "Индекс заявок / просмотров",
+    caption: "Индекс заявок и просмотров",
     series: [88, 92, 95, 99, 103, 107, 110, 114, 118, 121, 125, 128, 132, 135, 138, 140, 141, 142, 141, 142],
-    foot: "Ряд — суммарный индекс активности; строки — разбивка по жанрам (mock).",
+    foot: "Ряд суммарный индекс активности; строки разбивка по жанрам.",
     bars: [
       { label: "Electronic", value: 142, widthPct: 100 },
       { label: "Pop", value: 128, widthPct: 90 },
@@ -231,16 +231,16 @@ export const MARKET_SUMMARY_PANELS = [
   {
     id: "order-flow",
     title: "Поток заявок в стакан",
-    caption: "Нормализованный индекс входящих лимитов · mock",
+    caption: "Нормализованный индекс входящих лимитов",
     series: [42, 44, 48, 46, 45, 50, 52, 49, 54, 52, 56, 55, 58, 57, 61, 59, 63, 62, 64, 66],
-    foot: "Не путать с объёмом выплат инвесторам — см. аналитику релизов",
+    foot: "Не путать с объёмом выплат инвесторам, см. аналитику релизов",
   },
   {
     id: "secondary-demand",
     title: "Спрос secondary",
-    caption: "Доля сделок с fill < 6h",
+    caption: "Доля сделок с fill менее 6ч",
     series: [38, 37, 40, 39, 36, 41, 44, 42, 45, 43, 47, 46, 48, 47, 50, 49, 51, 50, 52, 53],
-    foot: "Выше — быстрее закрываются лоты",
+    foot: "Выше значит быстрее закрываются лоты",
   },
 ] as const;
 

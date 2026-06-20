@@ -1,0 +1,57 @@
+/* Общие правила megamenu-превью: курсор поверх контента, без обрезки */
+
+.service-preview-scene {
+  overflow: visible !important;
+}
+
+.service-preview-scene .animate-service-preview-page-in {
+  overflow: visible;
+  height: 100%;
+}
+
+.service-preview-cursor-local {
+  z-index: 80;
+}
+
+.service-preview-local-ring {
+  z-index: 81;
+}
+
+.service-preview-local-tip {
+  z-index: 82;
+  max-width: 72px;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+/* Единая подсветка цели — как fees / activity reference */
+.preview-megamenu-target {
+  position: relative;
+  z-index: 10;
+  animation: sp-megamenu-target-pulse var(--sp-duration, 5s) ease-in-out infinite;
+}
+
+@keyframes sp-megamenu-target-pulse {
+  0%, 28% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(183 245 0 / 0);
+  }
+
+  32%, 76% {
+    transform: scale(1.01);
+    box-shadow: 0 0 0 2px rgb(183 245 0 / 0.55);
+  }
+
+  80%, 100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+}
+
+.service-preview-scene tbody tr.preview-megamenu-target {
+  transform-origin: center;
+}
+
+.service-preview-scene tbody tr.preview-megamenu-target td {
+  background-color: rgb(255 255 255);
+}

@@ -1,119 +1,160 @@
-import Image from "next/image";
-import { ChevronRight, Search } from "lucide-react";
+﻿"use client";
 
-import { NEWS_CATEGORY_META, newsArticlesMock, type NewsCategoryId } from "@/constants/news-mock-data";
+import * as React from "react";
+import { Search } from "@/lib/lucide";
+
+import { NewsCard } from "@/components/news/news-card";
+import { NewsCategoryFilters } from "@/components/news/news-category-filters";
+import { NewsPagination } from "@/components/news/news-pagination";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { Button } from "@/components/ui/button";
+import type { NewsCategoryFilterId } from "@/constants/news-mock-data";
+import { NEWS_PAGE_SIZE } from "@/constants/news-mock-data";
+import { isLiveNewsEnabled } from "@/lib/public-env";
+import { fetchPublicNewsList } from "@/services/news.service";
 import { cn } from "@/lib/utils";
 
-function CategoryPill({ category }: { category: NewsCategoryId }) {
-  const meta = NEWS_CATEGORY_META[category];
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-tight",
-        meta.pillClass,
-      )}
-    >
-      {meta.label}
-    </span>
-  );
-}
-
 export function NewsPageContent() {
-  const [featured, ...rest] = newsArticlesMock;
+  const { t } = useI18n();
+  const [category, setCategory] = React.useState<NewsCategoryFilterId>("all");
+  const [search, setSearch] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [total, setTotal] = React.useState(0);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [articles, setArticles] = React.useState<Awaited<ReturnType<typeof fetchPublicNewsList>>["items"]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
 
-  if (!featured) return null;
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 280);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [category, debouncedSearch]);
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(false);
+    void fetchPublicNewsList({
+      page,
+      pageSize: NEWS_PAGE_SIZE,
+      category,
+      q: debouncedSearch || undefined,
+    })
+      .then((result) => {
+        setArticles(result.items);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [page, category, debouncedSearch]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleCategoryChange = (id: NewsCategoryFilterId) => {
+    setCategory(id);
+  };
 
   return (
-    <div className="space-y-8 sm:space-y-10">
-      <section className="rounded-3xl bg-white p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs font-medium text-neutral-500">
-            Узнать больше <span className="mx-1 text-neutral-300">›</span> <span className="text-neutral-900">Блог</span>
+    <div className="space-y-8 pb-4 sm:space-y-10">
+      <section className="border-b border-white/[0.06] pb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-medium text-zinc-500">
+            {t("news.breadcrumb")} <span className="mx-1 text-zinc-700">›</span>{" "}
+            <span className="text-zinc-300">{t("news.breadcrumbBlog")}</span>
           </p>
-          <label className="relative block w-full max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" aria-hidden />
+          <label className="relative block w-full sm:max-w-xs">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500"
+              aria-hidden
+            />
             <input
               type="search"
-              placeholder="Поиск статей"
-              className="h-10 w-full rounded-full border border-neutral-200 bg-neutral-50 pl-9 pr-4 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 focus:border-neutral-300"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("news.searchPlaceholder")}
+              className="h-10 w-full rounded-full border border-white/10 bg-zinc-950 pl-9 pr-4 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-white/20"
             />
           </label>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 pb-4">
-          {["В тренде", "Для начинающих", "Торговля", "Объяснение", "Глоссарий", "Блог", "Аналитика"].map((tab) => (
-            <button
-              key={tab}
+        <div className="mt-5 overflow-x-auto pb-1">
+          <NewsCategoryFilters active={category} onChange={handleCategoryChange} className="min-w-max sm:min-w-0" />
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            {t("news.blogTitle")}
+            {!loading && !error ? ` (${total})` : ""}
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">{t("news.blogSubtitle")}</p>
+        </div>
+      </section>
+
+      {loading ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: NEWS_PAGE_SIZE }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="aspect-[16/10] rounded-xl bg-zinc-900" />
+              <div className="mt-4 h-3 w-16 rounded bg-zinc-900" />
+              <div className="mt-3 h-5 w-full rounded bg-zinc-900" />
+              <div className="mt-2 h-4 w-4/5 rounded bg-zinc-900" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-6 py-12 text-center">
+          <p className="text-sm text-red-200">
+            {isLiveNewsEnabled() ? t("news.error.live") : t("news.error.demo")}
+          </p>
+          <Button type="button" variant="outline" className="mt-4 border-white/15 bg-transparent text-white hover:bg-zinc-900" onClick={load}>
+            {t("news.retry")}
+          </Button>
+        </div>
+      ) : articles.length === 0 ? (
+        <div className="rounded-2xl bg-zinc-950 px-6 py-16 text-center ring-1 ring-white/[0.06]">
+          <p className="text-sm font-medium text-white">{t("news.empty.title")}</p>
+          <p className="mt-2 text-sm text-zinc-500">
+            {debouncedSearch ? t("news.empty.searchHint") : t("news.empty.categoryHint")}
+          </p>
+          {(debouncedSearch || category !== "all") && (
+            <Button
               type="button"
-              className={cn(
-                "text-2xs sm:text-sm font-semibold transition-colors",
-                tab === "Блог" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-800",
-              )}
+              variant="outline"
+              className="mt-4 border-white/15 bg-transparent text-white hover:bg-zinc-900"
+              onClick={() => {
+                setSearch("");
+                setCategory("all");
+              }}
             >
-              {tab}
-            </button>
-          ))}
-          <button type="button" className="ml-auto inline-flex items-center text-neutral-500 hover:text-neutral-900">
-            <ChevronRight className="size-4" aria-hidden />
-          </button>
+              {t("news.empty.resetFilters")}
+            </Button>
+          )}
         </div>
+      ) : (
+        <>
+          <section aria-label={t("news.list.aria")}>
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {articles.map((article) => (
+                <NewsCard key={article.id} article={article} />
+              ))}
+            </div>
+          </section>
 
-        <div className="mt-6">
-          <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">Блог (71)</h2>
-          <p className="mt-2 text-sm text-neutral-600">Узнайте последние новости о RevShare.</p>
-        </div>
-      </section>
-
-      <article className="grid gap-6 rounded-3xl bg-white p-4 sm:p-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <CategoryPill category={featured.category} />
-            {featured.isNew ? (
-              <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-semibold text-neutral-800">
-                New
-              </span>
-            ) : null}
-          </div>
-          <time className="font-mono text-[11px] text-neutral-500" dateTime={featured.isoDate}>
-            {featured.dateLabel}
-          </time>
-          <h3 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">{featured.title}</h3>
-          <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-base">{featured.excerpt}</p>
-        </div>
-        <div className="relative h-52 overflow-hidden rounded-2xl sm:h-60">
-          <Image src="/images/news/back.jpg" alt="" fill className="object-cover object-center" />
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-tr from-white/45 via-transparent to-neutral-900/15" aria-hidden />
-        </div>
-      </article>
-
-      <section aria-labelledby="news-grid-title">
-        <h2 id="news-grid-title" className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">
-          Все публикации
-        </h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rest.map((article) => (
-            <article
-              key={article.id}
-              className="overflow-hidden rounded-2xl bg-white transition-transform duration-200 hover:-translate-y-0.5"
-            >
-              <div className="relative h-36">
-                <Image src="/images/news/back.jpg" alt="" fill className="object-cover object-center" />
-                <div className="pointer-events-none absolute inset-0 bg-linear-to-tr from-white/35 via-transparent to-neutral-900/20" aria-hidden />
-              </div>
-              <div className="space-y-2 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <CategoryPill category={article.category} />
-                  <time className="font-mono text-[11px] tabular-nums text-neutral-500" dateTime={article.isoDate}>
-                    {article.dateLabel}
-                  </time>
-                </div>
-                <h3 className="text-base font-semibold tracking-tight text-neutral-900">{article.title}</h3>
-                <p className="text-sm leading-relaxed text-neutral-600">{article.excerpt}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+          <NewsPagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            className={cn("pt-4")}
+          />
+        </>
+      )}
     </div>
   );
 }

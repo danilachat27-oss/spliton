@@ -1,7 +1,7 @@
 "use client";
 
 import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { Music } from "lucide-react";
+import { Music } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";

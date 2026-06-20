@@ -10,6 +10,7 @@ import {
   catalogMarketOverviewReleaseAnalyticsPath,
   catalogMarketOverviewReleaseTablePath,
 } from "@/constants/routes";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 const statusClass: Record<PositionPreviewItem["status"], string> = {
   Active: "border-blue-100 bg-blue-50 text-blue-800",
@@ -17,6 +18,24 @@ const statusClass: Record<PositionPreviewItem["status"], string> = {
   Secondary: "border-neutral-200 bg-neutral-50 text-neutral-800",
   Closed: "border-neutral-200 bg-neutral-100 text-neutral-600",
 };
+
+function positionStatusLabel(
+  status: PositionPreviewItem["status"],
+  t: (key: string) => string,
+): string {
+  switch (status) {
+    case "Active":
+      return t("positions.status.active");
+    case "Open round":
+      return t("positions.status.openRound");
+    case "Secondary":
+      return t("positions.status.secondary");
+    case "Closed":
+      return t("positions.status.closed");
+    default:
+      return status;
+  }
+}
 
 function toNumber(raw: string) {
   return Number(raw.replace(/[^\d.-]/g, ""));
@@ -33,7 +52,7 @@ function buildTrend(row: PositionPreviewItem) {
 }
 
 function formatCompact(value: number) {
-  return `${Math.round(value).toLocaleString("ru-RU")} USDT`;
+  return `${Math.round(value).toLocaleString(undefined)} USDT`;
 }
 
 function Sparkline({
@@ -41,11 +60,13 @@ function Sparkline({
   gradientId,
   filterId,
   startLabel,
+  sparklineAria,
 }: {
   points: number[];
   gradientId: string;
   filterId: string;
   startLabel: string;
+  sparklineAria: string;
 }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const min = Math.min(...points);
@@ -84,7 +105,7 @@ function Sparkline({
             const idx = Math.max(0, Math.min(points.length - 1, Math.round(x / step)));
             setHoverIndex(idx);
           }}
-          aria-label="Мини-график оценки позиции"
+          aria-label={sparklineAria}
           role="img"
         >
           <defs>
@@ -138,7 +159,7 @@ function Sparkline({
       <div className="mt-1 grid grid-cols-3 gap-1 text-[10px] text-neutral-400">
         {yTicks.map((tick) => (
           <span key={tick} className="tabular-nums">
-            {Math.round(tick).toLocaleString("ru-RU")}
+            {Math.round(tick).toLocaleString(undefined)}
           </span>
         ))}
       </div>
@@ -147,6 +168,7 @@ function Sparkline({
 }
 
 export function TopPositionCardsGrid({ rows }: { rows: PositionPreviewItem[] }) {
+  const { t } = useI18n();
   const uid = useId().replace(/:/g, "");
 
   const topRows = useMemo(() => rows.slice(0, 4), [rows]);
@@ -179,7 +201,7 @@ export function TopPositionCardsGrid({ rows }: { rows: PositionPreviewItem[] }) 
                 </div>
               </div>
               <span className={`inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusClass[row.status]}`}>
-                {row.status}
+                {positionStatusLabel(row.status, t)}
               </span>
             </div>
 
@@ -189,6 +211,7 @@ export function TopPositionCardsGrid({ rows }: { rows: PositionPreviewItem[] }) 
                 gradientId={`pos-mini-${uid}-${row.id}-g`}
                 filterId={`pos-mini-${uid}-${row.id}-f`}
                 startLabel={row.dateEntered}
+                sparklineAria={t("positions.sparklineAria")}
               />
             </div>
 

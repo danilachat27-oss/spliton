@@ -10,34 +10,39 @@ export type FieldErrors = {
 
 export type FormErrorState = FieldErrors & { submit?: string };
 
-export function validatePasswordStep(values: {
-  password: string;
-  confirmPassword: string;
-  termsAccepted: boolean;
-}): Pick<FieldErrors, "password" | "confirmPassword" | "terms"> {
+export type AuthTranslate = (key: string) => string;
+
+export function validatePasswordStep(
+  values: {
+    password: string;
+    confirmPassword: string;
+    termsAccepted: boolean;
+  },
+  t: AuthTranslate,
+): Pick<FieldErrors, "password" | "confirmPassword" | "terms"> {
   const next: Pick<FieldErrors, "password" | "confirmPassword" | "terms"> = {};
 
   if (!values.password) {
-    next.password = "Придумайте пароль";
+    next.password = t("auth.validation.passwordRequired");
   } else if (values.password.length < minPasswordLength) {
-    next.password = `Минимум ${minPasswordLength} символов`;
+    next.password = t("auth.validation.passwordMin").replace("{min}", String(minPasswordLength));
   }
 
   if (!values.confirmPassword) {
-    next.confirmPassword = "Подтвердите пароль";
+    next.confirmPassword = t("auth.validation.confirmRequired");
   } else if (values.password !== values.confirmPassword) {
-    next.confirmPassword = "Пароли не совпадают";
+    next.confirmPassword = t("auth.validation.passwordMismatch");
   }
 
   if (!values.termsAccepted) {
-    next.terms = "Нужно принять условия и конфиденциальность";
+    next.terms = t("auth.validation.termsRequired");
   }
 
   return next;
 }
 
-export function emailErrorMessage(trimmed: string): string | undefined {
-  if (!trimmed) return "Укажите электронную почту";
-  if (!emailPattern.test(trimmed)) return "Введите действительный email";
+export function emailErrorMessage(trimmed: string, t: AuthTranslate): string | undefined {
+  if (!trimmed) return t("auth.validation.emailRequired");
+  if (!emailPattern.test(trimmed)) return t("auth.validation.emailInvalid");
   return undefined;
 }

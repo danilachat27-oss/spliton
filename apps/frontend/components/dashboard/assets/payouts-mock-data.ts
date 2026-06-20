@@ -10,10 +10,10 @@ export type PayoutHistoryRow = {
   ledgerRef: string;
   date: string;
   release: string;
-  type: "Начисление" | "Выплата" | "Вывод" | "Корректировка";
+  type: "accrual" | "payout" | "withdrawal" | "adjustment";
   unitsShare: string;
   amount: string;
-  status: "Начислено" | "Доступно" | "В обработке" | "Выплачено" | "Завершено";
+  status: "accrued" | "available" | "processing" | "paid" | "completed";
 };
 
 export type PayoutScheduleRow = {
@@ -21,7 +21,7 @@ export type PayoutScheduleRow = {
   release: string;
   nextAccrual: string;
   period: string;
-  status: "Ожидается" | "Готовится расчёт" | "Начислено";
+  status: "expected" | "calculating" | "accrued";
   comment: string;
 };
 
@@ -35,10 +35,13 @@ export const payoutSummary: PayoutSummary[] = [
 
 /** Чаша «весов» на обзоре выплат: сравнение двух окон по начислениям и выводам (мок). */
 export type PayoutScalePan = {
-  title: string;
+  titleKey: "previous_7d" | "current_7d" | "previous_30d" | "current_30d" | "previous_90d" | "current_90d";
   period: string;
   accrualsUSDT: number;
   withdrawalsUSDT: number;
+  hintKey: "by_releases";
+  /** UI uses already-resolved strings (mock). */
+  title: string;
   hint: string;
 };
 
@@ -51,64 +54,80 @@ export type PayoutBalanceScaleMock = {
 export const payoutBalanceScale: PayoutBalanceScaleMock = {
   asset: "USDT · TRC20",
   left: {
-    title: "Предыдущие 30 дней",
+    titleKey: "previous_30d",
+    title: "previous_30d",
     period: "17.02 — 18.03",
     accrualsUSDT: 284.5,
     withdrawalsUSDT: 196.0,
-    hint: "начисления по релизам",
+    hintKey: "by_releases",
+    hint: "by_releases",
   },
   right: {
-    title: "Текущие 30 дней",
+    titleKey: "current_30d",
+    title: "current_30d",
     period: "19.03 — 18.04",
     accrualsUSDT: 318.2,
     withdrawalsUSDT: 158.4,
-    hint: "начисления по релизам",
+    hintKey: "by_releases",
+    hint: "by_releases",
   },
 };
 
 /** Длина каждого из двух скользящих окон сравнения (мок). */
 export type PayoutComparisonWindowId = "7d" | "30d" | "90d";
 
-export const payoutComparisonWindowOptions: { id: PayoutComparisonWindowId; label: string }[] = [
-  { id: "7d", label: "7 дн." },
-  { id: "30d", label: "30 дн." },
-  { id: "90d", label: "90 дн." },
+export const payoutComparisonWindowOptions: {
+  id: PayoutComparisonWindowId;
+  labelKey: string;
+  label: string;
+}[] = [
+  { id: "7d", labelKey: "chart.range7d", label: "7d" },
+  { id: "30d", labelKey: "chart.range30d", label: "30d" },
+  { id: "90d", labelKey: "chart.range90d", label: "90d" },
 ];
 
 const payoutBalanceScaleByWindow: Record<PayoutComparisonWindowId, PayoutBalanceScaleMock> = {
   "7d": {
     asset: "USDT · TRC20",
     left: {
-      title: "Предыдущие 7 дней",
+      titleKey: "previous_7d",
+      title: "previous_7d",
       period: "12.04 — 18.04",
       accrualsUSDT: 62.4,
       withdrawalsUSDT: 48.0,
-      hint: "начисления по релизам",
+      hintKey: "by_releases",
+      hint: "by_releases",
     },
     right: {
-      title: "Текущие 7 дней",
+      titleKey: "current_7d",
+      title: "current_7d",
       period: "13.04 — 19.04",
       accrualsUSDT: 71.1,
       withdrawalsUSDT: 22.5,
-      hint: "начисления по релизам",
+      hintKey: "by_releases",
+      hint: "by_releases",
     },
   },
   "30d": payoutBalanceScale,
   "90d": {
     asset: "USDT · TRC20",
     left: {
-      title: "Предыдущие 90 дней",
+      titleKey: "previous_90d",
+      title: "previous_90d",
       period: "20.12 — 18.03",
       accrualsUSDT: 812.3,
       withdrawalsUSDT: 540.0,
-      hint: "начисления по релизам",
+      hintKey: "by_releases",
+      hint: "by_releases",
     },
     right: {
-      title: "Текущие 90 дней",
+      titleKey: "current_90d",
+      title: "current_90d",
       period: "19.03 — 17.06",
       accrualsUSDT: 891.6,
       withdrawalsUSDT: 412.8,
-      hint: "начисления по релизам",
+      hintKey: "by_releases",
+      hint: "by_releases",
     },
   },
 };
@@ -254,70 +273,70 @@ export const payoutHistory: PayoutHistoryRow[] = [
     ledgerRef: "RS-7F3A…9C2E",
     date: "12.04.2026",
     release: "Offset",
-    type: "Начисление",
+    type: "accrual",
     unitsShare: "420 units",
     amount: "38.40 USDT",
-    status: "Начислено",
+    status: "accrued",
   },
   {
     id: "ph-2",
     ledgerRef: "RS-2B91…E441",
     date: "04.04.2026",
     release: "Midnight Drive",
-    type: "Выплата",
+    type: "payout",
     unitsShare: "180 units",
     amount: "14.20 USDT",
-    status: "Выплачено",
+    status: "paid",
   },
   {
     id: "ph-3",
     ledgerRef: "WD-A804…01FF",
     date: "28.03.2026",
     release: "Glass Echo",
-    type: "Вывод",
+    type: "withdrawal",
     unitsShare: "—",
     amount: "120.00 USDT",
-    status: "Завершено",
+    status: "completed",
   },
   {
     id: "ph-4",
     ledgerRef: "RS-CC10…77AB",
     date: "21.03.2026",
     release: "Low Horizon",
-    type: "Начисление",
+    type: "accrual",
     unitsShare: "260 units",
     amount: "22.30 USDT",
-    status: "Доступно",
+    status: "available",
   },
   {
     id: "ph-5",
     ledgerRef: "RS-5012…3D8F",
     date: "15.03.2026",
     release: "Neon District",
-    type: "Начисление",
+    type: "accrual",
     unitsShare: "300 units",
     amount: "29.80 USDT",
-    status: "Начислено",
+    status: "accrued",
   },
   {
     id: "ph-6",
     ledgerRef: "WD-9E22…B600",
     date: "09.03.2026",
     release: "Offset",
-    type: "Вывод",
+    type: "withdrawal",
     unitsShare: "—",
     amount: "80.00 USDT",
-    status: "В обработке",
+    status: "processing",
   },
   {
     id: "ph-7",
     ledgerRef: "ADJ-11FA…62C0",
     date: "03.03.2026",
     release: "Glass Echo",
-    type: "Корректировка",
+    type: "adjustment",
     unitsShare: "по периоду",
     amount: "-3.20 USDT",
-    status: "Завершено",
+    status: "completed",
   },
 ];
 
@@ -327,7 +346,7 @@ export const payoutSchedule: PayoutScheduleRow[] = [
     release: "Offset",
     nextAccrual: "22.04.2026",
     period: "01.04–15.04",
-    status: "Готовится расчёт",
+    status: "calculating",
     comment: "Расчёт revenue share по подтверждённым стримам.",
   },
   {
@@ -335,7 +354,7 @@ export const payoutSchedule: PayoutScheduleRow[] = [
     release: "Midnight Drive",
     nextAccrual: "24.04.2026",
     period: "01.04–15.04",
-    status: "Ожидается",
+    status: "expected",
     comment: "Ожидаем загрузку данных от дистрибутора.",
   },
   {
@@ -343,7 +362,7 @@ export const payoutSchedule: PayoutScheduleRow[] = [
     release: "Glass Echo",
     nextAccrual: "18.04.2026",
     period: "16.03–31.03",
-    status: "Начислено",
+    status: "accrued",
     comment: "Начисление сформировано и добавлено в историю.",
   },
 ];

@@ -1,10 +1,11 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { Info } from "@/lib/lucide";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { PayoutAccrualChartPoint, PayoutChartRangeId } from "@/components/dashboard/assets/payouts-mock-data";
 import { getPayoutAccrualChartSeries, getPayoutChartKpiSnapshot } from "@/components/dashboard/assets/payouts-mock-data";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 const VIEW_W = 960;
@@ -110,21 +111,35 @@ function areaPathD(
 }
 
 type PayoutsAccrualChartProps = {
-  /** Статичная серия (например для сторибука); по умолчанию — интерактивные моки по периоду. */
+  /** Статичная серия (live API или сторибук); без неё — только в mock-режиме. */
   data?: PayoutAccrualChartPoint[];
+  /** Управляемый интервал (live API). */
+  range?: PayoutChartRangeId;
+  onRangeChange?: (range: PayoutChartRangeId) => void;
+  /** Live-ряд: включает переключение интервала при переданном `data`. */
+  liveSeries?: boolean;
 };
 
-export function PayoutsAccrualChart({ data: staticData }: PayoutsAccrualChartProps) {
+export function PayoutsAccrualChart({
+  data: staticData,
+  range: controlledRange,
+  onRangeChange,
+  liveSeries = false,
+}: PayoutsAccrualChartProps) {
+  const { t } = useI18n();
   const [range, setRange] = useState<PayoutChartRangeId>("7d");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [tipPos, setTipPos] = useState<{ x: number; y: number; wrapWidth: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const seriesLocked = Boolean(staticData && staticData.length > 0);
+  const activeRange = controlledRange ?? range;
+  const setActiveRange = onRangeChange ?? setRange;
+  const rangeInteractive = !seriesLocked || (liveSeries && Boolean(onRangeChange));
 
   const series = useMemo(
-    () => (seriesLocked ? staticData! : getPayoutAccrualChartSeries(range)),
-    [seriesLocked, staticData, range],
+    () => (seriesLocked ? staticData! : getPayoutAccrualChartSeries(activeRange)),
+    [seriesLocked, staticData, activeRange],
   );
 
   const kpi = useMemo(() => getPayoutChartKpiSnapshot(series), [series]);
@@ -190,7 +205,7 @@ export function PayoutsAccrualChart({ data: staticData }: PayoutsAccrualChartPro
   return (
     <section
       className="space-y-8 rounded-3xl bg-white px-5 py-6 sm:space-y-9 sm:px-7 sm:py-8"
-      aria-label="Детальный график начислений USDT"
+      aria-label={t("payouts.chart.ariaLabel")}
     >
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div className="min-w-0 space-y-2">
@@ -198,7 +213,7 @@ export function PayoutsAccrualChart({ data: staticData }: PayoutsAccrualChartPro
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">USDT · Chart</p>
             <span
               className="inline-flex text-neutral-400"
-              title="Мок-данные: накопительная сумма по распределениям и объём начислений за выбранный интервал. При подключении API подставятся реальные ряды."
+              title={t("payouts.chart.mockTooltip")}
             >
               <Info className="size-3.5" strokeWidth={2} aria-hidden />
             </span>
@@ -213,19 +228,19 @@ export function PayoutsAccrualChart({ data: staticData }: PayoutsAccrualChartPro
         <div
           className="flex shrink-0 rounded-xl bg-neutral-100 p-1"
           role="tablist"
-          aria-label="Интервал графика"
+          aria-label={t("payouts.chart.intervalAria")}
         >
           {RANGES.map((r) => (
             <button
               key={r.id}
               type="button"
               role="tab"
-              aria-selected={!seriesLocked && range === r.id}
-              disabled={seriesLocked}
-              onClick={() => setRange(r.id)}
+              aria-selected={rangeInteractive && activeRange === r.id}
+              disabled={!rangeInteractive}
+              onClick={() => setActiveRange(r.id)}
               className={cn(
                 "rounded-lg px-3 py-2 text-[11px] font-semibold transition-colors",
-                !seriesLocked && range === r.id
+                rangeInteractive && activeRange === r.id
                   ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80"
                   : "text-neutral-500 hover:text-neutral-800",
                 seriesLocked && "cursor-default opacity-60",

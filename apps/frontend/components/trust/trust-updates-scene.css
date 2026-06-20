@@ -1,0 +1,718 @@
+/* Что нового в центре доверия — детализированные мини-сцены */
+
+.trust-upd-scene {
+  --tus-duration: 18s;
+}
+
+/* ——— Панели: только одна видима, остальные скрыты полностью ——— */
+.trust-upd-panel {
+  animation-duration: var(--tus-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.trust-upd-panel--ledger { animation-name: tus-panel-ledger; }
+.trust-upd-panel--status { animation-name: tus-panel-status; }
+.trust-upd-panel--disputes { animation-name: tus-panel-disputes; }
+.trust-upd-panel--trust { animation-name: tus-panel-trust; }
+
+@keyframes tus-panel-ledger {
+  0%, 2% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  4%, 23% { opacity: 1; visibility: visible; transform: translateY(0); }
+  25%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes tus-panel-status {
+  0%, 23% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  25%, 48% { opacity: 1; visibility: visible; transform: translateY(0); }
+  50%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes tus-panel-disputes {
+  0%, 48% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  50%, 73% { opacity: 1; visibility: visible; transform: translateY(0); }
+  75%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes tus-panel-trust {
+  0%, 73% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  75%, 96% { opacity: 1; visibility: visible; transform: translateY(0); }
+  98%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+/* ——— Общие анимированные элементы ——— */
+.trust-upd-toast,
+.trust-upd-spinner,
+.trust-upd-detail,
+.trust-upd-step-label,
+.trust-upd-underline,
+.trust-upd-progress,
+.trust-upd-cursor,
+.trust-upd-ring,
+.trust-upd-tip,
+.trust-upd-check-wrap,
+.trust-upd-check-circle,
+.trust-upd-check-path,
+.trust-upd-check-burst,
+.trust-upd-success,
+.trust-upd-success-text,
+.trust-upd-ledger-entry,
+.trust-upd-status-badge,
+.trust-upd-status-hero,
+.trust-upd-status-pulse,
+.trust-upd-status-row,
+.trust-upd-status-chip,
+.trust-upd-dispute-card,
+.trust-upd-dispute-step,
+.trust-upd-dispute-status,
+.trust-upd-trust-hero,
+.trust-upd-trust-card,
+.trust-upd-trust-cta,
+.trust-upd-live-dot {
+  animation-duration: var(--tus-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.trust-upd-toast,
+.trust-upd-spinner,
+.trust-upd-cursor,
+.trust-upd-ring,
+.trust-upd-tip,
+.trust-upd-success,
+.trust-upd-success-text {
+  opacity: 0;
+}
+
+.trust-upd-spin-icon { animation: tus-spin 0.9s linear infinite; }
+
+@keyframes tus-spin { to { transform: rotate(360deg); } }
+
+/* ——— Спиннеры ——— */
+.trust-upd-spinner--ledger { animation-name: tus-spinner-ledger; }
+.trust-upd-spinner--status { animation-name: tus-spinner-status; }
+.trust-upd-spinner--disputes { animation-name: tus-spinner-disputes; }
+.trust-upd-spinner--trust { animation-name: tus-spinner-trust; }
+
+@keyframes tus-spinner-ledger {
+  0%, 4% { opacity: 0; transform: translateY(-4px); }
+  6%, 12% { opacity: 1; transform: translateY(0); }
+  14%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-spinner-status {
+  0%, 25% { opacity: 0; transform: translateY(-4px); }
+  27%, 33% { opacity: 1; transform: translateY(0); }
+  35%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-spinner-disputes {
+  0%, 50% { opacity: 0; transform: translateY(-4px); }
+  52%, 58% { opacity: 1; transform: translateY(0); }
+  60%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-spinner-trust {
+  0%, 75% { opacity: 0; transform: translateY(-4px); }
+  77%, 83% { opacity: 1; transform: translateY(0); }
+  85%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ——— Toast ——— */
+.trust-upd-toast--ledger { animation-name: tus-toast-ledger; }
+.trust-upd-toast--status { animation-name: tus-toast-status; }
+.trust-upd-toast--disputes { animation-name: tus-toast-disputes; }
+.trust-upd-toast--trust { animation-name: tus-toast-trust; }
+
+@keyframes tus-toast-ledger {
+  0%, 11% { opacity: 0; transform: translateX(12px); }
+  13%, 22% { opacity: 1; transform: translateX(0); }
+  24%, 100% { opacity: 0; transform: translateX(12px); }
+}
+
+@keyframes tus-toast-status {
+  0%, 34% { opacity: 0; transform: translateX(12px); }
+  36%, 47% { opacity: 1; transform: translateX(0); }
+  49%, 100% { opacity: 0; transform: translateX(12px); }
+}
+
+@keyframes tus-toast-disputes {
+  0%, 59% { opacity: 0; transform: translateX(12px); }
+  61%, 72% { opacity: 1; transform: translateX(0); }
+  74%, 100% { opacity: 0; transform: translateX(12px); }
+}
+
+@keyframes tus-toast-trust {
+  0%, 84% { opacity: 0; transform: translateX(12px); }
+  86%, 95% { opacity: 1; transform: translateX(0); }
+  97%, 100% { opacity: 0; transform: translateX(12px); }
+}
+
+/* ——— Success overlay ——— */
+.trust-upd-success--ledger { animation-name: tus-success-ledger; }
+.trust-upd-success-text--ledger { animation-name: tus-success-text-ledger; }
+.trust-upd-success--status { animation-name: tus-success-status; }
+.trust-upd-success-text--status { animation-name: tus-success-text-status; }
+.trust-upd-success--disputes { animation-name: tus-success-disputes; }
+.trust-upd-success-text--disputes { animation-name: tus-success-text-disputes; }
+.trust-upd-success--trust { animation-name: tus-success-trust; }
+.trust-upd-success-text--trust { animation-name: tus-success-text-trust; }
+
+@keyframes tus-success-ledger {
+  0%, 14% { opacity: 0; }
+  15%, 21% { opacity: 1; }
+  23%, 100% { opacity: 0; }
+}
+
+@keyframes tus-success-text-ledger {
+  0%, 15.5% { opacity: 0; transform: translateY(6px); }
+  16.5%, 21% { opacity: 1; transform: translateY(0); }
+  23%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-success-status {
+  0%, 38% { opacity: 0; }
+  39%, 46% { opacity: 1; }
+  48%, 100% { opacity: 0; }
+}
+
+@keyframes tus-success-text-status {
+  0%, 39.5% { opacity: 0; transform: translateY(6px); }
+  40.5%, 46% { opacity: 1; transform: translateY(0); }
+  48%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-success-disputes {
+  0%, 63% { opacity: 0; }
+  64%, 71% { opacity: 1; }
+  73%, 100% { opacity: 0; }
+}
+
+@keyframes tus-success-text-disputes {
+  0%, 64.5% { opacity: 0; transform: translateY(6px); }
+  65.5%, 71% { opacity: 1; transform: translateY(0); }
+  73%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-success-trust {
+  0%, 87% { opacity: 0; }
+  88%, 94% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+@keyframes tus-success-text-trust {
+  0%, 88.5% { opacity: 0; transform: translateY(6px); }
+  89.5%, 94% { opacity: 1; transform: translateY(0); }
+  96%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ——— Ledger ——— */
+.trust-upd-ledger-entry--1 { animation-name: tus-ledger-entry-1; }
+.trust-upd-ledger-entry--2 { animation-name: tus-ledger-entry-2; }
+.trust-upd-ledger-entry--3 { animation-name: tus-ledger-entry-3; }
+
+@keyframes tus-ledger-entry-1 {
+  0%, 8% { opacity: 0; transform: translateY(6px); }
+  10%, 22% { opacity: 1; transform: translateY(0); background: rgb(250 250 250); }
+  24%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes tus-ledger-entry-2 {
+  0%, 12% { opacity: 0; transform: translateY(6px); background: rgb(250 250 250); box-shadow: none; }
+  14%, 16% { opacity: 1; transform: translateY(0); background: rgb(250 250 250); box-shadow: none; }
+  17%, 21% { opacity: 1; transform: translateY(0); background: rgb(236 253 245); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.4); }
+  23%, 100% { opacity: 0; transform: translateY(-4px); background: rgb(250 250 250); box-shadow: none; }
+}
+
+@keyframes tus-ledger-entry-3 {
+  0%, 16% { opacity: 0; transform: translateY(6px); }
+  18%, 22% { opacity: 1; transform: translateY(0); }
+  24%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ——— Status ——— */
+.trust-upd-status-badge { animation-name: tus-status-badge; }
+
+@keyframes tus-status-badge {
+  0%, 32% { opacity: 0; transform: scale(0.9); }
+  34%, 47% { opacity: 1; transform: scale(1); }
+  49%, 100% { opacity: 0; transform: scale(0.9); }
+}
+
+.trust-upd-status-hero { animation-name: tus-status-hero; }
+
+@keyframes tus-status-hero {
+  0%, 30% { box-shadow: none; }
+  32%, 46% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.3); }
+  48%, 100% { box-shadow: none; }
+}
+
+.trust-upd-status-pulse { animation-name: tus-status-pulse; }
+
+@keyframes tus-status-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+.trust-upd-status-row--trading { animation-name: tus-status-row-1; }
+.trust-upd-status-row--payouts { animation-name: tus-status-row-2; }
+.trust-upd-status-row--cabinet { animation-name: tus-status-row-3; }
+
+@keyframes tus-status-row-base {
+  0%, 34% { background: rgb(250 250 250); }
+  36%, 46% { background: rgb(236 253 245); }
+  48%, 100% { background: rgb(250 250 250); }
+}
+
+@keyframes tus-status-row-1 {
+  0%, 24% { background: rgb(250 250 250); opacity: 0; }
+  25%, 34% { background: rgb(250 250 250); opacity: 1; }
+  35%, 46% { background: rgb(236 253 245); opacity: 1; }
+  48%, 100% { background: rgb(250 250 250); opacity: 0; }
+}
+
+@keyframes tus-status-row-2 {
+  0%, 24% { background: rgb(250 250 250); opacity: 0; }
+  25%, 36% { background: rgb(250 250 250); opacity: 1; }
+  37%, 46% { background: rgb(236 253 245); opacity: 1; }
+  48%, 100% { background: rgb(250 250 250); opacity: 0; }
+}
+
+@keyframes tus-status-row-3 {
+  0%, 24% { background: rgb(250 250 250); opacity: 0; }
+  25%, 38% { background: rgb(250 250 250); opacity: 1; }
+  39%, 46% { background: rgb(236 253 245); opacity: 1; }
+  48%, 100% { background: rgb(250 250 250); opacity: 0; }
+}
+
+.trust-upd-status-chip--trading,
+.trust-upd-status-chip--payouts,
+.trust-upd-status-chip--cabinet {
+  animation-name: tus-status-chip;
+  background: rgb(245 245 245);
+  color: rgb(115 115 115);
+}
+
+@keyframes tus-status-chip {
+  0%, 24% { background: rgb(245 245 245); color: rgb(115 115 115); opacity: 0; }
+  25%, 34% { background: rgb(245 245 245); color: rgb(115 115 115); opacity: 1; }
+  37%, 46% { background: rgb(220 252 231); color: rgb(21 128 61); opacity: 1; }
+  48%, 100% { background: rgb(245 245 245); color: rgb(115 115 115); opacity: 0; }
+}
+
+/* ——— Disputes ——— */
+.trust-upd-dispute-card { animation-name: tus-dispute-card; }
+
+@keyframes tus-dispute-card {
+  0%, 58% { box-shadow: none; }
+  60%, 71% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); }
+  73%, 100% { box-shadow: none; }
+}
+
+.trust-upd-dispute-step--1 { animation-name: tus-dispute-step-1; }
+.trust-upd-dispute-step--2 { animation-name: tus-dispute-step-2; }
+.trust-upd-dispute-step--3 { animation-name: tus-dispute-step-3; }
+
+@keyframes tus-dispute-step-1 {
+  0%, 58% { background: rgb(23 23 23); color: white; }
+  60%, 71% { background: rgb(23 23 23); color: white; }
+  73%, 100% { background: rgb(245 245 245); color: rgb(115 115 115); }
+}
+
+@keyframes tus-dispute-step-2 {
+  0%, 62% { background: rgb(245 245 245); color: rgb(115 115 115); }
+  64%, 71% { background: rgb(254 243 199); color: rgb(146 64 14); }
+  73%, 100% { background: rgb(245 245 245); color: rgb(115 115 115); }
+}
+
+@keyframes tus-dispute-step-3 {
+  0%, 66% { background: rgb(245 245 245); color: rgb(163 163 163); }
+  68%, 71% { background: rgb(245 245 245); color: rgb(163 163 163); }
+  73%, 100% { background: rgb(245 245 245); color: rgb(163 163 163); }
+}
+
+.trust-upd-dispute-status { animation-name: tus-dispute-status; opacity: 0; }
+
+@keyframes tus-dispute-status {
+  0%, 62% { opacity: 0; transform: translateY(4px); }
+  64%, 71% { opacity: 1; transform: translateY(0); }
+  73%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ——— Trust ——— */
+.trust-upd-trust-hero { animation-name: tus-trust-hero; }
+
+@keyframes tus-trust-hero {
+  0%, 84% { box-shadow: none; }
+  86%, 94% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.4); }
+  96%, 100% { box-shadow: none; }
+}
+
+.trust-upd-trust-card--ledger { animation-name: tus-trust-card-1; }
+.trust-upd-trust-card--treasury { animation-name: tus-trust-card-2; }
+.trust-upd-trust-card--status { animation-name: tus-trust-card-3; }
+.trust-upd-trust-card--docs { animation-name: tus-trust-card-4; }
+
+@keyframes tus-trust-card-1 {
+  0%, 74% { opacity: 0; transform: scale(0.98); box-shadow: none; background: rgb(250 250 250); }
+  75%, 85% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  86%, 87% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); background: rgb(236 253 245); }
+  89%, 94% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  96%, 100% { opacity: 0; transform: scale(0.98); }
+}
+
+@keyframes tus-trust-card-2 {
+  0%, 74% { opacity: 0; transform: scale(0.98); box-shadow: none; background: rgb(250 250 250); }
+  75%, 87% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  88%, 89% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); background: rgb(236 253 245); }
+  91%, 94% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  96%, 100% { opacity: 0; transform: scale(0.98); }
+}
+
+@keyframes tus-trust-card-3 {
+  0%, 74% { opacity: 0; transform: scale(0.98); box-shadow: none; background: rgb(250 250 250); }
+  75%, 89% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  90%, 91% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); background: rgb(236 253 245); }
+  93%, 94% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  96%, 100% { opacity: 0; transform: scale(0.98); }
+}
+
+@keyframes tus-trust-card-4 {
+  0%, 74% { opacity: 0; transform: scale(0.98); box-shadow: none; background: rgb(250 250 250); }
+  75%, 91% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  92%, 93% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); background: rgb(236 253 245); }
+  95%, 96% { opacity: 1; transform: scale(1); box-shadow: none; background: rgb(250 250 250); }
+  98%, 100% { opacity: 0; transform: scale(0.98); }
+}
+
+.trust-upd-trust-cta { animation-name: tus-trust-cta; }
+
+@keyframes tus-trust-cta {
+  0%, 90% { box-shadow: none; transform: scale(1); }
+  92%, 95% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.45); transform: scale(1.02); }
+  97%, 100% { box-shadow: none; transform: scale(1); }
+}
+
+.trust-upd-live-dot { animation-name: tus-live-dot; }
+
+@keyframes tus-live-dot {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+
+/* ——— Галочки ——— */
+.trust-upd-check-circle {
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  transform-origin: 26px 26px;
+}
+
+.trust-upd-check-path {
+  stroke-dasharray: 42;
+  stroke-dashoffset: 42;
+}
+
+.trust-upd-check-wrap--ledger { animation-name: tus-check-wrap-ledger; }
+.trust-upd-check-wrap--status { animation-name: tus-check-wrap-status; }
+.trust-upd-check-wrap--disputes { animation-name: tus-check-wrap-disputes; }
+.trust-upd-check-wrap--trust { animation-name: tus-check-wrap-trust; }
+
+.trust-upd-check-circle--ledger { animation-name: tus-check-circle-ledger; }
+.trust-upd-check-circle--status { animation-name: tus-check-circle-status; }
+.trust-upd-check-circle--disputes { animation-name: tus-check-circle-disputes; }
+.trust-upd-check-circle--trust { animation-name: tus-check-circle-trust; }
+
+.trust-upd-check-path--ledger { animation-name: tus-check-path-ledger; }
+.trust-upd-check-path--status { animation-name: tus-check-path-status; }
+.trust-upd-check-path--disputes { animation-name: tus-check-path-disputes; }
+.trust-upd-check-path--trust { animation-name: tus-check-path-trust; }
+
+/* ——— Таймлайн: номера шагов, без галочек ——— */
+.trust-upd-step-dot {
+  background: white;
+  color: rgb(115 115 115);
+  outline: 1px solid rgb(23 23 23);
+  transition: background-color 0.35s ease, color 0.35s ease, transform 0.35s ease;
+}
+
+.trust-upd-step-dot--ledger { animation: tus-dot-ledger var(--tus-duration) ease-in-out infinite; }
+.trust-upd-step-dot--status { animation: tus-dot-status var(--tus-duration) ease-in-out infinite; }
+.trust-upd-step-dot--disputes { animation: tus-dot-disputes var(--tus-duration) ease-in-out infinite; }
+.trust-upd-step-dot--trust { animation: tus-dot-trust var(--tus-duration) ease-in-out infinite; }
+
+@keyframes tus-dot-ledger {
+  0%, 3% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+  4%, 23% { background: rgb(23 23 23); color: white; outline-color: transparent; transform: scale(1.08); }
+  25%, 100% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+}
+
+@keyframes tus-dot-status {
+  0%, 23% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+  25%, 48% { background: rgb(23 23 23); color: white; outline-color: transparent; transform: scale(1.08); }
+  50%, 100% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+}
+
+@keyframes tus-dot-disputes {
+  0%, 48% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+  50%, 73% { background: rgb(23 23 23); color: white; outline-color: transparent; transform: scale(1.08); }
+  75%, 100% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+}
+
+@keyframes tus-dot-trust {
+  0%, 73% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+  75%, 96% { background: rgb(23 23 23); color: white; outline-color: transparent; transform: scale(1.08); }
+  98%, 100% { background: white; color: rgb(115 115 115); outline-color: rgb(23 23 23); transform: scale(1); }
+}
+
+@keyframes tus-check-wrap-ledger {
+  0%, 3% { opacity: 0; transform: scale(0.55); }
+  4%, 22% { opacity: 1; transform: scale(1); }
+  24%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+@keyframes tus-check-circle-ledger {
+  0%, 4% { stroke-dashoffset: 145; }
+  5%, 7% { stroke-dashoffset: 0; }
+  8%, 22% { stroke-dashoffset: 0; }
+  24%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes tus-check-path-ledger {
+  0%, 6% { stroke-dashoffset: 42; opacity: 0; }
+  7%, 9% { stroke-dashoffset: 0; opacity: 1; }
+  10%, 22% { stroke-dashoffset: 0; opacity: 1; }
+  24%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes tus-check-burst-ledger {
+  0%, 6% { opacity: 0; transform: scale(0.4); }
+  8%, 11% { opacity: 0.8; transform: scale(1.3); }
+  14%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes tus-check-wrap-status {
+  0%, 23% { opacity: 0; transform: scale(0.55); }
+  25%, 47% { opacity: 1; transform: scale(1); }
+  49%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+@keyframes tus-check-circle-status {
+  0%, 25% { stroke-dashoffset: 145; }
+  26%, 28% { stroke-dashoffset: 0; }
+  29%, 47% { stroke-dashoffset: 0; }
+  49%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes tus-check-path-status {
+  0%, 27% { stroke-dashoffset: 42; opacity: 0; }
+  28%, 30% { stroke-dashoffset: 0; opacity: 1; }
+  31%, 47% { stroke-dashoffset: 0; opacity: 1; }
+  49%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes tus-check-burst-status {
+  0%, 27% { opacity: 0; transform: scale(0.4); }
+  29%, 32% { opacity: 0.8; transform: scale(1.3); }
+  35%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes tus-check-wrap-disputes {
+  0%, 48% { opacity: 0; transform: scale(0.55); }
+  50%, 72% { opacity: 1; transform: scale(1); }
+  74%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+@keyframes tus-check-circle-disputes {
+  0%, 50% { stroke-dashoffset: 145; }
+  51%, 53% { stroke-dashoffset: 0; }
+  54%, 72% { stroke-dashoffset: 0; }
+  74%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes tus-check-path-disputes {
+  0%, 52% { stroke-dashoffset: 42; opacity: 0; }
+  53%, 55% { stroke-dashoffset: 0; opacity: 1; }
+  56%, 72% { stroke-dashoffset: 0; opacity: 1; }
+  74%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes tus-check-burst-disputes {
+  0%, 52% { opacity: 0; transform: scale(0.4); }
+  54%, 57% { opacity: 0.8; transform: scale(1.3); }
+  60%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes tus-check-wrap-trust {
+  0%, 73% { opacity: 0; transform: scale(0.55); }
+  75%, 95% { opacity: 1; transform: scale(1); }
+  97%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+@keyframes tus-check-circle-trust {
+  0%, 75% { stroke-dashoffset: 145; }
+  76%, 78% { stroke-dashoffset: 0; }
+  79%, 95% { stroke-dashoffset: 0; }
+  97%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes tus-check-path-trust {
+  0%, 77% { stroke-dashoffset: 42; opacity: 0; }
+  78%, 80% { stroke-dashoffset: 0; opacity: 1; }
+  81%, 95% { stroke-dashoffset: 0; opacity: 1; }
+  97%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes tus-check-burst-trust {
+  0%, 77% { opacity: 0; transform: scale(0.4); }
+  79%, 82% { opacity: 0.8; transform: scale(1.3); }
+  85%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+/* ——— Курсор: движение к цели и клик ——— */
+.trust-upd-cursor {
+  will-change: transform, opacity;
+}
+
+.trust-upd-cursor--ledger {
+  animation-name: tus-cursor-ledger;
+}
+
+.trust-upd-cursor--status {
+  animation-name: tus-cursor-status;
+}
+
+.trust-upd-cursor--disputes {
+  animation-name: tus-cursor-disputes;
+}
+
+.trust-upd-cursor--trust {
+  animation-name: tus-cursor-trust;
+}
+
+.trust-upd-tip--ledger { animation-name: tus-tip-ledger; }
+.trust-upd-tip--status { animation-name: tus-tip-status; }
+.trust-upd-tip--disputes { animation-name: tus-tip-disputes; }
+.trust-upd-tip--trust { animation-name: tus-tip-trust; }
+
+@keyframes tus-cursor-ledger {
+  0%, 9% { opacity: 0; transform: translate(18px, -14px); }
+  10%, 13% { opacity: 1; transform: translate(6px, -4px); }
+  14%, 20% { opacity: 1; transform: translate(0, 0); }
+  22%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes tus-cursor-status {
+  0%, 33% { opacity: 0; transform: translate(16px, -12px); }
+  34%, 37% { opacity: 1; transform: translate(5px, -3px); }
+  38%, 45% { opacity: 1; transform: translate(0, 0); }
+  47%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes tus-cursor-disputes {
+  0%, 58% { opacity: 0; transform: translate(14px, -10px); }
+  59%, 62% { opacity: 1; transform: translate(4px, -2px); }
+  63%, 70% { opacity: 1; transform: translate(0, 0); }
+  72%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes tus-cursor-trust {
+  0%, 83% { opacity: 0; transform: translate(16px, -12px); }
+  84%, 87% { opacity: 1; transform: translate(5px, -3px); }
+  88%, 94% { opacity: 1; transform: translate(0, 0); }
+  96%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes tus-tip-ledger { 0%, 9% { opacity: 0; } 10%, 20% { opacity: 1; } 22%, 100% { opacity: 0; } }
+@keyframes tus-tip-status { 0%, 33% { opacity: 0; } 34%, 45% { opacity: 1; } 47%, 100% { opacity: 0; } }
+@keyframes tus-tip-disputes { 0%, 58% { opacity: 0; } 59%, 70% { opacity: 1; } 72%, 100% { opacity: 0; } }
+@keyframes tus-tip-trust { 0%, 83% { opacity: 0; } 84%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+
+.trust-upd-ring--ledger { animation-name: tus-ring-ledger; }
+.trust-upd-ring--status { animation-name: tus-ring-status; }
+.trust-upd-ring--disputes { animation-name: tus-ring-disputes; }
+.trust-upd-ring--trust { animation-name: tus-ring-trust; }
+
+@keyframes tus-ring-ledger { 0%, 14% { opacity: 0; transform: scale(0.5); } 16%, 18% { opacity: 1; transform: scale(1.45); } 20%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes tus-ring-status { 0%, 37% { opacity: 0; transform: scale(0.5); } 39%, 41% { opacity: 1; transform: scale(1.45); } 43%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes tus-ring-disputes { 0%, 62% { opacity: 0; transform: scale(0.5); } 64%, 66% { opacity: 1; transform: scale(1.45); } 68%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes tus-ring-trust { 0%, 87% { opacity: 0; transform: scale(0.5); } 89%, 91% { opacity: 1; transform: scale(1.45); } 93%, 100% { opacity: 0; transform: scale(1.8); } }
+
+/* ——— Таймлайн ——— */
+.trust-upd-step-label--ledger { animation: tus-label-ledger var(--tus-duration) ease-in-out infinite; }
+.trust-upd-step-label--status { animation: tus-label-status var(--tus-duration) ease-in-out infinite; }
+.trust-upd-step-label--disputes { animation: tus-label-disputes var(--tus-duration) ease-in-out infinite; }
+.trust-upd-step-label--trust { animation: tus-label-trust var(--tus-duration) ease-in-out infinite; }
+
+.trust-upd-underline--ledger { animation: tus-underline-ledger var(--tus-duration) ease-in-out infinite; }
+.trust-upd-underline--status { animation: tus-underline-status var(--tus-duration) ease-in-out infinite; }
+.trust-upd-underline--disputes { animation: tus-underline-disputes var(--tus-duration) ease-in-out infinite; }
+.trust-upd-underline--trust { animation: tus-underline-trust var(--tus-duration) ease-in-out infinite; }
+
+.trust-upd-detail--ledger { animation: tus-detail-ledger var(--tus-duration) ease-in-out infinite; }
+.trust-upd-detail--status { animation: tus-detail-status var(--tus-duration) ease-in-out infinite; }
+.trust-upd-detail--disputes { animation: tus-detail-disputes var(--tus-duration) ease-in-out infinite; }
+.trust-upd-detail--trust { animation: tus-detail-trust var(--tus-duration) ease-in-out infinite; }
+
+@keyframes tus-label-ledger { 0%, 3% { color: rgb(115 115 115); font-weight: 500; } 4%, 23% { color: rgb(23 23 23); font-weight: 600; } 25%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes tus-label-status { 0%, 23% { color: rgb(115 115 115); font-weight: 500; } 25%, 48% { color: rgb(23 23 23); font-weight: 600; } 50%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes tus-label-disputes { 0%, 48% { color: rgb(115 115 115); font-weight: 500; } 50%, 73% { color: rgb(23 23 23); font-weight: 600; } 75%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes tus-label-trust { 0%, 73% { color: rgb(115 115 115); font-weight: 500; } 75%, 96% { color: rgb(23 23 23); font-weight: 600; } 98%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+
+@keyframes tus-underline-ledger { 0%, 3% { transform: scaleX(0); opacity: 0; } 4%, 23% { transform: scaleX(1); opacity: 1; } 25%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes tus-underline-status { 0%, 23% { transform: scaleX(0); opacity: 0; } 25%, 48% { transform: scaleX(1); opacity: 1; } 50%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes tus-underline-disputes { 0%, 48% { transform: scaleX(0); opacity: 0; } 50%, 73% { transform: scaleX(1); opacity: 1; } 75%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes tus-underline-trust { 0%, 73% { transform: scaleX(0); opacity: 0; } 75%, 96% { transform: scaleX(1); opacity: 1; } 98%, 100% { transform: scaleX(0); opacity: 0; } }
+
+@keyframes tus-detail-ledger { 0%, 3% { opacity: 0; visibility: hidden; transform: translateY(8px); } 4%, 23% { opacity: 1; visibility: visible; transform: translateY(0); } 25%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); } }
+@keyframes tus-detail-status { 0%, 23% { opacity: 0; visibility: hidden; transform: translateY(8px); } 25%, 48% { opacity: 1; visibility: visible; transform: translateY(0); } 50%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); } }
+@keyframes tus-detail-disputes { 0%, 48% { opacity: 0; visibility: hidden; transform: translateY(8px); } 50%, 73% { opacity: 1; visibility: visible; transform: translateY(0); } 75%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); } }
+@keyframes tus-detail-trust { 0%, 73% { opacity: 0; visibility: hidden; transform: translateY(8px); } 75%, 96% { opacity: 1; visibility: visible; transform: translateY(0); } 98%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); } }
+
+.trust-upd-progress { animation: tus-progress var(--tus-duration) linear infinite; }
+
+@keyframes tus-progress {
+  0% { width: 0%; }
+  23% { width: 25%; }
+  48% { width: 50%; }
+  73% { width: 75%; }
+  96% { width: 100%; }
+  100% { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-upd-scene *,
+  .trust-upd-scene *::before,
+  .trust-upd-scene *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .trust-upd-panel--ledger,
+  .trust-upd-detail--ledger {
+    opacity: 1 !important;
+    visibility: visible !important;
+    animation: none !important;
+  }
+
+  .trust-upd-panel--status,
+  .trust-upd-panel--disputes,
+  .trust-upd-panel--trust,
+  .trust-upd-detail--status,
+  .trust-upd-detail--disputes,
+  .trust-upd-detail--trust,
+  .trust-upd-cursor,
+  .trust-upd-spinner,
+  .trust-upd-toast,
+  .trust-upd-success {
+    display: none !important;
+  }
+
+  .trust-upd-check-path,
+  .trust-upd-check-circle {
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+}

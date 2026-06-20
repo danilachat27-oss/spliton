@@ -1,0 +1,281 @@
+/* Payouts megamenu — многошаговые сцены (как calc/fees в Сервисах) */
+
+.service-preview-scene--payouts-overview,
+.service-preview-scene--payouts-comparison,
+.service-preview-scene--payouts-history,
+.service-preview-scene--payouts-deposit,
+.service-preview-scene--payouts-withdraw {
+  padding: 0.25rem;
+}
+
+.service-preview-cursor-local--pay-overview-kpi,
+.service-preview-local-tip--pay-overview-kpi {
+  animation-name: sp-pay-show-kpi;
+}
+
+.service-preview-local-ring--pay-overview-kpi {
+  animation-name: sp-pay-ring-kpi;
+}
+
+.service-preview-cursor-local--pay-overview-chart,
+.service-preview-local-tip--pay-overview-chart {
+  animation-name: sp-pay-show-chart;
+}
+
+.service-preview-local-ring--pay-overview-chart {
+  animation-name: sp-pay-ring-chart;
+}
+
+@keyframes sp-pay-show-kpi {
+  0%, 4% { opacity: 0; }
+  6%, 40% { opacity: 1; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-kpi {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-show-chart {
+  0%, 42% { opacity: 0; }
+  46%, 82% { opacity: 1; }
+  86%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-chart {
+  0%, 54% { opacity: 0; transform: scale(0.5); }
+  56%, 60% { opacity: 1; transform: scale(1.45); }
+  64%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--payouts-overview .preview-pay-chart-target {
+  animation: sp-pay-chart-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-chart-pulse {
+  0%, 48% { box-shadow: none; }
+  52%, 78% { box-shadow: 0 0 0 2px rgb(59 130 246 / 0.35); }
+  82%, 100% { box-shadow: none; }
+}
+
+.service-preview-scene--payouts-overview .preview-pay-chart-dot {
+  animation: sp-pay-chart-dot var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--payouts-overview .preview-pay-chart-tooltip {
+  animation: sp-pay-chart-tooltip var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--payouts-overview .preview-pay-chart-crosshair {
+  animation: sp-pay-chart-crosshair var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-chart-dot {
+  0%, 44% { opacity: 0; transform: scale(0.6); }
+  48%, 80% { opacity: 1; transform: scale(1); }
+  84%, 100% { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes sp-pay-chart-tooltip {
+  0%, 46% { opacity: 0; transform: translateY(2px); }
+  50%, 78% { opacity: 1; transform: translateY(0); }
+  82%, 100% { opacity: 0; transform: translateY(2px); }
+}
+
+@keyframes sp-pay-chart-crosshair {
+  0%, 44% { opacity: 0; }
+  48%, 80% { opacity: 0.85; }
+  84%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--payouts-overview .preview-pay-range-tab--active {
+  animation: sp-pay-range-switch var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-range-switch {
+  0%, 8% { background-color: rgb(255 255 255); color: rgb(23 23 23); }
+  12%, 38% { background-color: rgb(255 255 255); color: rgb(23 23 23); }
+  42%, 100% { background-color: transparent; color: rgb(115 115 115); }
+}
+
+.service-preview-scene--payouts-overview .preview-pay-range-tab--30d {
+  animation: sp-pay-range-switch-30d var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-range-switch-30d {
+  0%, 40% { background-color: transparent; color: rgb(115 115 115); }
+  44%, 78% { background-color: rgb(255 255 255); color: rgb(23 23 23); box-shadow: 0 0 0 1px rgb(229 229 229 / 0.8); }
+  82%, 100% { background-color: transparent; color: rgb(115 115 115); }
+}
+
+/* Comparison */
+.service-preview-cursor-local--pay-compare-accruals,
+.service-preview-local-tip--pay-compare-accruals {
+  animation-name: sp-pay-show-compare;
+}
+
+.service-preview-local-ring--pay-compare-accruals {
+  animation-name: sp-pay-ring-compare;
+}
+
+@keyframes sp-pay-show-compare {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-compare {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--payouts-comparison .preview-pay-compare-tab--30d {
+  animation: sp-pay-compare-tab-30d var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-compare-tab-30d {
+  0%, 18% { background-color: transparent; color: rgb(115 115 115); }
+  22%, 72% { background-color: rgb(255 255 255); color: rgb(23 23 23); box-shadow: 0 0 0 1px rgb(229 229 229 / 0.8); }
+  76%, 100% { background-color: transparent; color: rgb(115 115 115); }
+}
+
+/* History */
+.service-preview-cursor-local--pay-history-row,
+.service-preview-local-tip--pay-history-row {
+  animation-name: sp-pay-show-history;
+}
+
+.service-preview-local-ring--pay-history-row {
+  animation-name: sp-pay-ring-history;
+}
+
+@keyframes sp-pay-show-history {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-history {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+
+/* Deposit */
+.service-preview-cursor-local--pay-deposit-copy,
+.service-preview-local-tip--pay-deposit-copy {
+  animation-name: sp-pay-show-deposit;
+}
+
+.service-preview-local-ring--pay-deposit-copy {
+  animation-name: sp-pay-ring-deposit;
+}
+
+@keyframes sp-pay-show-deposit {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-deposit {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--payouts-deposit .preview-pay-deposit-copied {
+  animation: sp-pay-deposit-copied-flash var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-deposit-copied-flash {
+  0%, 34% { opacity: 0; }
+  38%, 52% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+
+/* Withdraw */
+.service-preview-cursor-local--pay-withdraw-amount,
+.service-preview-local-tip--pay-withdraw-amount {
+  animation-name: sp-pay-show-withdraw-amount;
+}
+
+.service-preview-local-ring--pay-withdraw-amount {
+  animation-name: sp-pay-ring-withdraw-amount;
+}
+
+.service-preview-cursor-local--pay-withdraw-submit,
+.service-preview-local-tip--pay-withdraw-submit {
+  animation-name: sp-pay-show-withdraw-submit;
+}
+
+.service-preview-local-ring--pay-withdraw-submit {
+  animation-name: sp-pay-ring-withdraw-submit;
+}
+
+@keyframes sp-pay-show-withdraw-amount {
+  0%, 4% { opacity: 0; }
+  6%, 46% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-withdraw-amount {
+  0%, 20% { opacity: 0; transform: scale(0.5); }
+  22%, 26% { opacity: 1; transform: scale(1.45); }
+  30%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-show-withdraw-submit {
+  0%, 48% { opacity: 0; }
+  52%, 84% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-ring-withdraw-submit {
+  0%, 58% { opacity: 0; transform: scale(0.5); }
+  60%, 64% { opacity: 1; transform: scale(1.45); }
+  68%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--payouts-withdraw .preview-pay-withdraw-input {
+  animation: sp-pay-withdraw-input-ring var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--payouts-withdraw .preview-pay-withdraw-submit {
+  animation: sp-pay-withdraw-submit-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-pay-withdraw-input-ring {
+  0%, 18% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  22%, 44% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  48%, 100% { box-shadow: none; }
+}
+
+@keyframes sp-pay-withdraw-submit-pulse {
+  0%, 52% { transform: scale(1); box-shadow: none; }
+  56%, 80% { transform: scale(1.03); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.55); }
+  84%, 100% { transform: scale(1); box-shadow: none; }
+}
+
+.service-preview-scene--payouts-withdraw .preview-pay-withdraw-value-a,
+.service-preview-scene--payouts-withdraw .preview-pay-withdraw-value-b {
+  animation: sp-pay-withdraw-type var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--payouts-withdraw .preview-pay-withdraw-value-b {
+  animation-name: sp-pay-withdraw-type-b;
+}
+
+@keyframes sp-pay-withdraw-type {
+  0%, 24% { opacity: 1; }
+  28%, 100% { opacity: 0; }
+}
+
+@keyframes sp-pay-withdraw-type-b {
+  0%, 24% { opacity: 0; }
+  28%, 88% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}

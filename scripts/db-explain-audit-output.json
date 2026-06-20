@@ -1,0 +1,18 @@
+﻿node : file:///D:/Projects/revshare-platform/scripts/db-explain-audit.mjs:1
+C:\Users\danik\AppData\Local\Temp\ps-script-cfaf1f83-40bf-4f16-bf65-ecd9408688ef.ps1:85 знак:35
++ ... cts\revshare-platform; node scripts/db-explain-audit.mjs 2>&1 | Out-F ...
++                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (file:///D:/Proj...ain-audit.mjs:1:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+/
+^
+
+SyntaxError: Invalid regular expression: missing /
+    at compileSourceTextModule (node:internal/modules/esm/utils:344:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:105:18)
+    at #translate (node:internal/modules/esm/loader:534:12)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)
+    at async ModuleJob._link (node:internal/modules/esm/module_job:154:19)
+
+Node.js v22.17.1

@@ -1,62 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef } from "react";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { GUIDE_IN_PAGE_NAV } from "@/constants/guide/selection";
+import { useGuideScrollSpy } from "@/lib/guide/guide-scroll-spy";
 import { cn } from "@/lib/utils";
 
 export function GuideInPageNav() {
-  const [active, setActive] = useState<string>(GUIDE_IN_PAGE_NAV[0]?.id ?? "guide-top");
-
-  useEffect(() => {
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-guide-section]"));
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting && e.target.id)
-          .sort((a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0));
-        const next = visible[0]?.target.id;
-        if (next) setActive(next);
-      },
-      { root: null, rootMargin: "-12% 0px -55% 0px", threshold: [0.08, 0.2, 0.35, 0.55] },
-    );
-
-    nodes.forEach((n) => observer.observe(n));
-    return () => observer.disconnect();
-  }, []);
+  const { t } = useI18n();
+  const navRef = useRef<HTMLElement>(null);
+  const { active, scrollToSection } = useGuideScrollSpy(navRef);
 
   return (
-    <nav aria-label="На что смотреть по гиду" className="sticky top-24">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">На что смотреть</div>
-      <ol className="mt-2 list-none space-y-0 border-l border-white/10 pl-2.5">
-        {GUIDE_IN_PAGE_NAV.map((item, idx) => {
-          const isActive = active === item.id;
-          return (
-            <li key={item.id}>
-              <a
-                href={`#${item.id}`}
-                className={cn(
-                  "flex w-full gap-1.5 rounded-md py-1.5 pl-1.5 pr-1.5 text-left text-[11px] leading-snug transition-[background-color,color,opacity] duration-200 md:text-[12px]",
-                  isActive
-                    ? "bg-zinc-800/75 font-medium text-white"
-                    : "text-zinc-500 hover:bg-white/4 hover:text-zinc-200",
-                )}
-              >
-                <span
+    <nav ref={navRef} aria-label={t("guide.nav.aria")} className="sticky top-[calc(var(--guide-header-offset,4rem)+0.5rem)]">
+      <div className="rounded-xl bg-[#0a0a0a]/80 p-3 backdrop-blur-sm">
+        <ol className="list-none space-y-0.5 border-l border-white/10 pl-2">
+          {GUIDE_IN_PAGE_NAV.map((item, idx) => {
+            const isActive = active === item.id;
+            return (
+              <li key={item.id}>
+                <a
+                  href={`#${item.id}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    scrollToSection(item.id);
+                  }}
                   className={cn(
-                    "w-5 shrink-0 pt-px font-mono text-[10px] tabular-nums",
-                    isActive ? "text-white/75" : "text-zinc-600",
+                    "guide-desktop-nav-item flex w-full gap-1.5 rounded-r-md border-l-2 border-transparent py-1.5 pl-2 pr-1.5 text-left text-[11px] leading-snug transition-[background-color,color,border-color] duration-200 md:text-[12px]",
+                    isActive
+                      ? "is-active font-medium text-white"
+                      : "text-zinc-500 hover:bg-white/4 hover:text-zinc-200",
                   )}
                 >
-                  {String(idx + 1).padStart(2, "0")}.
-                </span>
-                <span className="min-w-0">{item.label}</span>
-              </a>
-            </li>
-          );
-        })}
-      </ol>
+                  <span
+                    className={cn(
+                      "guide-desktop-nav-index w-5 shrink-0 pt-px font-mono text-[10px] tabular-nums",
+                      isActive ? "text-[#c4f570]" : "text-zinc-600",
+                    )}
+                  >
+                    {String(idx + 1).padStart(2, "0")}.
+                  </span>
+                  <span className="min-w-0 leading-snug">{t(item.labelKey)}</span>
+                </a>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </nav>
   );
 }

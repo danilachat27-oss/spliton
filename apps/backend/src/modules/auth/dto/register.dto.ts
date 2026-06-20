@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
@@ -19,4 +20,25 @@ export class RegisterDto {
   @IsString()
   @MaxLength(80)
   displayName?: string;
+
+  @IsBoolean()
+  acceptedTerms!: boolean;
+
+  @IsBoolean()
+  acceptedPrivacy!: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  referralCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  utmSource?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  utmCampaign?: string;
 }

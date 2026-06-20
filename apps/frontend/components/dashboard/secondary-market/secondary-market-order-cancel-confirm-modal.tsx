@@ -3,14 +3,14 @@
 import * as React from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import type { DialogRoot } from "@base-ui/react/dialog";
-import { X } from "lucide-react";
+import { X } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 export type OrderCancelConfirmModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Активная заявка без исполнения vs частично исполненная (остаток в стакане). */
   variant: "active" | "partial";
   side: "buy" | "sell";
   onConfirm: () => void | Promise<void>;
@@ -23,6 +23,7 @@ export function OrderCancelConfirmModal({
   side,
   onConfirm,
 }: OrderCancelConfirmModalProps) {
+  const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleOpenChange = (next: boolean, eventDetails: DialogRoot.ChangeEventDetails) => {
@@ -45,30 +46,25 @@ export function OrderCancelConfirmModal({
   };
 
   const title =
-    variant === "partial" ? "Отменить остаток заявки?" : "Отменить заявку?";
+    variant === "partial"
+      ? t("secondaryMarket.forms.cancelPartialTitle")
+      : t("secondaryMarket.forms.cancelActiveTitle");
 
   const body =
     variant === "partial" ? (
       <div className="text-[13px] leading-relaxed text-zinc-400">
-        Исполненная часть уже завершена и останется в истории сделок. Будет отменён только неисполненный
-        остаток.
-        {side === "buy" ? (
-          <span className="mt-2 block text-zinc-500">
-            Неиспользованный USDT по остатку снова станет доступен.
-          </span>
-        ) : (
-          <span className="mt-2 block text-zinc-500">
-            Неисполненные units по остатку вернутся в доступный баланс.
-          </span>
-        )}
-      </div>
-    ) : side === "buy" ? (
-      <div className="text-[13px] leading-relaxed text-zinc-400">
-        Неисполненный остаток будет снят со стакана, заблокированные средства станут снова доступны.
+        {t("secondaryMarket.forms.cancelPartialBody")}
+        <span className="mt-2 block text-zinc-500">
+          {side === "buy"
+            ? t("secondaryMarket.forms.cancelPartialBuyFunds")
+            : t("secondaryMarket.forms.cancelPartialSellUnits")}
+        </span>
       </div>
     ) : (
       <div className="text-[13px] leading-relaxed text-zinc-400">
-        Неисполненный остаток будет снят со стакана, units вернутся в доступный баланс.
+        {side === "buy"
+          ? t("secondaryMarket.forms.cancelActiveBuy")
+          : t("secondaryMarket.forms.cancelActiveSell")}
       </div>
     );
 
@@ -91,7 +87,7 @@ export function OrderCancelConfirmModal({
           )}
         >
           <Dialog.Close
-            aria-label="Закрыть"
+            aria-label={t("secondaryMarket.aria.close")}
             className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-zinc-200"
           >
             <X className="size-4" />
@@ -103,7 +99,7 @@ export function OrderCancelConfirmModal({
               className="h-10 rounded-full bg-white/10 px-5 font-mono text-[12px] font-medium text-zinc-200 transition hover:bg-white/14 hover:text-white disabled:opacity-50"
               disabled={isSubmitting}
             >
-              Не отменять
+              {t("secondaryMarket.forms.doNotCancel")}
             </Dialog.Close>
             <button
               type="button"
@@ -111,7 +107,7 @@ export function OrderCancelConfirmModal({
               onClick={() => void handleConfirm()}
               className="h-10 rounded-full bg-white px-5 font-mono text-[12px] font-semibold text-black transition hover:opacity-90 disabled:opacity-50"
             >
-              {isSubmitting ? "…" : "Подтвердить отмену"}
+              {isSubmitting ? "…" : t("secondaryMarket.forms.confirmCancel")}
             </button>
           </div>
         </Dialog.Popup>

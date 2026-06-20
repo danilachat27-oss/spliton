@@ -1,3 +1,7 @@
+"use client";
+
+import { useI18n } from "@/components/providers/i18n-provider";
+
 export function ActivitySummaryCards({
   totalOps,
   deposits,
@@ -9,11 +13,13 @@ export function ActivitySummaryCards({
   secondaryTrades: string;
   latest: string;
 }) {
+  const { t } = useI18n();
+
   const cards = [
-    { label: "Всего операций", value: totalOps },
-    { label: "Пополнений за период", value: deposits },
-    { label: "Сделок на secondary", value: secondaryTrades },
-    { label: "Последняя активность", value: latest },
+    { label: t("activity.widgets.summaryTotalOps"), value: totalOps },
+    { label: t("activity.widgets.summaryDeposits"), value: deposits },
+    { label: t("activity.widgets.summarySecondaryTrades"), value: secondaryTrades },
+    { label: t("activity.widgets.summaryLatest"), value: latest },
   ];
 
   return (

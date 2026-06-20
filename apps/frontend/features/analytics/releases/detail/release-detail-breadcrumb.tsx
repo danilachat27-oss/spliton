@@ -1,11 +1,19 @@
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+"use client";
 
+import Link from "next/link";
+import { ChevronRight } from "@/lib/lucide";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { ReleaseDetailPageData } from "@/types/analytics/release-detail";
 
 export function ReleaseDetailBreadcrumb({ data }: { data: ReleaseDetailPageData }) {
+  const { t } = useI18n();
+
   return (
-    <nav aria-label="Навигация" className="flex flex-wrap items-center gap-1 text-[12px] text-zinc-500">
+    <nav
+      aria-label={t("analytics.detail.breadcrumbAria")}
+      className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-zinc-500 sm:text-[12px]"
+    >
       {data.breadcrumbs.map((crumb, i) => {
         const isLast = i === data.breadcrumbs.length - 1;
         return (
@@ -16,7 +24,7 @@ export function ReleaseDetailBreadcrumb({ data }: { data: ReleaseDetailPageData 
                 {crumb.label}
               </Link>
             ) : (
-              <span className={isLast ? "font-medium text-zinc-300" : undefined}>{crumb.label}</span>
+              <span className={isLast ? "font-medium text-zinc-200 sm:text-zinc-300" : undefined}>{crumb.label}</span>
             )}
           </span>
         );

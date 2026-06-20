@@ -1,19 +1,20 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { ReferralProgramPageContent } from "@/components/referral/referral-program-page-content";
+import { ReferralProgramPageContent } from "@/components/referral/referral-program-page-content-live";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { UnderlineTab } from "@/components/shared/exchange/underline-tab";
 import {
   parseReferralProgramTabParam,
   REFERRAL_PROGRAM_TABS,
-  REFERRAL_TAB_META,
   type ReferralProgramTabId,
 } from "@/constants/dashboard/referral-program";
 
 function ReferralProgramScreenInner() {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -37,27 +38,32 @@ function ReferralProgramScreenInner() {
     [pathname, router, searchParams],
   );
 
-  const pageMeta = REFERRAL_TAB_META[tab];
+  const documentTitle = t(`referral.tabMeta.${tab}.documentTitle`);
 
   React.useEffect(() => {
-    document.title = `${pageMeta.documentTitle} · Реферальная программа · RevShare`;
-  }, [pageMeta.documentTitle]);
+    document.title = `${documentTitle} · ${t("referral.screen.documentSuffix")}`;
+  }, [documentTitle, t]);
 
   return (
     <div className="flex min-h-0 flex-col bg-black font-sans tabular-nums text-white antialiased">
       <header className="sticky top-0 z-40 shrink-0 border-b border-white/6 bg-black/95 backdrop-blur-sm supports-backdrop-filter:bg-black/85">
         <div className="mx-auto w-full max-w-[1400px] px-4 md:px-6 lg:px-8">
           <div className="flex flex-col gap-3 py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:py-3.5">
-            <p className="text-xl font-semibold tracking-tight text-white md:text-2xl">Реферальная программа</p>
+            <p className="text-xl font-semibold tracking-tight text-white md:text-2xl">{t("referral.screen.title")}</p>
           </div>
 
           <nav
             className="flex min-h-10 w-full flex-wrap items-center gap-x-1 gap-y-1 overflow-x-auto border-t border-white/6 pb-3 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] md:gap-x-2 [&::-webkit-scrollbar]:hidden"
-            aria-label="Разделы реферальной программы"
+            aria-label={t("referral.screen.navAria")}
           >
-            {REFERRAL_PROGRAM_TABS.map((t) => (
-              <UnderlineTab key={t.id} active={tab === t.id} onClick={() => setTab(t.id)} tone="neutral">
-                {t.label}
+            {REFERRAL_PROGRAM_TABS.map((tabItem) => (
+              <UnderlineTab
+                key={tabItem.id}
+                active={tab === tabItem.id}
+                onClick={() => setTab(tabItem.id)}
+                tone="neutral"
+              >
+                {t(`referral.tab.${tabItem.id}`)}
               </UnderlineTab>
             ))}
           </nav>

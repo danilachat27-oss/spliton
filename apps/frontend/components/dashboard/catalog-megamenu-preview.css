@@ -1,0 +1,431 @@
+/* Catalog megamenu — многошаговые сцены (как holdings / payouts) */
+
+/* Main catalog page */
+.service-preview-scene--catalog-main {
+  padding: 0.375rem;
+}
+
+.service-preview-cursor-local--cat-main-filter,
+.service-preview-local-tip--cat-main-filter {
+  animation-name: sp-cat-show-main-filter;
+}
+
+.service-preview-local-ring--cat-main-filter {
+  animation-name: sp-cat-ring-main-filter;
+}
+
+.service-preview-cursor-local--cat-main-row,
+.service-preview-local-tip--cat-main-row {
+  animation-name: sp-cat-show-main-row;
+}
+
+.service-preview-local-ring--cat-main-row {
+  animation-name: sp-cat-ring-main-row;
+}
+
+@keyframes sp-cat-show-main-filter {
+  0%, 4% { opacity: 0; }
+  6%, 40% { opacity: 1; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-main-filter {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-show-main-row {
+  0%, 46% { opacity: 0; }
+  50%, 84% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-main-row {
+  0%, 54% { opacity: 0; transform: scale(0.5); }
+  56%, 60% { opacity: 1; transform: scale(1.45); }
+  64%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--catalog-main .preview-cat-main-kpi {
+  animation: sp-cat-main-kpi-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-main .preview-cat-main-tab--active {
+  animation: sp-cat-main-tab var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-main .preview-cat-main-kind-target {
+  animation: sp-cat-main-kind-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-main .preview-cat-main-kind-active {
+  animation: sp-cat-main-kind-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-cat-main-kpi-pulse {
+  0%, 48% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  52%, 78% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  82%, 100% { box-shadow: none; }
+}
+
+@keyframes sp-cat-main-tab {
+  0%, 10% { border-color: rgb(255 255 255); color: rgb(255 255 255); }
+  14%, 72% { border-color: rgb(255 255 255); color: rgb(255 255 255); }
+  76%, 100% { border-color: transparent; color: rgb(113 113 122); }
+}
+
+@keyframes sp-cat-main-kind-pulse {
+  0%, 22% { transform: scale(1); }
+  26%, 38% { transform: scale(1.04); }
+  42%, 100% { transform: scale(1); }
+}
+
+/* Analytics */
+.service-preview-scene--catalog-analytics {
+  padding: 0.375rem;
+}
+
+.service-preview-cursor-local--cat-analytics-chart,
+.service-preview-local-tip--cat-analytics-chart {
+  animation-name: sp-cat-show-analytics-chart;
+}
+
+.service-preview-local-ring--cat-analytics-chart {
+  animation-name: sp-cat-ring-analytics-chart;
+}
+
+.service-preview-cursor-local--cat-analytics-row,
+.service-preview-local-tip--cat-analytics-row {
+  animation-name: sp-cat-show-analytics-row;
+}
+
+.service-preview-local-ring--cat-analytics-row {
+  animation-name: sp-cat-ring-analytics-row;
+}
+
+@keyframes sp-cat-show-analytics-chart {
+  0%, 4% { opacity: 0; }
+  6%, 44% { opacity: 1; }
+  48%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-analytics-chart {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-show-analytics-row {
+  0%, 46% { opacity: 0; }
+  50%, 84% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-analytics-row {
+  0%, 54% { opacity: 0; transform: scale(0.5); }
+  56%, 60% { opacity: 1; transform: scale(1.45); }
+  64%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-yield-chart {
+  animation: sp-cat-yield-chart-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-yield-dot {
+  animation: sp-cat-yield-dot var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-yield-tooltip {
+  animation: sp-cat-yield-tooltip var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-yield-crosshair {
+  animation: sp-cat-yield-crosshair var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-analytics-kpi {
+  animation: sp-cat-analytics-kpi-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-analytics-tab--active {
+  animation: sp-cat-analytics-tab var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-analytics .preview-cat-analytics-period--active {
+  animation: sp-cat-analytics-period var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-cat-yield-chart-pulse {
+  0%, 48% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  52%, 78% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.4); }
+  82%, 100% { box-shadow: none; }
+}
+
+@keyframes sp-cat-analytics-kpi-pulse {
+  0%, 48% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  52%, 78% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.4); }
+  82%, 100% { box-shadow: none; }
+}
+
+@keyframes sp-cat-analytics-tab {
+  0%, 10% { border-color: rgb(255 255 255); color: rgb(255 255 255); }
+  14%, 72% { border-color: rgb(255 255 255); color: rgb(255 255 255); }
+  76%, 100% { border-color: transparent; color: rgb(113 113 122); }
+}
+
+@keyframes sp-cat-analytics-period {
+  0%, 10% { background-color: rgb(255 255 255); color: rgb(0 0 0); }
+  14%, 72% { background-color: rgb(255 255 255); color: rgb(0 0 0); }
+  76%, 100% { background-color: rgb(255 255 255 / 0.06); color: rgb(161 161 170); }
+}
+
+@keyframes sp-cat-yield-dot {
+  0%, 48% { opacity: 0.35; transform: scale(0.85); }
+  52%, 78% { opacity: 1; transform: scale(1.15); }
+  82%, 100% { opacity: 0.35; transform: scale(0.85); }
+}
+
+@keyframes sp-cat-yield-tooltip {
+  0%, 48% { opacity: 0; transform: translateY(2px); }
+  52%, 78% { opacity: 1; transform: translateY(0); }
+  82%, 100% { opacity: 0; transform: translateY(2px); }
+}
+
+@keyframes sp-cat-yield-crosshair {
+  0%, 48% { opacity: 0; }
+  52%, 78% { opacity: 1; }
+  82%, 100% { opacity: 0; }
+}
+
+/* Guide */
+.service-preview-scene--catalog-guide {
+  padding: 0.375rem;
+}
+
+.service-preview-cursor-local--cat-guide-cta,
+.service-preview-local-tip--cat-guide-cta {
+  animation-name: sp-cat-show-guide-cta;
+}
+
+.service-preview-local-ring--cat-guide-cta {
+  animation-name: sp-cat-ring-guide-cta;
+}
+
+.service-preview-scene--catalog-guide .preview-cat-guide-cta {
+  animation: sp-cat-guide-cta-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-cursor-local--cat-guide-topic,
+.service-preview-local-tip--cat-guide-topic {
+  animation-name: sp-cat-show-guide-topic;
+}
+
+.service-preview-local-ring--cat-guide-topic {
+  animation-name: sp-cat-ring-guide-topic;
+}
+
+.service-preview-cursor-local--cat-guide-nav,
+.service-preview-local-tip--cat-guide-nav {
+  animation-name: sp-cat-show-guide-nav;
+}
+
+.service-preview-local-ring--cat-guide-nav {
+  animation-name: sp-cat-ring-guide-nav;
+}
+
+.service-preview-scene--catalog-guide .preview-cat-guide-nav {
+  animation: sp-cat-guide-nav-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-guide .preview-cat-guide-topic {
+  animation: sp-cat-guide-topic-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-cat-show-guide-cta {
+  0%, 80% { opacity: 0; }
+  84%, 96% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-guide-cta {
+  0%, 88% { opacity: 0; transform: scale(0.5); }
+  90%, 94% { opacity: 1; transform: scale(1.45); }
+  98%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-guide-cta-pulse {
+  0%, 82% { transform: scale(1); box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  86%, 94% { transform: scale(1.04); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.55); }
+  98%, 100% { transform: scale(1); box-shadow: none; }
+}
+
+@keyframes sp-cat-show-guide-nav {
+  0%, 42% { opacity: 0; }
+  46%, 78% { opacity: 1; }
+  82%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-guide-nav {
+  0%, 50% { opacity: 0; transform: scale(0.5); }
+  52%, 56% { opacity: 1; transform: scale(1.45); }
+  60%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-guide-nav-pulse {
+  0%, 48% { box-shadow: inset 0 0 0 0 rgb(183 245 0 / 0); background-color: transparent; }
+  52%, 74% { box-shadow: inset 0 0 0 1px rgb(183 245 0 / 0.35); background-color: rgb(183 245 0 / 0.08); }
+  78%, 100% { box-shadow: inset 0 0 0 0 rgb(183 245 0 / 0); background-color: transparent; }
+}
+
+@keyframes sp-cat-show-guide-topic {
+  0%, 4% { opacity: 0; }
+  6%, 38% { opacity: 1; }
+  42%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-guide-topic {
+  0%, 16% { opacity: 0; transform: scale(0.5); }
+  18%, 22% { opacity: 1; transform: scale(1.45); }
+  26%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-guide-topic-pulse {
+  0%, 18% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  22%, 36% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  40%, 100% { box-shadow: none; }
+}
+
+/* Params */
+.service-preview-scene--catalog-params {
+  padding: 0.375rem;
+}
+
+.service-preview-scene--catalog-params .preview-cat-params-summary {
+  animation: sp-cat-params-summary-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-params .preview-cat-params-example {
+  animation: sp-cat-params-example-row-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-cat-params-summary-pulse {
+  0%, 48% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  52%, 74% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  78%, 100% { box-shadow: none; }
+}
+
+@keyframes sp-cat-params-example-row-pulse {
+  0%, 18% { background-color: transparent; }
+  22%, 36% { background-color: rgb(183 245 0 / 0.06); }
+  40%, 100% { background-color: transparent; }
+}
+
+.service-preview-cursor-local--cat-params-example,
+.service-preview-local-tip--cat-params-example {
+  animation-name: sp-cat-show-params-example;
+}
+
+.service-preview-local-ring--cat-params-example {
+  animation-name: sp-cat-ring-params-example;
+}
+
+.service-preview-cursor-local--cat-params-units,
+.service-preview-local-tip--cat-params-units {
+  animation-name: sp-cat-show-params-units;
+}
+
+.service-preview-local-ring--cat-params-units {
+  animation-name: sp-cat-ring-params-units;
+}
+
+@keyframes sp-cat-show-params-example {
+  0%, 4% { opacity: 0; }
+  6%, 40% { opacity: 1; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-params-example {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-show-params-units {
+  0%, 46% { opacity: 0; }
+  50%, 84% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-params-units {
+  0%, 54% { opacity: 0; transform: scale(0.5); }
+  56%, 60% { opacity: 1; transform: scale(1.45); }
+  64%, 100% { opacity: 0; }
+}
+
+/* Market */
+.service-preview-scene--catalog-market {
+  padding: 0.375rem;
+}
+
+.service-preview-scene--catalog-market .preview-cat-market-tab {
+  animation: sp-cat-market-tab var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--catalog-market .preview-cat-market-row {
+  animation: sp-cat-market-row-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-cat-market-tab {
+  0%, 10% { border-color: rgb(255 255 255); color: rgb(255 255 255); }
+  14%, 72% { border-color: rgb(255 255 255); color: rgb(255 255 255); }
+  76%, 100% { border-color: transparent; color: rgb(113 113 122); }
+}
+
+@keyframes sp-cat-market-row-pulse {
+  0%, 48% { background-color: transparent; }
+  52%, 78% { background-color: rgb(183 245 0 / 0.06); }
+  82%, 100% { background-color: transparent; }
+}
+
+.service-preview-cursor-local--cat-market-segment,
+.service-preview-local-tip--cat-market-segment {
+  animation-name: sp-cat-show-market-segment;
+}
+
+.service-preview-local-ring--cat-market-segment {
+  animation-name: sp-cat-ring-market-segment;
+}
+
+.service-preview-cursor-local--cat-market-row,
+.service-preview-local-tip--cat-market-row {
+  animation-name: sp-cat-show-market-row;
+}
+
+.service-preview-local-ring--cat-market-row {
+  animation-name: sp-cat-ring-market-row;
+}
+
+@keyframes sp-cat-show-market-segment {
+  0%, 6% { opacity: 0; }
+  8%, 42% { opacity: 1; }
+  46%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-market-segment {
+  0%, 22% { opacity: 0; transform: scale(0.5); }
+  24%, 28% { opacity: 1; transform: scale(1.45); }
+  32%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-show-market-row {
+  0%, 48% { opacity: 0; }
+  52%, 86% { opacity: 1; }
+  90%, 100% { opacity: 0; }
+}
+
+@keyframes sp-cat-ring-market-row {
+  0%, 58% { opacity: 0; transform: scale(0.5); }
+  60%, 64% { opacity: 1; transform: scale(1.45); }
+  68%, 100% { opacity: 0; }
+}

@@ -1,3 +1,7 @@
+"use client";
+
+import { useI18n } from "@/components/providers/i18n-provider";
+
 export function PositionsSummaryCards({
   total,
   activeReleases,
@@ -9,11 +13,13 @@ export function PositionsSummaryCards({
   totalUnits: string;
   averageShare: string;
 }) {
+  const { t } = useI18n();
+
   const cards = [
-    { label: "Всего позиций", value: total },
-    { label: "Активных релизов", value: activeReleases },
-    { label: "Всего UNT", value: totalUnits },
-    { label: "Средняя доля позиции", value: averageShare },
+    { label: t("positions.widgets.summaryTotal"), value: total },
+    { label: t("positions.widgets.summaryActiveReleases"), value: activeReleases },
+    { label: t("positions.widgets.summaryTotalUnits"), value: totalUnits },
+    { label: t("positions.widgets.summaryAverageShare"), value: averageShare },
   ];
 
   return (

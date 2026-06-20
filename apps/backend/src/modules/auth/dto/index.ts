@@ -8,3 +8,5 @@ export { TwoFactorRegenerateRecoveryCodesDto } from './two-factor-regenerate-rec
 export { TwoFactorVerifyDto } from './two-factor-verify.dto';
 export { TwoFactorVerifySetupDto } from './two-factor-verify-setup.dto';
 export { VerifyEmailDto } from './verify-email.dto';
+export { ForgotPasswordDto } from './forgot-password.dto';
+export { ResetPasswordDto } from './reset-password.dto';

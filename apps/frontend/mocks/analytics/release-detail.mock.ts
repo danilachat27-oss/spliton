@@ -1,4 +1,9 @@
-import { ROUTES } from "@/constants/routes";
+﻿import { ROUTES } from "@/constants/routes";
+import { applyReleaseDetailSummarySparklines } from "@/lib/analytics/release-detail-summary-sparklines";
+import {
+  createMockReleaseDetailPageState,
+  mockLifecycleLabel,
+} from "@/lib/analytics/release-detail-mock-state";
 import type {
   ReleaseDetailChartPeriod,
   ReleaseDetailPageData,
@@ -104,7 +109,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Является ли это ценной бумагой?",
-    a: "Нет. RevShare — технологическая платформа учёта revenue share rights и оборота units; продукт не позиционируется как ценные бумаги или брокерские услуги.",
+    a: "Нет. Spliton — технологическая платформа учёта revenue share rights и оборота units; продукт не позиционируется как ценные бумаги или брокерские услуги.",
   },
   {
     q: "Как пополнить баланс в USDT (TRC20)?",
@@ -124,15 +129,17 @@ export function buildReleaseDetailPageData(row: ReleaseAnalyticsRow): ReleaseDet
   const soldUnits = row.units.replace(/\s/g, "");
   const availableExample = `${Math.max(120, 2400 - Number(soldUnits.replace(/\D/g, "")) || 400)}`;
 
-  return {
+  return applyReleaseDetailSummarySparklines({
     row,
+    pageState: createMockReleaseDetailPageState(row),
+    lifecycleLabel: mockLifecycleLabel(row),
     breadcrumbs: [
       { label: "Каталог", href: ROUTES.dashboardCatalog },
       { label: "Аналитика релизов", href: ROUTES.analyticsReleases },
       { label: row.release },
     ],
     heroBlurb:
-      "Revenue share release внутри RevShare: учёт units, распределения и выплат в USDT (TRC20). Ниже — агрегированный обзор, история начислений и условия модели (mock-данные для макета).",
+      "Revenue share release внутри Spliton: учёт units, распределения и выплат в USDT (TRC20). Ниже — агрегированный обзор, история начислений и условия модели (mock-данные для макета).",
     cover: {
       caption:
         "Видео-обложка релиза: короткий ролик о сделке, payout-модели и участниках (подключите MP4/HLS в данных страницы).",
@@ -210,13 +217,13 @@ export function buildReleaseDetailPageData(row: ReleaseAnalyticsRow): ReleaseDet
         label: "Средняя цена / unit",
         value: "18,4 USDT / u.",
         sub: "внутренний рынок",
-        info: "Средневзвешенная цена передачи одного unit на вторичке RevShare; отражает фактические исполнения, не «цену трека».",
+        info: "Средневзвешенная цена передачи одного unit на вторичке Spliton; отражает фактические исполнения, не «цену трека».",
       },
     ],
     about: {
       title: "О релизе",
       paragraphs: [
-        `${row.release} — релиз в каталоге RevShare с моделью revenue share: пользователи приобретают units, которые фиксируют долю в пуле распределения дохода трека (investor_share), а не право собственности на фонограмму.`,
+        `${row.release} — релиз в каталоге Spliton с моделью revenue share: пользователи приобретают units, которые фиксируют долю в пуле распределения дохода трека (investor_share), а не право собственности на фонограмму.`,
         `Платформа ведёт учёт rounds, начислений и выплат в USDT (TRC20), а также передачу rights на secondary внутри экосистемы. Показатели на странице — демонстрационные, для проверки UI и сценариев.`,
         `Вы не «владеете треком» и не получаете гарантированный доход: размер выплат зависит от фактического дохода релиза, deal terms и вашего количества units.`,
       ],
@@ -311,5 +318,13 @@ export function buildReleaseDetailPageData(row: ReleaseAnalyticsRow): ReleaseDet
         href: `${ROUTES.dashboard}#payouts`,
       },
     ],
-  };
+  }, {
+    soldUnits: Number(soldUnits.replace(/\D/g, "")) || 1000,
+    totalUnits: 2400,
+    availableUnits: Number(availableExample.replace(/\D/g, "")) || 400,
+    volumeUsdt: [0, 12_000, 18_000, 22_000, 28_000, 31_000],
+    volumeUnits: [12, 28, 45, 90, 140, 210, 320, 410, 480, 500],
+    liquidityVolume24h: [80, 140, 120, 200, 260, 310, 380, 420, 460, 500],
+    liquidityScore: [2.8, 3.1, 3.4, 3.9, 4.2, 4.0, 4.6, 4.9, 5.1, 5.3],
+  });
 }

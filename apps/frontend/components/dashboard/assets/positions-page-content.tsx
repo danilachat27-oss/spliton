@@ -1,96 +1,69 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "@/lib/lucide";
 
 import { positionPreviews } from "@/components/dashboard/assets/assets-mock-data";
-import { PositionsPortfolioValueChart, PositionsUnitsTrajectoryChart } from "@/components/dashboard/assets/positions-charts";
+import {
+  assetsCardClass,
+  assetsOutlineButtonClass,
+  assetsPrimaryButtonClass,
+} from "@/components/dashboard/assets/assets-ui";
 import { PositionsHeaderBar } from "@/components/dashboard/assets/positions-header-bar";
-import { PositionsSummaryCards } from "@/components/dashboard/assets/positions-summary-cards";
 import { PositionsTableCard } from "@/components/dashboard/assets/positions-table-card";
-import { TopPositionCardsGrid } from "@/components/dashboard/assets/top-position-cards-grid";
+import { useAssetsPositionsPage } from "@/hooks/use-assets-positions-page";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { ReadOnlySectionError } from "@/components/shared/data-states/read-only-section-error";
 import { ROUTES } from "@/constants/routes";
-
-const statuses = ["Все статусы", "Active", "Open round", "Secondary", "Closed"] as const;
-const sorts = [
-  "Сортировка: по стоимости",
-  "Сортировка: по количеству UNT",
-  "Сортировка: по дате входа",
-  "Сортировка: по доле в портфеле",
-] as const;
-
-function toNumber(raw: string) {
-  return Number(raw.replace(/[^\d.-]/g, ""));
-}
+import { cn } from "@/lib/utils";
 
 export function PositionsPageContent() {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<(typeof statuses)[number]>(statuses[0]);
-  const [sort, setSort] = useState<(typeof sorts)[number]>(sorts[0]);
+  const { t } = useI18n();
+  const {
+    live,
+    filters,
+    updateFilters,
+    setPage,
+    resetFilters,
+    rows,
+    total,
+    page,
+    pageSize,
+    genreOptions,
+    loading,
+    error,
+    hasActiveFilters,
+    reload,
+  } = useAssetsPositionsPage();
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const selectedStatus = status;
-    const rows = positionPreviews.filter((row) => {
-      if (selectedStatus !== "Все статусы" && row.status !== selectedStatus) return false;
-      if (!q) return true;
-      return row.release.toLowerCase().includes(q) || row.artist.toLowerCase().includes(q) || row.genre.toLowerCase().includes(q);
-    });
-    const sorted = [...rows];
-    if (sort === "Сортировка: по стоимости") sorted.sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
-    if (sort === "Сортировка: по количеству UNT") {
-      sorted.sort((a, b) => parseFloat(b.units.replace(/\s/g, "")) - parseFloat(a.units.replace(/\s/g, "")));
-    }
-    if (sort === "Сортировка: по дате входа") sorted.sort((a, b) => b.dateEntered.localeCompare(a.dateEntered));
-    if (sort === "Сортировка: по доле в портфеле") sorted.sort((a, b) => parseFloat(b.share) - parseFloat(a.share));
-    return sorted;
-  }, [query, sort, status]);
+  const displayRows = live ? (rows ?? []) : positionPreviews;
+  const isInitialLoad = live && loading && rows === null;
+  const isEmpty = !isInitialLoad && displayRows.length === 0 && !hasActiveFilters;
+  const isFilteredEmpty = !isInitialLoad && displayRows.length === 0 && hasActiveFilters;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const totalUnits = filtered.reduce((acc, row) => acc + Number(row.units.replace(/\s/g, "")), 0);
-  const avgShare = filtered.length
-    ? `${(filtered.reduce((acc, row) => acc + parseFloat(row.share), 0) / filtered.length).toFixed(1)}%`
-    : "0%";
-  const activeReleases = new Set(filtered.filter((r) => r.status === "Active").map((r) => r.release)).size;
-
-  const portfolioUsdt = useMemo(
-    () => filtered.reduce((acc, row) => acc + toNumber(row.value), 0),
-    [filtered],
-  );
-
-  useEffect(() => {
-    const id = window.location.hash.replace(/^#/, "");
-    if (!id) return;
-    const frame = window.requestAnimationFrame(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [filtered]);
-
-  const resetFilters = () => {
-    setQuery("");
-    setStatus(statuses[0]);
-    setSort(sorts[0]);
-  };
-
-  if (positionPreviews.length === 0) {
+  if (live && error && rows === null) {
     return (
-      <section className="rounded-3xl bg-white px-5 py-12 text-center sm:px-8 sm:py-14">
-        <p className="text-xl font-semibold tracking-tight text-neutral-900">У вас пока нет позиций</p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-neutral-500">
-          Позиции появятся после входа в релизы и покупки UNT.
-        </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href={ROUTES.dashboardCatalog}
-            className="inline-flex h-10 items-center rounded-xl bg-blue-700 px-5 text-sm font-semibold text-white transition hover:bg-blue-800"
-          >
-            Открыть каталог
+      <ReadOnlySectionError
+        sectionId="assets-positions"
+        error={error}
+        onRetry={() => void reload()}
+        retryLabel={t("positions.retry")}
+      />
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <section className={cn(assetsCardClass, "py-14 text-center")}>
+        <p className="text-lg font-semibold text-neutral-900">{t("positions.emptyTitle")}</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">{t("positions.emptyBody")}</p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <Link href={ROUTES.dashboardCatalog} className={assetsPrimaryButtonClass}>
+            {t("positions.openCatalog")}
           </Link>
-          <Link
-            href={ROUTES.dashboardOverview}
-            className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-neutral-50/90 px-5 text-sm font-semibold text-neutral-800 ring-1 ring-neutral-100 transition hover:bg-neutral-100"
-          >
-            Перейти в сводку
+          <Link href={ROUTES.dashboardOverview} className={assetsOutlineButtonClass}>
+            {t("positions.goOverview")}
           </Link>
         </div>
       </section>
@@ -98,53 +71,83 @@ export function PositionsPageContent() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-4 sm:space-y-5">
+      {live && error && rows !== null ? (
+        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <PositionsHeaderBar
-        query={query}
-        onQuery={setQuery}
-        status={status}
-        statusOptions={[...statuses]}
-        onStatus={(v) => setStatus(v as (typeof statuses)[number])}
-        sort={sort}
-        sortOptions={[...sorts]}
-        onSort={(v) => setSort(v as (typeof sorts)[number])}
+        query={filters.q}
+        onQuery={(q) => updateFilters({ q })}
+        status={filters.status}
+        onStatus={(status) => updateFilters({ status })}
+        genre={filters.genre}
+        onGenre={(genre) => updateFilters({ genre })}
+        genreOptions={genreOptions}
+        sort={filters.sort}
+        onSort={(sort) => updateFilters({ sort: sort as typeof filters.sort })}
+        disabled={live && loading}
       />
 
-      <PositionsSummaryCards
-        total={String(filtered.length)}
-        activeReleases={String(activeReleases)}
-        totalUnits={totalUnits.toLocaleString("ru-RU")}
-        averageShare={avgShare}
-      />
-
-      {filtered.length === 0 ? (
-        <section className="rounded-3xl bg-white px-5 py-10 text-center sm:px-8 sm:py-12">
-          <p className="text-lg font-semibold tracking-tight text-neutral-900">Ничего не найдено по текущим фильтрам</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">Измените фильтры или откройте каталог релизов.</p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="inline-flex h-10 items-center rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white transition hover:bg-neutral-800"
-            >
-              Сбросить фильтры
-            </button>
-            <Link
-              href={ROUTES.dashboardCatalog}
-              className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-white px-5 text-sm font-semibold text-neutral-800 ring-1 ring-neutral-100 transition hover:bg-neutral-50"
-            >
-              Открыть каталог
-            </Link>
+      {isInitialLoad ? (
+        <section className={assetsCardClass}>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-10 animate-pulse rounded-lg bg-neutral-100" />
+            ))}
           </div>
+        </section>
+      ) : isFilteredEmpty ? (
+        <section className={cn(assetsCardClass, "py-12 text-center")}>
+          <p className="text-base font-semibold text-neutral-900">{t("positions.filteredEmptyTitle")}</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">{t("positions.filteredEmptyBody")}</p>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className={cn(assetsOutlineButtonClass, "mt-6")}
+          >
+            {t("positions.resetFilters")}
+          </button>
         </section>
       ) : (
         <>
-          <section className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-            <PositionsPortfolioValueChart portfolioUsdt={portfolioUsdt} />
-            <PositionsUnitsTrajectoryChart totalUnits={totalUnits} />
-          </section>
-          <PositionsTableCard rows={filtered} />
-          <TopPositionCardsGrid rows={filtered} />
+          <PositionsTableCard rows={displayRows} loading={isInitialLoad} live={live} compact />
+
+          {live && total > pageSize ? (
+            <nav
+              className="flex flex-wrap items-center justify-between gap-3 px-1"
+              aria-label={t("positions.paginationLabel")}
+            >
+              <p className="text-xs text-neutral-500">
+                {t("positions.paginationSummary")
+                  .replace("{page}", String(page))
+                  .replace("{totalPages}", String(totalPages))
+                  .replace("{total}", String(total))}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage(page - 1)}
+                  className={cn(assetsOutlineButtonClass, "h-9 disabled:cursor-not-allowed disabled:opacity-50")}
+                >
+                  <ChevronLeft className="size-3.5" />
+                  {t("positions.paginationPrev")}
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage(page + 1)}
+                  className={cn(assetsOutlineButtonClass, "h-9 disabled:cursor-not-allowed disabled:opacity-50")}
+                >
+                  {t("positions.paginationNext")}
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+            </nav>
+          ) : null}
         </>
       )}
     </div>

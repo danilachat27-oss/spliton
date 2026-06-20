@@ -1,21 +1,24 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search } from "@/lib/lucide";
 import { useMemo, useState } from "react";
 
 import { PayoutHistoryTable } from "@/components/dashboard/assets/payout-history-table";
 import type { PayoutHistoryRow } from "@/components/dashboard/assets/payouts-mock-data";
 import { payoutHistory } from "@/components/dashboard/assets/payouts-mock-data";
+import { usePayoutsHistoryPage } from "@/hooks/use-payouts-history-page";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { ReadOnlySectionError } from "@/components/shared/data-states/read-only-section-error";
 import { cn } from "@/lib/utils";
 
 const ASSET = "USDT · TRC20";
 
 const TYPE_FILTERS: Array<{ id: "all" | PayoutHistoryRow["type"]; label: string }> = [
   { id: "all", label: "Все" },
-  { id: "Начисление", label: "Начисление" },
-  { id: "Выплата", label: "Выплата" },
-  { id: "Вывод", label: "Вывод" },
-  { id: "Корректировка", label: "Корр." },
+  { id: "accrual", label: "Начисление" },
+  { id: "payout", label: "Выплата" },
+  { id: "withdrawal", label: "Вывод" },
+  { id: "adjustment", label: "Корр." },
 ];
 
 function parseUsdt(amount: string): number {
@@ -36,12 +39,16 @@ function formatSigned(n: number) {
 }
 
 export function PayoutsHistoryPageContent() {
+  const { t } = useI18n();
+  const { live, rows: payoutHistoryRows, loading, error, reload } = usePayoutsHistoryPage({ pageSize: 200 });
+  const sourceRows = live ? (payoutHistoryRows ?? []) : payoutHistory;
+
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<(typeof TYPE_FILTERS)[number]["id"]>("all");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return payoutHistory.filter((row) => {
+    return sourceRows.filter((row) => {
       if (typeFilter !== "all" && row.type !== typeFilter) return false;
       if (!q) return true;
       return (
@@ -51,7 +58,7 @@ export function PayoutsHistoryPageContent() {
         row.type.toLowerCase().includes(q)
       );
     });
-  }, [query, typeFilter]);
+  }, [query, typeFilter, sourceRows]);
 
   const stats = useMemo(() => {
     const rows = filtered;
@@ -61,8 +68,8 @@ export function PayoutsHistoryPageContent() {
     for (const r of rows) {
       const v = parseUsdt(r.amount);
       net += v;
-      if (r.type === "Вывод") outflow += Math.abs(v);
-      else if (r.type === "Корректировка") {
+      if (r.type === "withdrawal") outflow += Math.abs(v);
+      else if (r.type === "adjustment") {
         if (v < 0) outflow += Math.abs(v);
         else inflow += v;
       } else {
@@ -98,6 +105,20 @@ export function PayoutsHistoryPageContent() {
     },
   ];
 
+  if (live && loading && !payoutHistoryRows) {
+    return <p className="text-sm text-neutral-500">Загрузка истории операций…</p>;
+  }
+
+  if (live && error) {
+    return (
+      <ReadOnlySectionError
+        sectionId="payouts-history"
+        error={error}
+        onRetry={() => void reload()}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">
@@ -129,9 +150,9 @@ export function PayoutsHistoryPageContent() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Релиз, ref, дата или тип…"
+            placeholder={t("payouts.history.searchPlaceholder")}
             className="h-11 w-full rounded-2xl bg-neutral-50 py-2 pr-3 pl-10 text-sm text-neutral-900 outline-none ring-0 transition placeholder:text-neutral-400 focus:bg-white focus:ring-2 focus:ring-blue-600/15"
-            aria-label="Поиск по ленте"
+            aria-label={t("payouts.history.searchAria")}
           />
         </div>
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Фильтр по типу операции">
@@ -151,7 +172,7 @@ export function PayoutsHistoryPageContent() {
         </div>
       </div>
 
-      {payoutHistory.length > 0 && filtered.length === 0 ? (
+      {sourceRows.length > 0 && filtered.length === 0 ? (
         <div className="rounded-3xl bg-white px-5 py-10 text-center sm:px-8">
           <p className="text-sm font-medium text-neutral-800">Ничего не найдено</p>
           <p className="mt-1 text-xs text-neutral-500">Сбросьте фильтры или измените запрос.</p>

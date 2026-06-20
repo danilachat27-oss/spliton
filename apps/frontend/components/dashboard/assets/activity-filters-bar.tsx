@@ -1,92 +1,27 @@
 "use client";
 
-import { CalendarDays, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { Search, SlidersHorizontal } from "@/lib/lucide";
+import { useMemo, useState } from "react";
 
+import { AssetsFilterField, AssetsFilterSelect } from "@/components/dashboard/assets/assets-filter-field";
+import { AssetsUnderlineTabs } from "@/components/dashboard/assets/assets-underline-tabs";
+import { assetsFilterInputClass } from "@/components/dashboard/assets/assets-ui";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 export type ActivityFilterTab = "all" | "deposits" | "buys" | "sells" | "transfers" | "withdrawals";
 
-const tabs: { id: ActivityFilterTab; label: string }[] = [
-  { id: "all", label: "Все" },
-  { id: "deposits", label: "Пополнения" },
-  { id: "buys", label: "Покупки UNT" },
-  { id: "sells", label: "Продажи UNT" },
-  { id: "transfers", label: "Переводы" },
-  { id: "withdrawals", label: "Выводы" },
-];
+export const ACTIVITY_PERIOD_7D = "7d";
+export const ACTIVITY_PERIOD_30D = "30d";
+export const ACTIVITY_PERIOD_90D = "90d";
+export const ACTIVITY_PERIOD_180D = "180d";
+export const ACTIVITY_PERIOD_1Y = "1y";
+export const ACTIVITY_PERIOD_ALL = "all";
+export const ACTIVITY_RELEASE_ALL = "__all__";
+export const ACTIVITY_STATUS_ALL = "__all__";
+export const ACTIVITY_DIRECTION_ALL = "all";
 
-const periodOptions = ["Последние 7 дней", "Последние 30 дней", "Последние 90 дней", "Этот год"];
-const releaseOptions = ["Все релизы", "Offset", "Midnight Drive", "Glass Echo", "Low Horizon"];
-const statusOptions = ["Все статусы", "Completed", "Pending", "Processing", "Cancelled"];
-
-function FancyDropdown({
-  value,
-  options,
-  onSelect,
-  icon,
-  className,
-}: {
-  value: string;
-  options: string[];
-  onSelect: (value: string) => void;
-  icon?: ReactNode;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  const items = useMemo(() => options, [options]);
-
-  return (
-    <div
-      ref={rootRef}
-      className={cn("relative", className)}
-      onBlur={(e) => {
-        if (!rootRef.current?.contains(e.relatedTarget as Node)) setOpen(false);
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200 bg-neutral-50/90 px-3.5 text-xs font-semibold text-neutral-800 ring-1 ring-neutral-100 transition",
-          open ? "border-neutral-300 bg-white" : "hover:bg-neutral-100",
-        )}
-      >
-        {icon}
-        {value}
-        <ChevronDown className={cn("size-3.5 text-neutral-400 transition-transform", open && "rotate-180")} />
-      </button>
-
-      {open ? (
-        <div className="absolute left-0 top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-[0_12px_30px_-18px_rgba(15,23,42,0.35)]">
-          <ul className="max-h-64 overflow-auto py-1">
-            {items.map((item) => (
-              <li key={item}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelect(item);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center px-3 py-2 text-left text-xs transition",
-                    item === value
-                      ? "bg-neutral-100 font-semibold text-neutral-900"
-                      : "text-neutral-700 hover:bg-neutral-50"
-                  )}
-                >
-                  {item}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </div>
-  );
-}
+const STATUS_VALUES = ["Completed", "Pending", "Processing", "Cancelled"] as const;
 
 export function ActivityFiltersBar({
   activeTab,
@@ -95,10 +30,16 @@ export function ActivityFiltersBar({
   onPeriodChange,
   release,
   onReleaseChange,
+  releaseOptions = [],
   status,
   onStatusChange,
+  direction,
+  onDirectionChange,
+  sort,
+  onSortChange,
   query,
   onQueryChange,
+  disabled,
 }: {
   activeTab: ActivityFilterTab;
   onTabChange: (tab: ActivityFilterTab) => void;
@@ -106,59 +47,157 @@ export function ActivityFiltersBar({
   onPeriodChange: (value: string) => void;
   release: string;
   onReleaseChange: (value: string) => void;
+  releaseOptions?: { id: string; title: string }[];
   status: string;
   onStatusChange: (value: string) => void;
+  direction: string;
+  onDirectionChange: (value: string) => void;
+  sort: string;
+  onSortChange: (value: string) => void;
   query: string;
   onQueryChange: (value: string) => void;
+  disabled?: boolean;
 }) {
-  return (
-    <section className="rounded-3xl border border-neutral-200 bg-white px-4 py-4 shadow-sm ring-1 ring-neutral-100/80 sm:px-6 sm:py-4">
-      <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex min-w-max flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2.5">
-          <div className="inline-flex shrink-0 rounded-xl bg-neutral-100 p-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => onTabChange(tab.id)}
-                className={cn(
-                  "whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-semibold transition-colors",
-                  activeTab === tab.id
-                    ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80"
-                    : "font-medium text-neutral-500 hover:text-neutral-800",
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+  const { t } = useI18n();
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <FancyDropdown
-              value={period}
-              options={periodOptions}
-              onSelect={onPeriodChange}
-              icon={<CalendarDays className="size-3.5 text-neutral-500" />}
+  const tabs = useMemo(
+    () =>
+      (
+        [
+          { id: "all", labelKey: "activity.tab.all" },
+          { id: "deposits", labelKey: "activity.tab.deposits" },
+          { id: "buys", labelKey: "activity.tab.buys" },
+          { id: "sells", labelKey: "activity.tab.sells" },
+          { id: "transfers", labelKey: "activity.tab.transfers" },
+          { id: "withdrawals", labelKey: "activity.tab.withdrawals" },
+        ] as const
+      ).map((tab) => ({ id: tab.id, label: t(tab.labelKey) })),
+    [t],
+  );
+
+  const periodOptions = useMemo(
+    () => [
+      { value: ACTIVITY_PERIOD_7D, label: t("activity.period.7d") },
+      { value: ACTIVITY_PERIOD_30D, label: t("activity.period.30d") },
+      { value: ACTIVITY_PERIOD_90D, label: t("activity.period.90d") },
+      { value: ACTIVITY_PERIOD_180D, label: t("activity.period.180d") },
+      { value: ACTIVITY_PERIOD_1Y, label: t("activity.period.1y") },
+      { value: ACTIVITY_PERIOD_ALL, label: t("activity.period.all") },
+    ],
+    [t],
+  );
+
+  const releaseFilterOptions = useMemo(
+    () => [
+      { value: ACTIVITY_RELEASE_ALL, label: t("activity.filterAllReleases") },
+      ...releaseOptions.map((r) => ({ value: r.id, label: r.title })),
+    ],
+    [releaseOptions, t],
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: ACTIVITY_STATUS_ALL, label: t("activity.filterAllStatuses") },
+      ...STATUS_VALUES.map((v) => ({
+        value: v,
+        label: t(`activity.widgets.status.${v.toLowerCase()}`),
+      })),
+    ],
+    [t],
+  );
+
+  const directionOptions = useMemo(
+    () => [
+      { value: ACTIVITY_DIRECTION_ALL, label: t("activity.direction.all") },
+      { value: "in", label: t("activity.direction.in") },
+      { value: "out", label: t("activity.direction.out") },
+    ],
+    [t],
+  );
+
+  const sortOptions = useMemo(
+    () => [
+      { value: "newest", label: t("activity.sort.newest") },
+      { value: "oldest", label: t("activity.sort.oldest") },
+      { value: "amount_desc", label: t("activity.sort.amountDesc") },
+      { value: "amount_asc", label: t("activity.sort.amountAsc") },
+    ],
+    [t],
+  );
+
+  return (
+    <div className="space-y-4">
+      <AssetsUnderlineTabs
+        value={activeTab}
+        onChange={onTabChange}
+        items={tabs}
+        disabled={disabled}
+        ariaLabel={t("activity.filters.tabsAria")}
+      />
+
+      <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+        <AssetsFilterField label={t("activity.filters.dateLabel")} className="sm:min-w-[10rem]">
+          <AssetsFilterSelect
+            value={period}
+            options={periodOptions}
+            onSelect={onPeriodChange}
+            disabled={disabled}
+          />
+        </AssetsFilterField>
+
+        <AssetsFilterField label={t("activity.filters.releaseLabel")}>
+          <AssetsFilterSelect
+            value={release}
+            options={releaseFilterOptions}
+            onSelect={onReleaseChange}
+            disabled={disabled}
+          />
+        </AssetsFilterField>
+
+        <AssetsFilterField label={t("activity.filters.statusLabel")} className="hidden sm:block">
+          <AssetsFilterSelect value={status} options={statusOptions} onSelect={onStatusChange} disabled={disabled} />
+        </AssetsFilterField>
+
+        <AssetsFilterField label={t("activity.searchPlaceholder")} className="min-w-[12rem] flex-[1.4]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+            <input
+              value={query}
+              disabled={disabled}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder={t("activity.searchPlaceholder")}
+              className={cn(assetsFilterInputClass, "pl-9")}
             />
-            <FancyDropdown
-              value={release}
-              options={releaseOptions}
-              onSelect={onReleaseChange}
-              icon={<SlidersHorizontal className="size-3.5 text-neutral-500" />}
-            />
-            <FancyDropdown value={status} options={statusOptions} onSelect={onStatusChange} />
-            <label className="relative min-w-[200px] flex-1 sm:min-w-0 sm:flex-none">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" />
-              <input
-                value={query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                placeholder="Поиск: tx id / release / action"
-                className="h-10 w-full min-w-0 rounded-xl border border-neutral-200 bg-neutral-50/90 pl-9 pr-3 text-xs text-neutral-800 outline-none ring-1 ring-neutral-100 transition placeholder:text-neutral-400 focus:border-neutral-300 focus:bg-white focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
           </div>
-        </div>
+        </AssetsFilterField>
+
+        <button
+          type="button"
+          onClick={() => setAdvancedOpen((v) => !v)}
+          className="mb-0.5 inline-flex h-10 items-center gap-1.5 rounded-lg bg-neutral-100 px-3 text-sm font-medium text-neutral-900 transition hover:bg-neutral-200/70 sm:hidden"
+        >
+          <SlidersHorizontal className="size-4" aria-hidden />
+          {t("activity.filters.more")}
+        </button>
       </div>
-    </section>
+
+      <div className={cn("flex flex-wrap items-end gap-3 sm:gap-4", !advancedOpen && "hidden sm:flex")}>
+        <AssetsFilterField label={t("activity.filters.statusLabel")} className="sm:hidden">
+          <AssetsFilterSelect value={status} options={statusOptions} onSelect={onStatusChange} disabled={disabled} />
+        </AssetsFilterField>
+        <AssetsFilterField label={t("activity.filters.directionLabel")}>
+          <AssetsFilterSelect
+            value={direction}
+            options={directionOptions}
+            onSelect={onDirectionChange}
+            disabled={disabled}
+          />
+        </AssetsFilterField>
+        <AssetsFilterField label={t("activity.filters.sortLabel")}>
+          <AssetsFilterSelect value={sort} options={sortOptions} onSelect={onSortChange} disabled={disabled} />
+        </AssetsFilterField>
+      </div>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+# Prefer .github/workflows/ci.yml (full monorepo pipeline).
 name: Backend CI
 
 on:
@@ -43,21 +44,20 @@ jobs:
   e2e:
     needs: build-lint-unit
     if: |
-      secrets.BACKEND_E2E_DATABASE_URL != '' &&
+      secrets.BACKEND_E2E_TEST_DATABASE_URL != '' &&
       secrets.BACKEND_E2E_DIRECT_URL != '' &&
       secrets.BACKEND_E2E_JWT_SECRET != '' &&
       secrets.BACKEND_E2E_JWT_REFRESH_SECRET != ''
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/backend
     env:
       NODE_ENV: test
-      DATABASE_URL: ${{ secrets.BACKEND_E2E_DATABASE_URL }}
+      CI: true
       DIRECT_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
+      TEST_DIRECT_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
       JWT_SECRET: ${{ secrets.BACKEND_E2E_JWT_SECRET }}
       JWT_REFRESH_SECRET: ${{ secrets.BACKEND_E2E_JWT_REFRESH_SECRET }}
       TEST_DATABASE_URL: ${{ secrets.BACKEND_E2E_TEST_DATABASE_URL }}
+      ALLOW_E2E_CLEANUP: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -65,9 +65,15 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: apps/backend/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            apps/backend/package-lock.json
 
       - run: npm ci
-
+      - name: Migrate test database
+        run: npm run test:db:setup
       - name: E2E tests
-        run: npm run test:e2e
+        working-directory: apps/backend
+        run: |
+          npm ci
+          npm run test:e2e

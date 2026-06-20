@@ -4,11 +4,13 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import {
+  ForgotPasswordDto,
   LoginDto,
   LogoutDto,
   RefreshTokenDto,
   RegisterDto,
   ResendEmailVerificationDto,
+  ResetPasswordDto,
   VerifyEmailDto,
 } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -113,6 +115,18 @@ export class AuthController {
       dto,
       this.getRequestMeta(req),
     );
+  }
+
+  @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  forgotPassword(@Body() dto: ForgotPasswordDto, @Req() req: Request) {
+    return this.authService.forgotPassword(dto, this.getRequestMeta(req));
+  }
+
+  @Post('reset-password')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
+    return this.authService.resetPassword(dto, this.getRequestMeta(req));
   }
 
   private getRequestMeta(req: Request) {

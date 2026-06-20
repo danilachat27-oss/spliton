@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { myPositions } from "@/components/my-assets/overview/mock-data";
 
 function PositionStatus({ label }: { label: string }) {
@@ -19,20 +22,22 @@ function PositionCover({ hint }: { hint: string }) {
 }
 
 export function PositionsTable() {
+  const { t } = useI18n();
+
   return (
     <section className="rounded-md border border-neutral-200 bg-white">
       <header className="border-b border-neutral-200 px-4 py-3 sm:px-5">
-        <h2 className="text-base font-semibold text-neutral-900">Мои позиции</h2>
-        <p className="mt-1 text-xs text-neutral-500">Релизы, UNT и актуальные начисления по вашим rights.</p>
+        <h2 className="text-base font-semibold text-neutral-900">{t("assets.myPositions")}</h2>
+        <p className="mt-1 text-xs text-neutral-500">{t("assets.positions.subtitle")}</p>
       </header>
 
       <div className="hidden xl:block">
         <div className="grid grid-cols-[minmax(220px,1.4fr)_minmax(130px,0.9fr)_minmax(120px,0.7fr)_minmax(140px,0.8fr)_minmax(150px,0.9fr)_96px] gap-3 border-b border-neutral-200 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-          <span>Релиз</span>
+          <span>{t("assets.positions.col.release")}</span>
           <span>UNT</span>
-          <span>Доля pool</span>
-          <span>Начислено</span>
-          <span>К выводу</span>
+          <span>{t("assets.positions.col.poolShare")}</span>
+          <span>{t("assets.positions.col.accrued")}</span>
+          <span>{t("assets.positions.col.available")}</span>
           <span />
         </div>
       </div>
@@ -64,17 +69,17 @@ export function PositionsTable() {
             </div>
 
             <div className="text-sm text-neutral-900 xl:text-[13px]">
-              <span className="text-xs text-neutral-500 xl:hidden">Доля pool: </span>
+              <span className="text-xs text-neutral-500 xl:hidden">{t("assets.positions.col.poolShare")}: </span>
               <span className="tabular-nums">{item.share}</span>
             </div>
 
             <div className="text-sm text-neutral-900 xl:text-[13px]">
-              <span className="text-xs text-neutral-500 xl:hidden">Начислено: </span>
+              <span className="text-xs text-neutral-500 xl:hidden">{t("assets.positions.col.accrued")}: </span>
               <span className="tabular-nums">{item.accrued}</span>
             </div>
 
             <div className="text-sm text-neutral-900 xl:text-[13px]">
-              <span className="text-xs text-neutral-500 xl:hidden">К выводу: </span>
+              <span className="text-xs text-neutral-500 xl:hidden">{t("assets.positions.col.available")}: </span>
               <span className="tabular-nums">{item.available}</span>
             </div>
 

@@ -1,7 +1,5 @@
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
-
 import { GuideSectionHeader } from "./guide-section-header";
 
 export function GuideSectionShell({
@@ -20,9 +18,9 @@ export function GuideSectionShell({
   className?: string;
 }) {
   return (
-    <section id={id} data-guide-section className={cn("scroll-mt-24", className)}>
+    <section id={id} data-guide-section className={className}>
       <GuideSectionHeader title={title} subtitle={subtitle} align={headerAlign} />
-      <div className="mt-3 md:mt-4">{children}</div>
+      <div className="mt-4 md:mt-5">{children}</div>
     </section>
   );
 }

@@ -1,18 +1,23 @@
+"use client";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import { activityItems } from "@/components/my-assets/overview/mock-data";
 
 export function ActivityFeed() {
+  const { t } = useI18n();
+
   return (
     <section className="rounded-md border border-neutral-200 bg-white">
       <header className="border-b border-neutral-200 px-4 py-3 sm:px-5">
-        <h3 className="text-sm font-semibold text-neutral-900">История активности</h3>
+        <h3 className="text-sm font-semibold text-neutral-900">{t("assets.activity.title")}</h3>
       </header>
 
       <div className="hidden sm:grid sm:grid-cols-[120px_160px_minmax(180px,1fr)_140px_110px] sm:gap-3 sm:border-b sm:border-neutral-200 sm:px-5 sm:py-2.5 sm:text-[11px] sm:font-semibold sm:uppercase sm:tracking-[0.08em] sm:text-neutral-500">
-        <span>Дата</span>
-        <span>Операция</span>
-        <span>Направление</span>
-        <span>Сумма / Units</span>
-        <span>Статус</span>
+        <span>{t("assets.activity.col.date")}</span>
+        <span>{t("assets.activity.col.operation")}</span>
+        <span>{t("assets.activity.col.direction")}</span>
+        <span>{t("assets.activity.col.amount")}</span>
+        <span>{t("assets.activity.col.status")}</span>
       </div>
 
       <div className="divide-y divide-neutral-200">

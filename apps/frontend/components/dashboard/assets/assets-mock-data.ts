@@ -32,6 +32,12 @@ export type PositionPreviewItem = {
   catalogReleaseId?: string;
   /** Целое число units в позиции (лимит формы «продать»). */
   heldUnits?: number;
+  /** Остаток units, доступный для продажи/вывода (если пришло от API). */
+  availableUnits?: number;
+  /** Признак доступности продажи. */
+  availableToSell?: boolean;
+  /** Возможность докупить units в позиции. */
+  canBuyMore?: boolean;
 };
 
 export type PositionStructureItem = {

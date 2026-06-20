@@ -4,5 +4,10 @@ export type HttpErrorResponse = {
   path: string;
   method: string;
   message: string | string[];
+  /** Legacy Nest error label */
   error?: string;
+  /** Stable machine-readable code */
+  code?: string;
+  details?: unknown;
+  requestId?: string;
 };

@@ -1,0 +1,194 @@
+/* Holdings megamenu — многошаговые сцены (как payouts / services) */
+
+.service-preview-scene--holdings-overview,
+.service-preview-scene--holdings-metrics,
+.service-preview-scene--holdings-activity,
+.service-preview-scene--holdings-positions {
+  padding: 0.25rem;
+}
+
+.service-preview-scene--holdings-overview .preview-hold-deposit-btn,
+.service-preview-scene--holdings-overview .preview-hold-portfolio-row {
+  /* pulse via .preview-megamenu-target in shared CSS */
+}
+
+.service-preview-cursor-local--hold-overview-deposit,
+.service-preview-local-tip--hold-overview-deposit {
+  animation-name: sp-hold-show-deposit;
+}
+
+.service-preview-local-ring--hold-overview-deposit {
+  animation-name: sp-hold-ring-deposit;
+}
+
+.service-preview-cursor-local--hold-overview-portfolio,
+.service-preview-local-tip--hold-overview-portfolio {
+  animation-name: sp-hold-show-portfolio;
+}
+
+.service-preview-local-ring--hold-overview-portfolio {
+  animation-name: sp-hold-ring-portfolio;
+}
+
+@keyframes sp-hold-show-deposit {
+  0%, 4% { opacity: 0; }
+  6%, 40% { opacity: 1; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes sp-hold-ring-deposit {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+@keyframes sp-hold-show-portfolio {
+  0%, 42% { opacity: 0; }
+  46%, 82% { opacity: 1; }
+  86%, 100% { opacity: 0; }
+}
+
+@keyframes sp-hold-ring-portfolio {
+  0%, 54% { opacity: 0; transform: scale(0.5); }
+  56%, 60% { opacity: 1; transform: scale(1.45); }
+  64%, 100% { opacity: 0; }
+}
+
+
+/* Metrics */
+.service-preview-cursor-local--hold-metrics-chart,
+.service-preview-local-tip--hold-metrics-chart {
+  animation-name: sp-hold-show-metrics-chart;
+}
+
+.service-preview-local-ring--hold-metrics-chart {
+  animation-name: sp-hold-ring-metrics-chart;
+}
+
+@keyframes sp-hold-show-metrics-chart {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-hold-ring-metrics-chart {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--holdings-metrics .preview-hold-metrics-chart {
+  animation: sp-hold-metrics-chart-pulse var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--holdings-metrics .preview-hold-metrics-dot {
+  animation: sp-hold-metrics-dot var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--holdings-metrics .preview-hold-metrics-tooltip {
+  animation: sp-hold-metrics-tooltip var(--sp-duration) ease-in-out infinite;
+}
+
+.service-preview-scene--holdings-metrics .preview-hold-metrics-crosshair {
+  animation: sp-hold-metrics-crosshair var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-hold-metrics-chart-pulse {
+  0%, 28% { box-shadow: none; }
+  32%, 76% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  80%, 100% { box-shadow: none; }
+}
+
+@keyframes sp-hold-metrics-dot {
+  0%, 26% { opacity: 0; transform: scale(0.6); }
+  30%, 76% { opacity: 1; transform: scale(1); }
+  80%, 100% { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes sp-hold-metrics-tooltip {
+  0%, 28% { opacity: 0; transform: translateY(2px); }
+  32%, 74% { opacity: 1; transform: translateY(0); }
+  78%, 100% { opacity: 0; transform: translateY(2px); }
+}
+
+@keyframes sp-hold-metrics-crosshair {
+  0%, 26% { opacity: 0; }
+  30%, 76% { opacity: 0.85; }
+  80%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--holdings-metrics .preview-hold-pnl-tab--active {
+  animation: sp-hold-pnl-tab-active var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-hold-pnl-tab-active {
+  0%, 8% { background-color: rgb(255 255 255); color: rgb(23 23 23); box-shadow: 0 0 0 1px rgb(229 229 229 / 0.8); }
+  12%, 88% { background-color: rgb(255 255 255); color: rgb(23 23 23); box-shadow: 0 0 0 1px rgb(229 229 229 / 0.8); }
+  92%, 100% { background-color: transparent; color: rgb(115 115 115); box-shadow: none; }
+}
+
+/* Activity */
+.service-preview-cursor-local--hold-activity-row,
+.service-preview-local-tip--hold-activity-row {
+  animation-name: sp-hold-show-activity-row;
+}
+
+.service-preview-local-ring--hold-activity-row {
+  animation-name: sp-hold-ring-activity-row;
+}
+
+@keyframes sp-hold-show-activity-row {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-hold-ring-activity-row {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+/* Activity row pulse — via .preview-megamenu-target in shared CSS */
+
+.service-preview-scene--holdings-activity .preview-hold-activity-tab--active {
+  animation: sp-hold-activity-tab var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-hold-activity-tab {
+  0%, 10% { border-color: rgb(23 23 23); color: rgb(23 23 23); }
+  14%, 72% { border-color: rgb(23 23 23); color: rgb(23 23 23); }
+  76%, 100% { border-color: transparent; color: rgb(115 115 115); }
+}
+
+/* Positions */
+.service-preview-cursor-local--hold-positions-row,
+.service-preview-local-tip--hold-positions-row {
+  animation-name: sp-hold-show-positions-row;
+}
+
+.service-preview-local-ring--hold-positions-row {
+  animation-name: sp-hold-ring-positions-row;
+}
+
+@keyframes sp-hold-show-positions-row {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-hold-ring-positions-row {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-scene--holdings-positions .preview-hold-positions-tab--active {
+  animation: sp-hold-positions-tab var(--sp-duration) ease-in-out infinite;
+}
+
+@keyframes sp-hold-positions-tab {
+  0%, 10% { border-color: rgb(23 23 23); color: rgb(23 23 23); }
+  14%, 72% { border-color: rgb(23 23 23); color: rgb(23 23 23); }
+  76%, 100% { border-color: transparent; color: rgb(115 115 115); }
+}

@@ -1,0 +1,118 @@
+/* UNT explainer — мини-сцены */
+
+.unt-scene {
+  --unt-scene-duration: 9s;
+}
+
+.unt-scene-pulse {
+  animation: unt-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes unt-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.unt-scene-bar-fill {
+  animation: unt-bar-fill var(--unt-scene-duration) ease-in-out infinite;
+}
+
+@keyframes unt-bar-fill {
+  0%, 8% { width: 0%; }
+  20%, 70% { width: 10%; }
+  82%, 100% { width: 0%; }
+}
+
+.unt-scene-usdt-out {
+  animation: unt-usdt-out var(--unt-scene-duration) ease-in-out infinite;
+}
+
+.unt-scene-unt-in {
+  animation: unt-unt-in var(--unt-scene-duration) ease-in-out infinite;
+}
+
+@keyframes unt-usdt-out {
+  0%, 12% { opacity: 1; transform: translateY(0); }
+  24%, 100% { opacity: 0.35; transform: translateY(-4px); }
+}
+
+@keyframes unt-unt-in {
+  0%, 20% { opacity: 0.3; transform: translateY(6px); }
+  32%, 72% { opacity: 1; transform: translateY(0); }
+  84%, 100% { opacity: 0.3; transform: translateY(6px); }
+}
+
+.unt-scene-payout-user {
+  animation: unt-payout-user var(--unt-scene-duration) ease-in-out infinite;
+}
+
+.unt-scene-payout-others {
+  animation: unt-payout-others var(--unt-scene-duration) ease-in-out infinite;
+}
+
+@keyframes unt-payout-user {
+  0%, 30% { box-shadow: none; }
+  38%, 68% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  76%, 100% { box-shadow: none; }
+}
+
+@keyframes unt-payout-others {
+  0%, 34% { opacity: 0.55; }
+  42%, 64% { opacity: 1; }
+  72%, 100% { opacity: 0.55; }
+}
+
+.unt-scene-transfer-arrow {
+  animation: unt-transfer-arrow var(--unt-scene-duration) ease-in-out infinite;
+}
+
+.unt-scene-transfer-from {
+  animation: unt-transfer-from var(--unt-scene-duration) ease-in-out infinite;
+}
+
+.unt-scene-transfer-to {
+  animation: unt-transfer-to var(--unt-scene-duration) ease-in-out infinite;
+}
+
+@keyframes unt-transfer-arrow {
+  0%, 24% { opacity: 0.2; transform: translateX(-6px); }
+  36%, 64% { opacity: 1; transform: translateX(0); }
+  76%, 100% { opacity: 0.2; transform: translateX(6px); }
+}
+
+@keyframes unt-transfer-from {
+  0%, 28% { opacity: 1; }
+  40%, 100% { opacity: 0.45; }
+}
+
+@keyframes unt-transfer-to {
+  0%, 36% { opacity: 0.45; }
+  48%, 100% { opacity: 1; }
+}
+
+.unt-scene-live-dot {
+  animation: unt-live-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes unt-live-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.unt-scene-progress {
+  animation: unt-progress var(--unt-scene-duration) ease-in-out infinite;
+}
+
+@keyframes unt-progress {
+  0% { width: 42%; }
+  50% { width: 57%; }
+  100% { width: 42%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unt-scene *,
+  .unt-scene *::before,
+  .unt-scene *::after {
+    animation: none !important;
+  }
+}

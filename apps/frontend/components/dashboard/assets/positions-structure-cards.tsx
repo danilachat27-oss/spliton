@@ -1,4 +1,7 @@
+"use client";
+
 import { genreStructure, statusStructure } from "@/components/dashboard/assets/assets-mock-data";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 const toneByIndex = [
@@ -69,11 +72,18 @@ function StructureCard({
   );
 }
 
-export function PositionsStructureCards() {
+export function PositionsStructureCards({
+  genreStructure: genreItems = genreStructure,
+  statusStructure: statusItems = statusStructure,
+}: {
+  genreStructure?: typeof genreStructure;
+  statusStructure?: typeof statusStructure;
+}) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-      <StructureCard eyebrow="Structure · Status" title="Распределение по статусам" items={statusStructure} />
-      <StructureCard eyebrow="Structure · Genre" title="Структура по жанрам" items={genreStructure} />
+      <StructureCard eyebrow="Structure · Status" title={t("positions.structure.byStatus")} items={statusItems} />
+      <StructureCard eyebrow="Structure · Genre" title={t("positions.structure.byGenre")} items={genreItems} />
     </div>
   );
 }

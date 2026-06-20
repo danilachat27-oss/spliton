@@ -1,9 +1,17 @@
 "use client";
 
-import { BarChart3, CalendarDays, Info } from "lucide-react";
+import { BarChart3, CalendarDays, Info } from "@/lib/lucide";
 import { useMemo, useState } from "react";
 
 import { MetricsDetailChart, type MetricsPoint } from "@/components/dashboard/assets/metrics-charts";
+import {
+  assetsCardClass,
+  assetsPanelClass,
+  assetsSegmentActiveClass,
+  assetsSegmentIdleClass,
+} from "@/components/dashboard/assets/assets-ui";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { tf } from "@/lib/i18n/widget-messages";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "calendar" | "chart";
@@ -26,34 +34,43 @@ function buildDailyPnLPoints(): MetricsPoint[] {
 }
 
 export function MetricsDailyBreakdownCard() {
+  const { t } = useI18n();
   const [mode, setMode] = useState<ViewMode>("calendar");
   const chartData = useMemo(() => buildDailyPnLPoints(), []);
 
-  const days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const days = [
+    t("assets.metrics.dayMon"),
+    t("assets.metrics.dayTue"),
+    t("assets.metrics.dayWed"),
+    t("assets.metrics.dayThu"),
+    t("assets.metrics.dayFri"),
+    t("assets.metrics.daySat"),
+    t("assets.metrics.daySun"),
+  ];
   const cells = Array.from({ length: 30 }, (_, i) => i + 1);
 
   return (
-    <section className="space-y-5 rounded-3xl bg-white px-5 py-6 sm:space-y-6 sm:px-7 sm:py-8" aria-label="Суточная разбивка">
+    <section className={assetsCardClass} aria-label={t("assets.metrics.dailyBreakdownAria")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Metrics · Daily</p>
-            <span className="text-neutral-400" title="Мок: календарь и дневной PnL.">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">{t("assets.metrics.dailyBreakdownEyebrow")}</p>
+            <span className="text-neutral-400" title={t("assets.metrics.dailyBreakdownMockHint")}>
               <Info className="size-3.5" strokeWidth={2} aria-hidden />
             </span>
           </div>
-          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">Суточная разбивка</h3>
-          <p className="text-sm text-neutral-500">PnL на 10.04.2026</p>
+          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">{t("assets.metrics.dailyBreakdownTitle")}</h3>
+          <p className="text-sm text-neutral-500">{tf(t("assets.metrics.dailyBreakdownSubtitle"), { date: "10.04.2026" })}</p>
           <p className="font-mono text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 sm:text-[2.25rem]">0,00 USDT</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 rounded-xl bg-neutral-100 p-1">
           <button
             type="button"
             onClick={() => setMode("calendar")}
-            aria-label="Календарный режим"
+            aria-label={t("assets.metrics.dailyCalendarMode")}
             className={cn(
               "inline-flex size-8 items-center justify-center rounded-lg transition-colors",
-              mode === "calendar" ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
+              mode === "calendar" ? assetsSegmentActiveClass : assetsSegmentIdleClass,
             )}
           >
             <CalendarDays className="size-3.5" strokeWidth={1.8} />
@@ -61,10 +78,10 @@ export function MetricsDailyBreakdownCard() {
           <button
             type="button"
             onClick={() => setMode("chart")}
-            aria-label="Режим графика"
+            aria-label={t("assets.metrics.dailyChartMode")}
             className={cn(
               "inline-flex size-8 items-center justify-center rounded-lg transition-colors",
-              mode === "chart" ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
+              mode === "chart" ? assetsSegmentActiveClass : assetsSegmentIdleClass,
             )}
           >
             <BarChart3 className="size-3.5" strokeWidth={1.8} />
@@ -75,14 +92,14 @@ export function MetricsDailyBreakdownCard() {
       <div className="flex items-center justify-end">
         <button
           type="button"
-          className="inline-flex items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
+          className="inline-flex items-center rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-200/70"
         >
           ‹ 2026-04 ›
         </button>
       </div>
 
       {mode === "calendar" ? (
-        <div className="grid grid-cols-7 gap-1.5 rounded-2xl bg-neutral-50/90 p-3 ring-1 ring-neutral-100 sm:p-4">
+        <div className={cn(assetsPanelClass, "grid grid-cols-7 gap-1.5 p-3 sm:p-4")}>
           {days.map((d) => (
             <div key={d} className="py-1 text-center text-[11px] font-medium text-neutral-500">
               {d}
@@ -92,12 +109,12 @@ export function MetricsDailyBreakdownCard() {
             <div
               key={cell}
               className={cn(
-                "rounded-lg border py-2 text-center text-[12px] transition-colors",
+                "rounded-lg py-2 text-center text-[12px] transition-colors",
                 cell === 10
-                  ? "border-blue-200 bg-white text-neutral-900 ring-1 ring-blue-100"
+                  ? "bg-neutral-100 text-neutral-900"
                   : cell < 6 || (cell >= 13 && cell <= 19)
-                    ? "border-neutral-200/80 bg-white text-neutral-700"
-                    : "border-transparent text-neutral-400",
+                    ? "bg-white text-neutral-700"
+                    : "text-neutral-400",
               )}
             >
               <div className="font-semibold">{cell}</div>

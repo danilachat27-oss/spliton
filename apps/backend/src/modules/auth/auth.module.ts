@@ -3,15 +3,21 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { EmailModule } from '../email/email.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { LegalModule } from '../legal/legal.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 import { AuthController } from './auth.controller';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 import { EmailVerificationRepository } from './repositories/email-verification.repository';
+import { PasswordResetRepository } from './repositories/password-reset.repository';
 import { TwoFactorRepository } from './repositories/two-factor.repository';
 import { AuthAuditService } from './services/auth-audit.service';
 import { EmailVerificationService } from './services/email-verification.service';
 import { AuthCookieService } from './services/auth-cookie.service';
 import { EmailVerificationTokenService } from './services/email-verification-token.service';
+import { PasswordResetTokenService } from './services/password-reset-token.service';
+import { PasswordResetService } from './services/password-reset.service';
 import { SessionService } from './services/session.service';
 import { TokenService } from './services/token.service';
 import { TwoFactorBackupCodeService } from './services/two-factor-backup-code.service';
@@ -25,6 +31,9 @@ import { TwoFactorAuthController } from './two-factor-auth.controller';
   imports: [
     ConfigModule,
     EmailModule,
+    NotificationsModule,
+    LegalModule,
+    ReferralsModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -40,9 +49,12 @@ import { TwoFactorAuthController } from './two-factor-auth.controller';
     AuthCookieService,
     AuthRepository,
     EmailVerificationRepository,
+    PasswordResetRepository,
     TwoFactorRepository,
     EmailVerificationTokenService,
+    PasswordResetTokenService,
     EmailVerificationService,
+    PasswordResetService,
     TwoFactorEncryptionService,
     TwoFactorBackupCodeService,
     TwoFactorLoginCompletionService,
@@ -52,6 +64,12 @@ import { TwoFactorAuthController } from './two-factor-auth.controller';
     AuthAuditService,
     JwtStrategy,
   ],
-  exports: [AuthService, PassportModule, JwtModule],
+  exports: [
+    AuthService,
+    PassportModule,
+    JwtModule,
+    AuthAuditService,
+    SessionService,
+  ],
 })
 export class AuthModule {}

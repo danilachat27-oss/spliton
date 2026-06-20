@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/lib/lucide";
 
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";

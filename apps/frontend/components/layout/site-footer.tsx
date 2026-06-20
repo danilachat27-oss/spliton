@@ -1,72 +1,30 @@
-import Link from "next/link";
-import { ArrowUpRight, Globe, Mail } from "lucide-react";
+﻿"use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight, Globe, Mail } from "@/lib/lucide";
+
+import { LanguageSelector } from "@/components/i18n/language-selector";
+import { FooterRegisterQr } from "@/components/layout/footer-register-qr";
 import { FooterSoundtrack } from "@/components/layout/footer-soundtrack";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { BRAND } from "@/constants/brand";
+import { SUPPORT_HELPDESK_EMAIL } from "@/constants/support-center";
 import { ROUTES } from "@/constants/routes";
+import { useFooterLinkGroups } from "@/hooks/use-shell-i18n";
+import { tf } from "@/lib/i18n/financial-messages";
 import { cn } from "@/lib/utils";
 
 type FooterHref = { label: string; href: string };
 
-const FOOTER_SITE_ORIGIN = "https://revshare.app";
-
-const assetsLinks: FooterHref[] = [
-  { label: "Обзор активов", href: ROUTES.dashboardOverview },
-  { label: "Метрики", href: ROUTES.dashboardMetrics },
-  { label: "Позиции", href: ROUTES.dashboardPositions },
-  { label: "Активность", href: ROUTES.dashboardActivity },
-  { label: "Выплаты — обзор", href: ROUTES.dashboardPayouts },
-  { label: "История выплат", href: ROUTES.dashboardPayoutsHistory },
-  { label: "Сравнение периодов", href: ROUTES.dashboardPayoutsComparison },
-  { label: "Пополнение USDT", href: "/assets/payouts/deposit" },
-  { label: "Вывод USDT", href: "/assets/payouts/withdraw" },
+const socials: { label: string; href: string; icon: "telegram" | "x" | "github" | "youtube" | "linkedin" | "mail" }[] = [
+  { label: "Telegram", href: "#", icon: "telegram" },
+  { label: "X", href: "#", icon: "x" },
+  { label: "GitHub", href: "#", icon: "github" },
+  { label: "YouTube", href: "#", icon: "youtube" },
+  { label: "LinkedIn", href: "#", icon: "linkedin" },
+  { label: "mail", href: `mailto:${SUPPORT_HELPDESK_EMAIL}`, icon: "mail" },
 ];
-
-const marketLinks: FooterHref[] = [
-  { label: "Вторичный рынок", href: ROUTES.dashboardSecondaryMarket },
-  { label: "Каталог релизов", href: ROUTES.dashboardCatalog },
-  { label: "Обзор рынка", href: ROUTES.catalogMarketOverview },
-  { label: "Параметры релиза", href: ROUTES.catalogReleaseParameters },
-  { label: "Аналитика релизов", href: ROUTES.analyticsReleases },
-  { label: "Калькулятор доходности", href: ROUTES.calculator },
-];
-
-const learnLinks: FooterHref[] = [
-  { label: "Подбор релиза", href: ROUTES.guideSelection },
-  { label: "Структура сделки", href: ROUTES.guideDealStructure },
-  { label: "Комиссии и тарифы", href: ROUTES.fees },
-];
-
-const servicesLinks: FooterHref[] = [
-  { label: "Поддержка", href: ROUTES.support },
-  { label: "Статус системы", href: ROUTES.systemStatus },
-  { label: "Новости", href: ROUTES.news },
-  { label: "Реферальная программа", href: ROUTES.referralProgram },
-  { label: "Партнёрская программа", href: ROUTES.partnerProgram },
-];
-
-const accountLinks: FooterHref[] = [
-  { label: "Кабинет", href: ROUTES.dashboard },
-  { label: "Профиль", href: ROUTES.dashboardProfile },
-  { label: "Выписка", href: ROUTES.dashboardStatement },
-  { label: "Вход", href: ROUTES.login },
-  { label: "Регистрация", href: ROUTES.register },
-];
-
-const legalLinks: FooterHref[] = [
-  { label: "Пользовательское соглашение", href: ROUTES.terms },
-  { label: "Политика конфиденциальности", href: ROUTES.privacy },
-  { label: "AML / KYC", href: ROUTES.support },
-];
-
-const socials: { label: string; href: string; icon: "telegram" | "x" | "github" | "youtube" | "linkedin" | "mail" }[] =
-  [
-    { label: "Telegram", href: "#", icon: "telegram" },
-    { label: "X", href: "#", icon: "x" },
-    { label: "GitHub", href: "#", icon: "github" },
-    { label: "YouTube", href: "#", icon: "youtube" },
-    { label: "LinkedIn", href: "#", icon: "linkedin" },
-    { label: "Почта", href: "mailto:support@revshare.app", icon: "mail" },
-  ];
 
 function SocialGlyph({ kind }: { kind: (typeof socials)[number]["icon"] }) {
   const common = "size-[18px]";
@@ -109,22 +67,26 @@ function SocialGlyph({ kind }: { kind: (typeof socials)[number]["icon"] }) {
 function FooterLinkColumn({
   title,
   links,
-  mono,
+  compact,
 }: {
   title: string;
   links: readonly FooterHref[];
-  mono?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div className="min-w-0">
-      <h3 className="mb-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">{title}</h3>
-      <ul className={cn("space-y-3.5", mono ? "font-mono text-[13px]" : "text-[14px]")}>
+      <h3
+        className={cn(
+          "mb-3 font-semibold uppercase tracking-[0.2em] text-zinc-500 sm:mb-5",
+          compact ? "text-[10px]" : "text-[11px]",
+        )}
+      >
+        {title}
+      </h3>
+      <ul className={cn("text-[14px] leading-snug", compact ? "space-y-2.5" : "space-y-3.5")}>
         {links.map((l) => (
-          <li key={l.href + l.label}>
-            <Link
-              href={l.href}
-              className="text-zinc-500 transition-colors hover:text-zinc-100 [text-wrap:balance]"
-            >
+          <li key={`${l.href}-${l.label}`}>
+            <Link href={l.href} className="text-zinc-500 transition-colors hover:text-zinc-100 text-balance">
               {l.label}
             </Link>
           </li>
@@ -134,51 +96,47 @@ function FooterLinkColumn({
   );
 }
 
-function FooterCtaBlock() {
-  const registerUrl = `${FOOTER_SITE_ORIGIN}${ROUTES.register}`;
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(registerUrl)}`;
-
-  return (
-    <div className="flex flex-col items-stretch rounded-2xl border border-white/10 bg-[#070707] p-6 sm:p-8 lg:max-w-[320px] lg:justify-self-end">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">Мобильный доступ</p>
-      <h3 className="mt-3 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-        RevShare рядом с вами
-      </h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-        Отсканируйте код — откроется регистрация. В демо среде ссылка ведёт на прод-домен для превью QR.
-      </p>
-      <Link
-        href={ROUTES.register}
-        className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-white text-sm font-semibold text-black transition hover:bg-zinc-200"
-      >
-        Создать аккаунт
-      </Link>
-      <div className="mt-8 flex justify-center rounded-xl bg-white p-3 ring-1 ring-white/10">
-        {/* eslint-disable-next-line @next/next/no-img-element -- внешний QR без remotePatterns */}
-        <img src={qrSrc} alt="" width={168} height={168} className="size-[168px]" />
-      </div>
-      <p className="mt-4 text-center text-[11px] leading-snug text-zinc-600">
-        Отсканируйте, чтобы перейти к регистрации RevShare
-      </p>
-    </div>
-  );
-}
-
-export function SiteFooter({ className }: { className?: string }) {
+export function SiteFooter({
+  className,
+  variant = "default",
+}: {
+  className?: string;
+  /** Компактнее на mobile — для лендинга кабинета. */
+  variant?: "default" | "compact";
+}) {
+  const { t } = useI18n();
+  const groups = useFooterLinkGroups();
   const year = new Date().getFullYear();
+  const compact = variant === "compact";
 
   return (
-    <footer className={cn("mt-auto border-t border-white/8 bg-black text-zinc-500", className)}>
-      <div className="mx-auto max-w-[1600px] px-4 pb-6 pt-16 sm:px-6 sm:pb-8 sm:pt-20 lg:px-10 lg:pb-10 lg:pt-24">
-        {/* Верхняя полоса — как newsletter / CTA у Sanity */}
-        <div className="border-b border-white/8 pb-12 md:pb-16">
+    <footer
+      data-footer-variant={compact ? "compact" : "default"}
+      className={cn(
+        "relative z-10 mt-auto overflow-visible bg-black font-sans text-zinc-500",
+        compact ? "border-t-0" : "border-t border-white/8",
+        className,
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-10",
+          compact ? "pb-4 pt-10 sm:pb-8 sm:pt-20 lg:pb-10 lg:pt-24" : "pb-6 pt-16 sm:pb-8 sm:pt-20 lg:pb-10 lg:pt-24",
+        )}
+      >
+        <div className={cn("border-b border-white/8", compact ? "hidden pb-0 sm:block sm:pb-12 md:pb-16" : "pb-12 md:pb-16")}>
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
             <div className="max-w-2xl space-y-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Обновления</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                {t("footer.promo.eyebrow")}
+              </p>
               <p className="text-2xl font-semibold leading-[1.15] tracking-tight text-white md:text-3xl lg:text-[2.15rem]">
-                Продукт, выплаты и вторичный рынок — в ленте{" "}
-                <Link href={ROUTES.news} className="text-zinc-300 underline decoration-white/20 underline-offset-[6px] transition hover:text-white hover:decoration-white/40">
-                  новостей
+                {t("footer.promo.title")}{" "}
+                <Link
+                  href={ROUTES.news}
+                  className="text-zinc-300 underline decoration-white/20 underline-offset-[6px] transition hover:text-white hover:decoration-white/40"
+                >
+                  {t("footer.promo.titleLink")}
                 </Link>
                 .
               </p>
@@ -188,119 +146,136 @@ export function SiteFooter({ className }: { className?: string }) {
                 href={ROUTES.news}
                 className="inline-flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] px-6 text-xs font-semibold uppercase tracking-wide text-zinc-100 transition hover:border-white/25 hover:bg-white/[0.07]"
               >
-                К ленте
+                {t("footer.promo.ctaNews")}
               </Link>
               <Link
                 href={ROUTES.dashboard}
                 className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full bg-white px-6 text-xs font-semibold uppercase tracking-wide text-black transition hover:bg-zinc-200"
               >
-                В кабинет
+                {t("footer.promo.ctaDashboard")}
                 <ArrowUpRight className="size-3.5 opacity-80" strokeWidth={2} aria-hidden />
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Основная сетка */}
-        <div className="mt-14 grid gap-14 lg:mt-20 lg:grid-cols-12 lg:gap-12 xl:gap-16">
-          {/* Бренд */}
-          <div className="flex flex-col gap-8 lg:col-span-3">
+        <div className={cn("grid lg:grid-cols-12 lg:gap-12 xl:gap-16", compact ? "mt-8 gap-8 sm:mt-14 lg:mt-20" : "mt-14 gap-14 lg:mt-20")}>
+          <div className="flex flex-col gap-6 overflow-visible sm:gap-8 lg:col-span-3">
             <div>
-              <Link
-                href={ROUTES.home}
-                className="inline-flex w-fit items-baseline gap-0.5 text-3xl font-semibold tracking-[-0.03em] text-white md:text-[2.1rem]"
-              >
-                <span>Rev</span>
-                <span className="text-zinc-400">Share</span>
+              <Link href={ROUTES.home} className="inline-flex w-fit items-center">
+                <Image
+                  src="/images/LOGO/black-logo-nofon.png"
+                  alt={BRAND.name}
+                  width={480}
+                  height={115}
+                  className={cn(
+                    "h-16 w-auto object-contain sm:h-[4.5rem] sm:max-w-[420px] md:h-24 md:max-w-[480px]",
+                    compact ? "max-w-[300px]" : "max-w-[360px]",
+                  )}
+                />
               </Link>
-              <p className="mt-4 max-w-sm text-sm leading-relaxed text-zinc-500 md:text-[15px]">
-                Долевое участие в доходе музыкальных релизов. USDT (TRC20), прозрачные условия и единый кабинет для
-                rights и ликвидности.
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-zinc-500 sm:mt-4 md:text-[15px]">
+                {t("footer.tagline")}
               </p>
             </div>
-            <p className="font-mono text-[11px] text-zinc-600">© {year} RevShare</p>
-            <button
-              type="button"
-              className="inline-flex w-fit items-center gap-2 rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-left text-xs font-medium text-zinc-300 transition hover:border-white/22 hover:bg-white/[0.06]"
-            >
+            <p className="text-[11px] text-zinc-600">
+              {tf(t("footer.copyright"), { year: String(year) })}
+            </p>
+            <div className="inline-flex w-fit items-center gap-2 rounded-lg px-1 py-1">
               <Globe className="size-3.5 text-zinc-500" strokeWidth={1.75} aria-hidden />
-              <span>Русский · USDT</span>
-              <span className="text-zinc-600" aria-hidden>
-                ▾
-              </span>
-            </button>
-          </div>
-
-          {/* Колонки ссылок */}
-          <div className="grid gap-12 sm:grid-cols-2 md:grid-cols-3 lg:col-span-6 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-12">
-            <FooterLinkColumn title="Активы и выплаты" links={assetsLinks} mono />
-            <FooterLinkColumn title="Рынок и аналитика" links={marketLinks} mono />
-            <FooterLinkColumn title="Обучение и тарифы" links={learnLinks} mono />
-            <FooterLinkColumn title="Сервисы" links={servicesLinks} mono />
-            <FooterLinkColumn title="Аккаунт" links={accountLinks} mono />
-            <FooterLinkColumn title="Правовая информация" links={legalLinks} mono />
-          </div>
-
-          <div className="lg:col-span-3">
-            <FooterCtaBlock />
-          </div>
-        </div>
-
-        {/* Крупный вордмарк */}
-        <div className="pointer-events-none mt-16 select-none border-t border-white/6 pt-14 text-center md:mt-24 md:pt-20">
-          <p
-            className="bg-gradient-to-b from-white/[0.14] via-white/[0.06] to-transparent bg-clip-text font-semibold tracking-[-0.05em] text-transparent"
-            style={{ fontSize: "clamp(3rem, 14vw, 9rem)", lineHeight: 0.9 }}
-            aria-hidden
-          >
-            RevShare
-          </p>
-        </div>
-
-        {/* Нижняя полоса */}
-        <div className="mt-12 flex flex-col gap-8 border-t border-white/8 pt-10 md:mt-16 md:flex-row md:items-center md:justify-between md:gap-6 md:pt-12">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600">Сообщество</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {socials.map((s) => (
-                <Link
-                  key={s.label}
-                  href={s.href}
-                  aria-label={s.label}
-                  className="flex size-11 items-center justify-center rounded-full border border-white/10 text-zinc-400 transition hover:border-white/18 hover:bg-white/[0.05] hover:text-zinc-100"
-                >
-                  <SocialGlyph kind={s.icon} />
-                </Link>
-              ))}
+              <LanguageSelector
+                variant="dark"
+                menuAlign="start"
+                buttonClassName="h-8 gap-1.5 px-1 py-0 text-xs text-zinc-300"
+              />
+              <span className="hidden text-xs text-zinc-500 sm:inline">{t("footer.localeSuffix")}</span>
             </div>
           </div>
 
-          <p className="max-w-md text-center font-mono text-[11px] leading-relaxed text-zinc-600 md:text-left">
-            USDT (TRC20) · ончейн-прозрачность · без скрытых комиссий в интерфейсе кабинета. Данные демо могут отличаться
-            от продакшена.
-          </p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:col-span-6 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-12">
+            <FooterLinkColumn compact={compact} title={groups.sections.assets} links={groups.assets} />
+            <FooterLinkColumn compact={compact} title={groups.sections.market} links={groups.market} />
+            <FooterLinkColumn compact={compact} title={groups.sections.learn} links={groups.learn} />
+            <FooterLinkColumn compact={compact} title={groups.sections.services} links={groups.services} />
+            <FooterLinkColumn compact={compact} title={groups.sections.account} links={groups.account} />
+            <FooterLinkColumn compact={compact} title={groups.sections.legal} links={groups.legal} />
+          </div>
 
-          <Link
-            href={ROUTES.systemStatus}
-            className="inline-flex items-center gap-2 self-center rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 font-mono text-[11px] text-zinc-400 transition hover:border-white/16 hover:text-zinc-200 md:self-auto"
-          >
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/50 opacity-40" />
-              <span className="relative inline-flex size-2 rounded-full bg-emerald-400/90" />
-            </span>
-            Статус сервисов
-          </Link>
+          <div className={cn("lg:col-span-3", compact && "hidden sm:block")}>
+            <FooterRegisterQr />
+          </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-white/6 pt-8 text-[12px] text-zinc-600 sm:flex-row sm:items-center">
+        <div
+          className={cn("relative", compact ? "mt-8 hidden md:mt-24 md:block" : "mt-16 md:mt-24")}
+          style={{ fontSize: "clamp(4.5rem, 22vw, 14rem)" }}
+        >
+          <FooterSoundtrack
+            variant="around-title"
+            className="pointer-events-none absolute inset-x-0 -top-2 z-0 md:-top-3"
+          />
+          <div className="pointer-events-none select-none text-center leading-[0.82]">
+            <p
+              className="bg-gradient-to-b from-white/[0.16] via-white/[0.07] to-transparent bg-clip-text font-semibold tracking-[-0.05em] text-transparent"
+              aria-hidden
+            >
+              {BRAND.name}
+            </p>
+          </div>
+
+          <div className="relative mt-10 overflow-hidden rounded-2xl md:mt-12">
+            <Image
+              src="/images/sotsety.png"
+              alt=""
+              fill
+              className="object-cover object-right"
+              sizes="(max-width: 1400px) 100vw, 1400px"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/88 via-black/72 to-black/55" aria-hidden />
+            <div className="relative flex flex-col gap-8 px-5 py-10 sm:px-8 md:flex-row md:items-center md:justify-between md:gap-6 md:py-12">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600">
+                  {t("footer.community.eyebrow")}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {socials.map((s) => (
+                    <Link
+                      key={s.icon}
+                      href={s.href}
+                      aria-label={s.icon === "mail" ? t("footer.social.mail") : s.label}
+                      className="flex size-11 items-center justify-center rounded-full border border-white/10 bg-black/30 text-zinc-400 backdrop-blur-sm transition hover:border-white/18 hover:bg-white/[0.05] hover:text-zinc-100"
+                    >
+                      <SocialGlyph kind={s.icon} />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              <p className="max-w-md text-center text-[11px] leading-relaxed text-zinc-500 md:text-left">
+                {t("footer.community.tagline")}
+              </p>
+
+              <Link
+                href={ROUTES.systemStatus}
+                className="inline-flex items-center gap-2 self-center rounded-full border border-white/10 bg-black/30 px-4 py-2 text-[11px] text-zinc-300 backdrop-blur-sm transition hover:border-white/16 hover:text-zinc-100 md:self-auto"
+              >
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400/50 opacity-40" />
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400/90" />
+                </span>
+                {t("footer.community.statusLink")}
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className={cn("flex flex-col items-start justify-between gap-3 border-t border-white/6 pt-6 text-[12px] text-zinc-600 sm:flex-row sm:items-center sm:pt-8", compact && "mt-6 sm:mt-10")}>
           <p>
-            <span className="font-medium text-zinc-400">RevShare</span> · {year} · Все права защищены
+            <span className="font-medium text-zinc-400">{BRAND.name}</span> · {year} · {t("footer.rights")}
           </p>
-          <p className="font-mono text-[11px] text-zinc-600">RevShare Platform</p>
+          <p className="text-[11px] text-zinc-600">{t("footer.platformLabel")}</p>
         </div>
       </div>
-
-      <FooterSoundtrack />
     </footer>
   );
 }

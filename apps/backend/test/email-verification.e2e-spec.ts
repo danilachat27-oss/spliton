@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { cleanupEmailVerificationUsers } from './helpers/cleanup-email-verification-users';
 import { createE2eApp, E2eApp } from './helpers/create-e2e-app';
+import { e2eRegisterPayload } from './helpers/register-e2e-user';
 
 function emailVerificationEmail(): string {
   return `test-email-verification-${Date.now()}@example.com`;
@@ -30,7 +31,7 @@ describe('Email verification (e2e)', () => {
 
     const reg = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password })
+      .send(e2eRegisterPayload(email, password))
       .expect(201);
     expect(reg.body).toEqual({ requiresEmailVerification: true });
     expect(reg.body.tokens).toBeUndefined();
@@ -46,7 +47,7 @@ describe('Email verification (e2e)', () => {
       .send({ token })
       .expect(201)
       .expect(({ body }) => {
-        expect(body).toEqual({ verified: true });
+        expect(body).toMatchObject({ verified: true });
       });
 
     await request(app.getHttpServer())

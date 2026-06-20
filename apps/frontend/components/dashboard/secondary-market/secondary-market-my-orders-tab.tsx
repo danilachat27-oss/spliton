@@ -1,9 +1,24 @@
 "use client";
 
 import * as React from "react";
+
 import Link from "next/link";
+
+import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { statusLabel } from "@/lib/i18n/status-labels";
+import type { AppLocale } from "@/lib/i18n/types";
+import { ROUTES } from "@/constants/routes";
+import { marketErrorMessage } from "@/services/secondary-market.service";
+import { getWalletDataSource } from "@/services/wallet.service";
+import { useSecondaryMarketMyOrders } from "@/hooks/use-secondary-market-live";
+import {
+  SecondaryMarketAuthGate,
+  SecondaryMarketErrorState,
+  SecondaryMarketLoadingState,
+} from "@/components/dashboard/secondary-market/secondary-market-fetch-states";
 import { Dialog } from "@base-ui/react/dialog";
-import { ExternalLink, LayoutPanelTop, MoreHorizontal, Search, X } from "lucide-react";
+import { ExternalLink, LayoutPanelTop, MoreHorizontal, Plus, Search, X } from "@/lib/lucide";
 
 import {
   secondaryMarketBookHref,
@@ -16,9 +31,12 @@ import {
   secondaryMarketReleaseAnalyticsPath,
 } from "@/constants/routes";
 import { getSecondaryMarketAnalyticsCatalogIdForReleaseSlug } from "@/mocks/dashboard/secondary-market-listings.mock";
+import { SECONDARY_MARKET_LISTINGS_MOCK } from "@/mocks/dashboard/secondary-market-listings.mock";
+import type { UserHoldingItem } from "@/services/secondary-market.service";
 import { cn } from "@/lib/utils";
 
 import { OrderCancelConfirmModal } from "@/components/dashboard/secondary-market/secondary-market-order-cancel-confirm-modal";
+import { SecondaryMarketCreateListingSheet } from "@/components/dashboard/secondary-market/secondary-market-create-listing-sheet";
 import {
   smTableActionIconCircle,
   smTableActionIconCirclePressed,
@@ -55,6 +73,7 @@ type UserOrder = {
   updatedAt: string;
   /** Для статуса «Сбой»: краткое пояснение для оператора. */
   failureReason?: string;
+  canCancel?: boolean;
 };
 
 const MOCK_ORDERS: UserOrder[] = [
@@ -159,18 +178,18 @@ const MOCK_ORDERS: UserOrder[] = [
     status: "rejected",
     createdAt: "16.04.2026 21:10",
     updatedAt: "16.04.2026 21:11",
-    failureReason: "Сервис matching вернул ошибку settlement. Заявка не попала в стакан.",
+    failureReason: "secondaryMarket.orders.mockSettlementFailure",
   },
 ];
 
 const STATUS_FILTER = [
-  { id: "all" as const, label: "Все" },
-  { id: "active" as const, label: "Активные" },
-  { id: "partial" as const, label: "Частично" },
-  { id: "filled" as const, label: "Исполнены" },
-  { id: "cancelled" as const, label: "Отменены" },
-  { id: "expired" as const, label: "Истекли" },
-  { id: "failed" as const, label: "Сбой" },
+  { id: "all" as const, key: "secondaryMarket.filters.all" },
+  { id: "active" as const, key: "secondaryMarket.filters.statusActive" },
+  { id: "partial" as const, key: "secondaryMarket.filters.statusPartial" },
+  { id: "filled" as const, key: "secondaryMarket.filters.statusFilled" },
+  { id: "cancelled" as const, key: "secondaryMarket.filters.statusCancelled" },
+  { id: "expired" as const, key: "secondaryMarket.filters.statusExpired" },
+  { id: "failed" as const, key: "secondaryMarket.filters.statusFailed" },
 ] as const;
 
 function formatUsdt(n: number) {
@@ -193,23 +212,8 @@ function CoverThumb({ symbol }: { symbol: string }) {
   );
 }
 
-function statusLabel(s: OrderStatus): string {
-  switch (s) {
-    case "active":
-      return "Активен";
-    case "partial":
-      return "Частично";
-    case "filled":
-      return "Исполнен";
-    case "cancelled":
-      return "Отменён";
-    case "expired":
-      return "Истёк";
-    case "rejected":
-      return "Сбой";
-    default:
-      return s;
-  }
+function orderStatusUiLabel(s: OrderStatus, locale: AppLocale): string {
+  return statusLabel("order", s, locale);
 }
 
 function statusPillClass(s: OrderStatus) {
@@ -235,6 +239,18 @@ function countBy(orders: UserOrder[], pred: (o: UserOrder) => boolean): number {
   return orders.filter(pred).length;
 }
 
+function mockUserHoldings(): UserHoldingItem[] {
+  return SECONDARY_MARKET_LISTINGS_MOCK.filter((l) => l.unitsAvailable > 0).map((l) => ({
+    releaseId: l.releaseId,
+    trackTitle: l.track,
+    symbol: l.symbol,
+    unitsTotal: String(l.unitsAvailable + 24),
+    unitsAvailable: String(Math.min(l.unitsAvailable, 120)),
+    unitsLocked: "0",
+    avgEntryPrice: String(l.pricePerUnit * 0.97),
+  }));
+}
+
 function formatOrderUpdatedAt() {
   const d = new Date();
   const dd = String(d.getDate()).padStart(2, "0");
@@ -253,7 +269,21 @@ function orderRemainingUnits(o: UserOrder): number {
   return Math.max(0, o.unitsTotal - o.unitsFilled);
 }
 
-function lockedHint(o: UserOrder): string {
+function formatMessage(template: string, params: Record<string, string | number>): string {
+  return Object.entries(params).reduce(
+    (acc, [key, value]) => acc.replace(new RegExp(`\\{${key}\\}`, "g"), String(value)),
+    template,
+  );
+}
+
+type TranslateFn = (key: string) => string;
+
+function tm(t: TranslateFn, key: string, params?: Record<string, string | number>): string {
+  const raw = t(key);
+  return params ? formatMessage(raw, params) : raw;
+}
+
+function lockedHint(o: UserOrder, t: TranslateFn): string {
   if (o.status === "filled" || o.status === "cancelled" || o.status === "expired" || o.status === "rejected") {
     return "—";
   }
@@ -261,32 +291,47 @@ function lockedHint(o: UserOrder): string {
     const rem = orderRemainingUnits(o);
     const px = o.pricePerUnit;
     if (o.mode === "market" && px == null) {
-      return `USDT ≈ ${formatUsdt(o.orderValueUsdt)} (рыночная заявка, макет)`;
+      return tm(t, "secondaryMarket.orders.lockedMarketMock", { amount: formatUsdt(o.orderValueUsdt) });
     }
     if (px != null) {
-      return `USDT ${formatUsdt(rem * px)} по остатку (${rem} u × ${formatUsdt(px)})`;
+      return tm(t, "secondaryMarket.orders.lockedBuyRemainder", {
+        amount: formatUsdt(rem * px),
+        units: rem,
+        price: formatUsdt(px),
+      });
     }
-    return `USDT по остатку`;
+    return t("secondaryMarket.orders.lockedBuyGeneric");
   }
-  return `Units ${orderRemainingUnits(o)}`;
+  return tm(t, "secondaryMarket.orders.lockedSellUnits", { units: orderRemainingUnits(o) });
 }
 
-function returnOnCancelHint(o: UserOrder): string {
+function returnOnCancelHint(o: UserOrder, t: TranslateFn): string {
   if (o.side === "buy") {
-    return "При отмене остатка неиспользованный USDT вернётся в доступный баланс.";
+    return t("secondaryMarket.orders.returnOnCancelBuy");
   }
-  return "При отмене остатка непроданные units вернутся в доступный баланс.";
+  return t("secondaryMarket.orders.returnOnCancelSell");
 }
 
-function executionSourceLabel(o: UserOrder): string {
-  if (o.status === "filled" && o.mode === "market") return "Исполнение: market fill";
-  if (o.status === "filled" && o.mode === "limit") return "Исполнение: полностью через стакан";
-  if (o.status === "partial") return "Исполнение: частично через стакан";
-  if (o.status === "active") return "Источник: ожидает в стакане";
-  if (o.status === "cancelled") return o.unitsFilled > 0 ? "Итог: часть исполнена, остаток снят" : "Итог: заявка снята до исполнения";
-  if (o.status === "expired") return "Итог: срок истёк, остаток снят автоматически";
-  if (o.status === "rejected") return "Итог: заявка не принята системой";
+function executionSourceLabel(o: UserOrder, t: TranslateFn): string {
+  if (o.status === "filled" && o.mode === "market") return t("secondaryMarket.orders.executionMarketFill");
+  if (o.status === "filled" && o.mode === "limit") return t("secondaryMarket.orders.executionLimitFull");
+  if (o.status === "partial") return t("secondaryMarket.orders.executionPartialBook");
+  if (o.status === "active") return t("secondaryMarket.orders.executionWaitingBook");
+  if (o.status === "cancelled")
+    return o.unitsFilled > 0
+      ? t("secondaryMarket.orders.executionCancelledPartial")
+      : t("secondaryMarket.orders.executionCancelledNone");
+  if (o.status === "expired") return t("secondaryMarket.orders.executionExpired");
+  if (o.status === "rejected") return t("secondaryMarket.orders.executionRejected");
   return "—";
+}
+
+function sideLabel(side: OrderSide, t: TranslateFn): string {
+  return side === "buy" ? t("secondaryMarket.side.buy") : t("secondaryMarket.side.sell");
+}
+
+function modeLabel(mode: OrderMode, t: TranslateFn): string {
+  return mode === "limit" ? t("secondaryMarket.forms.limit") : t("secondaryMarket.forms.market");
 }
 
 function bookHrefForOrder(o: UserOrder): string | null {
@@ -305,7 +350,14 @@ const ordersModalPopupClass =
   "rounded-2xl bg-[#101010] text-white shadow-[0_32px_120px_rgba(0,0,0,0.78)] transition-[opacity,transform] duration-200 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0";
 
 export function SecondaryMarketMyOrdersTab() {
+  const isLive = getWalletDataSource() === "live";
+  const { isAuthenticated } = useAuth();
+  const { locale, t } = useI18n();
+  const liveOrders = useSecondaryMarketMyOrders();
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [orders, setOrders] = React.useState<UserOrder[]>(() => [...MOCK_ORDERS]);
+  const ordersSource: UserOrder[] = isLive ? (liveOrders.orders as UserOrder[]) : orders;
+  const holdingsSource: UserHoldingItem[] = isLive ? liveOrders.holdings : mockUserHoldings();
   const [cancelTarget, setCancelTarget] = React.useState<UserOrder | null>(null);
   const [isBulkCancelOpen, setIsBulkCancelOpen] = React.useState(false);
   const [selectedOrder, setSelectedOrder] = React.useState<UserOrder | null>(null);
@@ -349,7 +401,7 @@ export function SecondaryMarketMyOrdersTab() {
   const [query, setQuery] = React.useState("");
 
   const summary = React.useMemo(() => {
-    const o = orders;
+    const o = ordersSource;
     return {
       active: countBy(o, (x) => x.status === "active"),
       partial: countBy(o, (x) => x.status === "partial"),
@@ -358,11 +410,11 @@ export function SecondaryMarketMyOrdersTab() {
       expired: countBy(o, (x) => x.status === "expired"),
       failed: countBy(o, (x) => x.status === "rejected"),
     };
-  }, [orders]);
+  }, [ordersSource]);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    return orders.filter((row) => {
+    return ordersSource.filter((row) => {
       if (statusFilter === "active" && row.status !== "active") return false;
       if (statusFilter === "partial" && row.status !== "partial") return false;
       if (statusFilter === "filled" && row.status !== "filled") return false;
@@ -379,24 +431,52 @@ export function SecondaryMarketMyOrdersTab() {
         row.artist.toLowerCase().includes(q)
       );
     });
-  }, [query, statusFilter, sideFilter, modeFilter, orders]);
+  }, [query, statusFilter, sideFilter, modeFilter, ordersSource]);
 
-  const cancellableCount = orders.filter((o) => o.status === "active" || o.status === "partial").length;
+  const cancellableCount = ordersSource.filter(
+    (o) => (o.status === "active" || o.status === "partial") && (!isLive || o.canCancel),
+  ).length;
 
-  const canCancel = (o: UserOrder) => o.status === "active" || o.status === "partial";
+  const canCancelOrder = (o: UserOrder) =>
+    isLive ? Boolean(o.canCancel) : o.status === "active" || o.status === "partial";
 
   const handleCancelConfirm = React.useCallback(async () => {
     pendingDetailRestoreOrderRef.current = null;
+    const wasPartial = cancelTarget?.status === "partial";
+    const orderId = cancelTarget?.id;
+    if (!orderId) return;
+    if (isLive) {
+      await liveOrders.cancelOrder(orderId);
+      clearToastSoon(wasPartial ? t("secondaryMarket.toast.partialCancelled") : t("secondaryMarket.toast.listingCancelled"));
+      setCancelTarget(null);
+      return;
+    }
     await new Promise((r) => setTimeout(r, 480));
     const updatedAt = formatOrderUpdatedAt();
-    const wasPartial = cancelTarget?.status === "partial";
     const id = cancelTarget?.id;
     if (!id) return;
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "cancelled" as const, updatedAt } : o)));
-    clearToastSoon(wasPartial ? "Остаток заявки снят со стакана" : "Заявка отменена");
-  }, [cancelTarget, clearToastSoon]);
+    clearToastSoon(wasPartial ? t("secondaryMarket.toast.partialCancelled") : t("secondaryMarket.toast.orderCancelled"));
+  }, [cancelTarget, clearToastSoon, isLive, liveOrders, t]);
 
   const handleBulkCancel = React.useCallback(async () => {
+    const targets = ordersSource.filter((o) => canCancelOrder(o));
+    if (isLive) {
+      if (targets.length === 0) {
+        setIsBulkCancelOpen(false);
+        return;
+      }
+      try {
+        for (const order of targets) {
+          await liveOrders.cancelOrder(order.id);
+        }
+        clearToastSoon(t("secondaryMarket.toast.bulkCancelled"));
+      } catch (e) {
+        clearToastSoon(marketErrorMessage(e));
+      }
+      setIsBulkCancelOpen(false);
+      return;
+    }
     await new Promise((r) => setTimeout(r, 420));
     const updatedAt = formatOrderUpdatedAt();
     setOrders((prev) =>
@@ -404,9 +484,9 @@ export function SecondaryMarketMyOrdersTab() {
         o.status === "active" || o.status === "partial" ? { ...o, status: "cancelled" as const, updatedAt } : o,
       ),
     );
-    clearToastSoon("Активные заявки отменены");
+    clearToastSoon(t("secondaryMarket.toast.bulkCancelled"));
     setIsBulkCancelOpen(false);
-  }, [clearToastSoon]);
+  }, [clearToastSoon, t]);
 
   const cancelModalVariant = cancelTarget?.status === "partial" ? "partial" : "active";
   const cancelModalSide = cancelTarget?.side ?? "buy";
@@ -415,39 +495,104 @@ export function SecondaryMarketMyOrdersTab() {
 
   const detailOrder = React.useMemo(() => {
     if (!selectedOrder) return null;
-    return orders.find((o) => o.id === selectedOrder.id) ?? selectedOrder;
-  }, [orders, selectedOrder]);
+    return ordersSource.find((o) => o.id === selectedOrder.id) ?? selectedOrder;
+  }, [ordersSource, selectedOrder]);
+
+  const handleCreateListing = React.useCallback(
+    async (body: { releaseId: string; units: number; pricePerUnit: number }) => {
+      if (isLive) {
+        try {
+          await liveOrders.create(body);
+        } catch (e) {
+          throw new Error(marketErrorMessage(e));
+        }
+        clearToastSoon(t("secondaryMarket.toast.listingPlaced"));
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 520));
+      const listing = SECONDARY_MARKET_LISTINGS_MOCK.find((l) => l.releaseId === body.releaseId);
+      const holding = holdingsSource.find((h) => h.releaseId === body.releaseId);
+      const updatedAt = formatOrderUpdatedAt();
+      const newOrder: UserOrder = {
+        id: `ord-${Date.now().toString(36)}`,
+        listingId: listing?.id ?? `lst-${body.releaseId}`,
+        symbol: holding?.symbol ?? listing?.symbol ?? "—",
+        track: holding?.trackTitle ?? listing?.track ?? "—",
+        artist: listing?.artist ?? "—",
+        releaseId: body.releaseId,
+        side: "sell",
+        mode: "limit",
+        pricePerUnit: body.pricePerUnit,
+        unitsTotal: body.units,
+        unitsFilled: 0,
+        orderValueUsdt: body.pricePerUnit * body.units,
+        status: "active",
+        createdAt: updatedAt,
+        updatedAt,
+      };
+      setOrders((prev) => [newOrder, ...prev]);
+      clearToastSoon(t("secondaryMarket.toast.listingPlacedDemo"));
+    },
+    [clearToastSoon, holdingsSource, isLive, liveOrders, t],
+  );
+
+  if (isLive && !isAuthenticated) {
+    return <SecondaryMarketAuthGate />;
+  }
+  if (isLive && liveOrders.loading && liveOrders.orders.length === 0) {
+    return <SecondaryMarketLoadingState label={t("secondaryMarket.errors.loadingOrders")} />;
+  }
+  if (isLive && liveOrders.error) {
+    return <SecondaryMarketErrorState message={liveOrders.error} onRetry={() => void liveOrders.reload()} />;
+  }
 
   return (
     <div className="relative space-y-6">
-      <p className="max-w-[62ch] font-mono text-[11px] leading-relaxed text-zinc-600">
-        Личный операционный экран: только ваши заявки на вторичном рынке. Не история рынка и не лента сделок.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="max-w-[62ch] font-mono text-[11px] leading-relaxed text-zinc-600">
+          {t("secondaryMarket.orders.intro")}
+        </p>
+        <button
+          type="button"
+          onClick={() => setIsCreateOpen(true)}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 self-start rounded-full bg-[#B7F500] px-4 font-mono text-[12px] font-semibold text-black transition hover:bg-[#c8ff3d] active:scale-[0.98]"
+        >
+          <Plus className="size-4" strokeWidth={2.5} aria-hidden />
+          {t("secondaryMarket.forms.createListingTitle")}
+        </button>
+      </div>
+
+      <SecondaryMarketCreateListingSheet
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        holdings={holdingsSource}
+        onSubmit={handleCreateListing}
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Активные</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.orders.kpiActive")}</p>
           <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-white">{summary.active}</p>
         </div>
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Частично</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.orders.kpiPartial")}</p>
           <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-amber-200/90">{summary.partial}</p>
         </div>
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Исполнено</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.orders.kpiFilled")}</p>
           <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-200">{summary.filled}</p>
         </div>
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Отмена / истёк / сбой</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.orders.kpiTerminal")}</p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] tabular-nums text-zinc-400">
             <span>
-              <span className="text-zinc-600">Отм.</span> {summary.cancelled}
+              <span className="text-zinc-600">{t("secondaryMarket.orders.kpiCancelledAbbr")}</span> {summary.cancelled}
             </span>
             <span>
-              <span className="text-zinc-600">Ист.</span> {summary.expired}
+              <span className="text-zinc-600">{t("secondaryMarket.orders.kpiExpiredAbbr")}</span> {summary.expired}
             </span>
             <span>
-              <span className="text-zinc-600">Сбой</span> {summary.failed}
+              <span className="text-zinc-600">{t("secondaryMarket.orders.kpiFailedAbbr")}</span> {summary.failed}
             </span>
           </div>
         </div>
@@ -465,7 +610,7 @@ export function SecondaryMarketMyOrdersTab() {
                 statusFilter === chip.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
               )}
             >
-              {chip.label}
+              {t(chip.key)}
             </button>
           ))}
         </div>
@@ -475,7 +620,7 @@ export function SecondaryMarketMyOrdersTab() {
             onClick={() => setIsBulkCancelOpen(true)}
             className="shrink-0 self-start rounded-full border border-white/12 bg-white/4 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-wide text-zinc-300 transition hover:border-fuchsia-400/35 hover:text-fuchsia-200 lg:self-center"
           >
-            Отменить все активные ({cancellableCount})
+            {tm(t, "secondaryMarket.actions.cancelAllActive", { count: cancellableCount })}
           </button>
         ) : null}
       </div>
@@ -487,19 +632,19 @@ export function SecondaryMarketMyOrdersTab() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Релиз, артист, тикер или id ордера"
+            placeholder={t("secondaryMarket.filters.searchOrders")}
             className="h-10 w-full rounded-xl bg-[#111111] py-2 pl-10 pr-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none ring-1 ring-white/10 focus:ring-[#B7F500]/35"
-            aria-label="Поиск по заявкам"
+            aria-label={t("secondaryMarket.aria.searchOrders")}
           />
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-2">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Сторона</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">{t("secondaryMarket.filters.side")}</span>
             {(
               [
-                { id: "all" as const, label: "Все" },
-                { id: "buy" as const, label: "Покупка" },
-                { id: "sell" as const, label: "Продажа" },
+                { id: "all" as const, key: "secondaryMarket.filters.all" },
+                { id: "buy" as const, key: "secondaryMarket.side.buy" },
+                { id: "sell" as const, key: "secondaryMarket.side.sell" },
               ] as const
             ).map((chip) => (
               <button
@@ -511,17 +656,17 @@ export function SecondaryMarketMyOrdersTab() {
                   sideFilter === chip.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
                 )}
               >
-                {chip.label}
+                {t(chip.key)}
               </button>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Тип</span>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">{t("secondaryMarket.filters.type")}</span>
             {(
               [
-                { id: "all" as const, label: "Все" },
-                { id: "limit" as const, label: "Лимит" },
-                { id: "market" as const, label: "Рынок" },
+                { id: "all" as const, key: "secondaryMarket.filters.all" },
+                { id: "limit" as const, key: "secondaryMarket.forms.limit" },
+                { id: "market" as const, key: "secondaryMarket.forms.market" },
               ] as const
             ).map((chip) => (
               <button
@@ -533,31 +678,39 @@ export function SecondaryMarketMyOrdersTab() {
                   modeFilter === chip.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
                 )}
               >
-                {chip.label}
+                {t(chip.key)}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {orders.length === 0 ? (
+      {ordersSource.length === 0 ? (
         <div className="rounded-2xl bg-[#111111] px-6 py-16 text-center ring-1 ring-white/6">
-          <h2 className="text-lg font-semibold tracking-tight text-white">Заявок пока нет</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-white">{t("secondaryMarket.empty.noOrders")}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-            Когда вы выставите заявку на покупку или продажу на вторичном рынке, она появится здесь.
+            {t("secondaryMarket.empty.noOrdersDesc")}
           </p>
           <Link
             href={marketHref}
             className="mt-6 inline-flex h-10 items-center justify-center rounded-full bg-white px-5 font-mono text-[12px] font-semibold text-black transition hover:opacity-90"
           >
-            Перейти к рынку
+            {t("secondaryMarket.actions.goToMarket")}
           </Link>
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#B7F500] px-5 font-mono text-[12px] font-semibold text-black transition hover:bg-[#c8ff3d]"
+          >
+            <Plus className="size-4" strokeWidth={2.5} aria-hidden />
+            {t("secondaryMarket.forms.createListingTitle")}
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl bg-[#111111] px-6 py-16 text-center ring-1 ring-white/6">
-          <h2 className="text-lg font-semibold tracking-tight text-white">Ничего не найдено</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-white">{t("secondaryMarket.empty.noResults")}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-            Попробуйте изменить фильтры или очистить поиск.
+            {t("secondaryMarket.empty.noOrdersFilterDesc")}
           </p>
           <button
             type="button"
@@ -569,26 +722,63 @@ export function SecondaryMarketMyOrdersTab() {
             }}
             className="mt-6 font-mono text-[12px] text-zinc-400 underline-offset-2 hover:text-white hover:underline"
           >
-            Сбросить фильтры
+            {t("secondaryMarket.filters.resetFilters")}
           </button>
         </div>
       ) : (
-        <div className="min-w-0 overflow-x-auto rounded-2xl bg-[#111111] ring-1 ring-white/6">
+        <>
+          <div className="divide-y divide-white/6 md:hidden">
+            {filtered.map((order) => {
+              const bookId = secondaryMarketBookIdForSymbol(order.symbol) ?? order.releaseId;
+              return (
+                <div key={order.id} className="flex items-start gap-3 py-3.5">
+                  <CoverThumb symbol={order.symbol} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-semibold text-white">{order.track}</p>
+                        <p className="truncate text-[12px] text-zinc-500">
+                          {order.symbol} · {sideLabel(order.side, t)} · {modeLabel(order.mode, t)}
+                        </p>
+                      </div>
+                      <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold", statusPillClass(order.status))}>
+                        {orderStatusUiLabel(order.status, locale)}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 font-mono text-[12px]">
+                      <span className="text-zinc-400">
+                        {order.pricePerUnit != null ? `${order.pricePerUnit.toLocaleString("ru-RU")} USDT` : t("secondaryMarket.forms.market")}
+                        <span className="text-zinc-600"> · </span>
+                        {order.unitsFilled}/{order.unitsTotal} u
+                      </span>
+                      <Link
+                        href={secondaryMarketBookHref(bookId)}
+                        className="text-[#B7F500] hover:underline"
+                      >
+                        {t("secondaryMarket.actions.orderBook")}
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden min-w-0 overflow-x-auto md:block">
           <table className="w-full min-w-[1020px] border-collapse text-left">
             <thead>
               <tr className="border-b border-white/10 font-mono text-[10px] uppercase tracking-wider text-zinc-600">
-                <th className="px-3 py-2.5 font-normal">ID</th>
-                <th className="min-w-[200px] px-3 py-2.5 font-normal">Листинг / релиз</th>
-                <th className="px-3 py-2.5 font-normal">Сторона</th>
-                <th className="px-3 py-2.5 font-normal">Тип</th>
-                <th className="px-3 py-2.5 text-right font-normal">Цена / u</th>
-                <th className="px-3 py-2.5 text-right font-normal">Units</th>
-                <th className="hidden px-3 py-2.5 text-right font-normal lg:table-cell">Исполн.</th>
-                <th className="hidden px-3 py-2.5 text-right font-normal lg:table-cell">Остаток</th>
-                <th className="px-3 py-2.5 text-right font-normal">Сумма</th>
-                <th className="px-3 py-2.5 font-normal">Статус</th>
-                <th className="hidden px-3 py-2.5 font-normal xl:table-cell">Создан</th>
-                <th className="px-3 py-2.5 text-right font-normal">Действия</th>
+                <th className="px-3 py-2.5 font-normal">{t("secondaryMarket.orders.columnId")}</th>
+                <th className="min-w-[200px] px-3 py-2.5 font-normal">{t("secondaryMarket.orders.columnListing")}</th>
+                <th className="px-3 py-2.5 font-normal">{t("secondaryMarket.orders.columnSide")}</th>
+                <th className="px-3 py-2.5 font-normal">{t("secondaryMarket.orders.columnType")}</th>
+                <th className="px-3 py-2.5 text-right font-normal">{t("secondaryMarket.orders.columnPrice")}</th>
+                <th className="px-3 py-2.5 text-right font-normal">{t("secondaryMarket.orders.columnUnits")}</th>
+                <th className="hidden px-3 py-2.5 text-right font-normal lg:table-cell">{t("secondaryMarket.orders.columnFilled")}</th>
+                <th className="hidden px-3 py-2.5 text-right font-normal lg:table-cell">{t("secondaryMarket.orders.columnRemainder")}</th>
+                <th className="px-3 py-2.5 text-right font-normal">{t("secondaryMarket.orders.columnAmount")}</th>
+                <th className="px-3 py-2.5 font-normal">{t("secondaryMarket.orders.columnStatus")}</th>
+                <th className="hidden px-3 py-2.5 font-normal xl:table-cell">{t("secondaryMarket.orders.columnCreated")}</th>
+                <th className="px-3 py-2.5 text-right font-normal">{t("secondaryMarket.actions.actions")}</th>
               </tr>
             </thead>
             <tbody className="font-mono text-[12px] text-zinc-300">
@@ -638,13 +828,13 @@ export function SecondaryMarketMyOrdersTab() {
                           row.side === "buy" ? "text-[#B7F500]" : "text-fuchsia-300",
                         )}
                       >
-                        {row.side === "buy" ? "Покупка" : "Продажа"}
+                        {sideLabel(row.side, t)}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 align-middle text-zinc-400">{row.mode === "limit" ? "Лимит" : "Рынок"}</td>
+                    <td className="px-3 py-2.5 align-middle text-zinc-400">{modeLabel(row.mode, t)}</td>
                     <td className="px-3 py-2.5 text-right align-middle tabular-nums text-white">
                       {row.mode === "market" && row.pricePerUnit == null ? (
-                        <span className="text-zinc-500">По рынку</span>
+                        <span className="text-zinc-500">{t("secondaryMarket.orders.atMarket")}</span>
                       ) : row.pricePerUnit != null ? (
                         formatUsdt(row.pricePerUnit)
                       ) : (
@@ -665,17 +855,17 @@ export function SecondaryMarketMyOrdersTab() {
                       <span
                         title={
                           row.status === "rejected" && row.failureReason
-                            ? row.failureReason
+                            ? t(row.failureReason)
                             : row.side === "buy"
-                              ? "Покупка: при выставлении блокируется USDT; частичное исполнение списывает пропорционально; отмена остатка возвращает USDT."
-                              : "Продажа: блокируются units; частичное исполнение продаёт часть; отмена остатка возвращает units."
+                              ? t("secondaryMarket.orders.statusTooltipBuy")
+                              : t("secondaryMarket.orders.statusTooltipSell")
                         }
                         className={cn(
                           "inline-flex cursor-help rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
                           statusPillClass(row.status),
                         )}
                       >
-                        {statusLabel(row.status)}
+                        {orderStatusUiLabel(row.status, locale)}
                       </span>
                     </td>
                     <td className="hidden px-3 py-2.5 align-middle text-[11px] text-zinc-600 xl:table-cell">
@@ -690,7 +880,7 @@ export function SecondaryMarketMyOrdersTab() {
                         <button
                           type="button"
                           className={smTableActionIconCircle}
-                          aria-label="Подробнее о заявке"
+                          aria-label={t("secondaryMarket.actions.orderDetails")}
                           onClick={() => {
                             setOrderActionMenuId(null);
                             setSelectedOrder(row);
@@ -699,7 +889,7 @@ export function SecondaryMarketMyOrdersTab() {
                           <LayoutPanelTop className="size-[17px]" strokeWidth={1.75} aria-hidden />
                         </button>
                         <Link href={assetHref} scroll={false} className={smTableActionReleasePill}>
-                          Релиз
+                          {t("secondaryMarket.actions.release")}
                           <ExternalLink className="size-3.5 opacity-55" aria-hidden />
                         </Link>
                         <div className="relative shrink-0">
@@ -707,7 +897,7 @@ export function SecondaryMarketMyOrdersTab() {
                             type="button"
                             aria-expanded={orderActionMenuId === row.id}
                             aria-haspopup="menu"
-                            aria-label="Ещё действия"
+                            aria-label={t("secondaryMarket.aria.moreActions")}
                             onClick={() => setOrderActionMenuId((id) => (id === row.id ? null : row.id))}
                             className={cn(
                               smTableActionIconCircle,
@@ -727,9 +917,9 @@ export function SecondaryMarketMyOrdersTab() {
                                   setSelectedOrder(row);
                                 }}
                               >
-                                Подробнее
+                                {t("secondaryMarket.actions.details")}
                               </button>
-                              {canCancel(row) ? (
+                              {canCancelOrder(row) ? (
                                 <button
                                   type="button"
                                   role="menuitem"
@@ -739,7 +929,7 @@ export function SecondaryMarketMyOrdersTab() {
                                     setCancelTarget(row);
                                   }}
                                 >
-                                  {row.status === "partial" ? "Отменить остаток" : "Отменить"}
+                                  {row.status === "partial" ? t("secondaryMarket.actions.cancelRemainder") : t("secondaryMarket.actions.cancel")}
                                 </button>
                               ) : null}
                               {stackHref ? (
@@ -750,10 +940,10 @@ export function SecondaryMarketMyOrdersTab() {
                                   className={smTableActionMenuItemLink}
                                   onClick={() => setOrderActionMenuId(null)}
                                 >
-                                  Стакан
+                                  {t("secondaryMarket.actions.orderBook")}
                                 </Link>
                               ) : (
-                                <span className={smTableActionMenuItemMuted}>Стакан недоступен</span>
+                                <span className={smTableActionMenuItemMuted}>{t("secondaryMarket.actions.orderBookUnavailable")}</span>
                               )}
                               {showRepeat ? (
                                 <Link
@@ -763,7 +953,7 @@ export function SecondaryMarketMyOrdersTab() {
                                   className={smTableActionMenuItemAccent}
                                   onClick={() => setOrderActionMenuId(null)}
                                 >
-                                  Повторить заявку
+                                  {t("secondaryMarket.actions.repeatOrder")}
                                 </Link>
                               ) : null}
                               <Link
@@ -773,7 +963,7 @@ export function SecondaryMarketMyOrdersTab() {
                                 className={smTableActionMenuItemSecondary}
                                 onClick={() => setOrderActionMenuId(null)}
                               >
-                                Торговая аналитика
+                                {t("secondaryMarket.actions.tradingAnalytics")}
                               </Link>
                               <Link
                                 role="menuitem"
@@ -782,7 +972,7 @@ export function SecondaryMarketMyOrdersTab() {
                                 className={smTableActionMenuItemSecondary}
                                 onClick={() => setOrderActionMenuId(null)}
                               >
-                                Инфо по листингу
+                                {t("secondaryMarket.actions.listingInfo")}
                               </Link>
                             </div>
                           ) : null}
@@ -794,7 +984,8 @@ export function SecondaryMarketMyOrdersTab() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <OrderCancelConfirmModal
@@ -829,36 +1020,40 @@ export function SecondaryMarketMyOrdersTab() {
             )}
           >
             <Dialog.Close
-              aria-label="Закрыть"
+              aria-label={t("secondaryMarket.aria.close")}
               className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-zinc-200"
             >
               <X className="size-4" />
             </Dialog.Close>
             <Dialog.Title className="pr-10 text-base font-semibold tracking-tight text-white">
-              Отменить все активные заявки?
+              {t("secondaryMarket.forms.bulkCancelTitle")}
             </Dialog.Title>
             <Dialog.Description className="mt-3 space-y-2 text-[13px] leading-relaxed text-zinc-400">
               <p>
-                Будут сняты только активные и неисполненные остатки ({cancellableCount}{" "}
-                {cancellableCount === 1 ? "заявка" : "заявок"}). Частично исполненные ордера: отменяется только
-                остаток в стакане; уже исполненная часть не затрагивается.
+                {tm(t, "secondaryMarket.orders.bulkCancelDesc1", {
+                  count: cancellableCount,
+                  ordersWord:
+                    cancellableCount === 1
+                      ? t("secondaryMarket.orders.orderWordOne")
+                      : t("secondaryMarket.orders.orderWordMany"),
+                })}
               </p>
-              <p className="text-zinc-500">Полностью исполненные заявки не изменяются.</p>
+              <p className="text-zinc-500">{t("secondaryMarket.orders.bulkCancelDesc2")}</p>
             </Dialog.Description>
             <div className="mt-5 rounded-xl bg-white/[0.04] px-4 py-3.5">
-              <p className="font-mono text-[11px] text-zinc-500">К отмене остатков</p>
+              <p className="font-mono text-[11px] text-zinc-500">{t("secondaryMarket.orders.bulkCancelCountLabel")}</p>
               <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-white">{cancellableCount}</p>
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Dialog.Close className="h-10 rounded-full bg-white/10 px-5 font-mono text-[12px] font-medium text-zinc-200 transition hover:bg-white/14 hover:text-white">
-                Не отменять
+                {t("secondaryMarket.forms.doNotCancel")}
               </Dialog.Close>
               <button
                 type="button"
                 onClick={() => void handleBulkCancel()}
                 className="h-10 rounded-full bg-white px-5 font-mono text-[12px] font-semibold text-black transition hover:opacity-90"
               >
-                Подтвердить отмену
+                {t("secondaryMarket.forms.confirmCancel")}
               </button>
             </div>
           </Dialog.Popup>
@@ -901,7 +1096,7 @@ export function SecondaryMarketMyOrdersTab() {
                     </Dialog.Description>
                   </div>
                   <Dialog.Close
-                    aria-label="Закрыть"
+                    aria-label={t("secondaryMarket.aria.close")}
                     className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
                   >
                     <X className="size-4" />
@@ -909,27 +1104,27 @@ export function SecondaryMarketMyOrdersTab() {
                 </div>
 
                 <div className="px-6 pb-4">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Заявка</p>
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">{t("secondaryMarket.orders.detailOrder")}</p>
                   <dl className="mt-3 space-y-0 font-mono text-[12px]">
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">ID</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.columnId")}</dt>
                       <dd className="tabular-nums text-zinc-200">{detailOrder.id}</dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Сторона</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.columnSide")}</dt>
                       <dd className={detailOrder.side === "buy" ? "text-[#B7F500]" : "text-fuchsia-300"}>
-                        {detailOrder.side === "buy" ? "Покупка" : "Продажа"}
+                        {sideLabel(detailOrder.side, t)}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Тип</dt>
-                      <dd className="text-zinc-300">{detailOrder.mode === "limit" ? "Лимит" : "Рынок"}</dd>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.columnType")}</dt>
+                      <dd className="text-zinc-300">{modeLabel(detailOrder.mode, t)}</dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Цена / unit</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.listingDetail.pricePerUnit")}</dt>
                       <dd className="text-right tabular-nums text-zinc-200">
                         {detailOrder.mode === "market" && detailOrder.pricePerUnit == null ? (
-                          <span className="text-zinc-500">По рынку</span>
+                          <span className="text-zinc-500">{t("secondaryMarket.orders.atMarket")}</span>
                         ) : detailOrder.pricePerUnit != null ? (
                           formatUsdt(detailOrder.pricePerUnit)
                         ) : (
@@ -938,42 +1133,42 @@ export function SecondaryMarketMyOrdersTab() {
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Объём</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.detailVolume")}</dt>
                       <dd className="tabular-nums text-zinc-200">{detailOrder.unitsTotal}</dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Исполнено</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.forms.filledUnits")}</dt>
                       <dd className="tabular-nums text-zinc-200">{detailOrder.unitsFilled}</dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Остаток</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.columnRemainder")}</dt>
                       <dd className="tabular-nums text-zinc-200">{orderRemainingUnits(detailOrder)}</dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Сумма</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.columnAmount")}</dt>
                       <dd className="tabular-nums text-zinc-200">
                         {detailOrder.orderValueUsdt > 0 ? `${formatUsdt(detailOrder.orderValueUsdt)} USDT` : "—"}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Создан</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.columnCreated")}</dt>
                       <dd className="text-right text-zinc-400">{detailOrder.createdAt}</dd>
                     </div>
                     <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Обновлён</dt>
+                      <dt className="text-zinc-600">{t("secondaryMarket.orders.detailUpdated")}</dt>
                       <dd className="text-right text-zinc-400">{detailOrder.updatedAt}</dd>
                     </div>
                   </dl>
                   <div className="mt-4 rounded-xl bg-white/[0.03] px-4 py-3">
-                    <p className="text-[11px] leading-relaxed text-zinc-500">{executionSourceLabel(detailOrder)}</p>
+                    <p className="text-[11px] leading-relaxed text-zinc-500">{executionSourceLabel(detailOrder, t)}</p>
                     {detailOrder.failureReason ? (
-                      <p className="mt-2 text-[11px] leading-relaxed text-fuchsia-200/80">{detailOrder.failureReason}</p>
+                      <p className="mt-2 text-[11px] leading-relaxed text-fuchsia-200/80">{t(detailOrder.failureReason)}</p>
                     ) : null}
                   </div>
                   <div className="mt-2.5 rounded-xl bg-white/[0.03] px-4 py-3">
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Заблокировано сейчас</p>
-                    <p className="mt-1 text-[12px] text-zinc-300">{lockedHint(detailOrder)}</p>
-                    <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{returnOnCancelHint(detailOrder)}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">{t("secondaryMarket.orders.detailLockedNow")}</p>
+                    <p className="mt-1 text-[12px] text-zinc-300">{lockedHint(detailOrder, t)}</p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{returnOnCancelHint(detailOrder, t)}</p>
                   </div>
                 </div>
 
@@ -984,7 +1179,7 @@ export function SecondaryMarketMyOrdersTab() {
                       scroll={false}
                       className={cn(smTableActionReleasePill, "h-10 px-5")}
                     >
-                      Релиз
+                      {t("secondaryMarket.actions.release")}
                       <ExternalLink className="size-3.5 opacity-55" aria-hidden />
                     </Link>
                     {bookHrefForOrder(detailOrder) ? (
@@ -993,11 +1188,11 @@ export function SecondaryMarketMyOrdersTab() {
                         scroll={false}
                         className="inline-flex h-10 items-center justify-center rounded-full bg-white/10 px-5 font-mono text-[12px] font-medium text-zinc-200 transition hover:bg-white/14"
                       >
-                        Стакан
+                        {t("secondaryMarket.actions.orderBook")}
                       </Link>
                     ) : null}
                   </div>
-                  {canCancel(detailOrder) ? (
+                  {canCancelOrder(detailOrder) ? (
                     <button
                       type="button"
                       onClick={() => {
@@ -1007,11 +1202,11 @@ export function SecondaryMarketMyOrdersTab() {
                       }}
                       className="w-full rounded-full bg-fuchsia-500/20 py-2.5 font-mono text-[12px] font-semibold text-fuchsia-100 transition hover:bg-fuchsia-500/28"
                     >
-                      {detailOrder.status === "partial" ? "Отменить остаток" : "Отменить заявку"}
+                      {detailOrder.status === "partial" ? t("secondaryMarket.actions.cancelRemainder") : t("secondaryMarket.forms.cancelOrder")}
                     </button>
                   ) : null}
                   {!bookHrefForOrder(detailOrder) ? (
-                    <p className="text-center font-mono text-[10px] text-zinc-600">Стакан для этого тикера недоступен в макете</p>
+                    <p className="text-center font-mono text-[10px] text-zinc-600">{t("secondaryMarket.orders.bookUnavailableMock")}</p>
                   ) : null}
                   <div className="flex flex-col gap-1.5 pt-1">
                     <Link
@@ -1019,14 +1214,14 @@ export function SecondaryMarketMyOrdersTab() {
                       scroll={false}
                       className="font-mono text-[11px] text-zinc-500 underline-offset-4 transition hover:text-zinc-300 hover:underline"
                     >
-                      Торговая аналитика вторички
+                      {t("secondaryMarket.actions.secondaryAnalytics")}
                     </Link>
                     <Link
                       href={secondaryMarketListingInfoPath(detailOrder.listingId)}
                       scroll={false}
                       className="font-mono text-[11px] text-zinc-500 underline-offset-4 transition hover:text-zinc-300 hover:underline"
                     >
-                      Информация по листингу
+                      {t("secondaryMarket.actions.listingInfoLong")}
                     </Link>
                   </div>
                 </div>

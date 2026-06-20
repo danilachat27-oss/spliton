@@ -1,0 +1,92 @@
+/* Support megamenu — zoomed preview scenes */
+
+.service-preview-scene--support-hub,
+.service-preview-scene--support-ticket,
+.service-preview-scene--support-status,
+.service-preview-scene--support-security {
+  padding: 0.25rem;
+}
+
+.service-preview-cursor-local--sup-hub-search,
+.service-preview-local-tip--sup-hub-search {
+  animation-name: sp-sup-show-search;
+}
+
+.service-preview-local-ring--sup-hub-search {
+  animation-name: sp-sup-ring-search;
+}
+
+@keyframes sp-sup-show-search {
+  0%, 4% { opacity: 0; }
+  6%, 40% { opacity: 1; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes sp-sup-ring-search {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+.service-preview-cursor-local--sup-ticket-send,
+.service-preview-local-tip--sup-ticket-send {
+  animation-name: sp-sup-show-ticket;
+}
+
+.service-preview-local-ring--sup-ticket-send {
+  animation-name: sp-sup-ring-ticket;
+}
+
+@keyframes sp-sup-show-ticket {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-sup-ring-ticket {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-cursor-local--sup-status-row,
+.service-preview-local-tip--sup-status-row {
+  animation-name: sp-sup-show-status;
+}
+
+.service-preview-local-ring--sup-status-row {
+  animation-name: sp-sup-ring-status;
+}
+
+@keyframes sp-sup-show-status {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-sup-ring-status {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-cursor-local--sup-security-twofa,
+.service-preview-local-tip--sup-security-twofa {
+  animation-name: sp-sup-show-security;
+}
+
+.service-preview-local-ring--sup-security-twofa {
+  animation-name: sp-sup-ring-security;
+}
+
+@keyframes sp-sup-show-security {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-sup-ring-security {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}

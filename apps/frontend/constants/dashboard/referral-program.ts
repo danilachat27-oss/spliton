@@ -25,7 +25,7 @@ export const REFERRAL_TAB_META: Record<
     documentTitle: "Награды",
     surfaceTitle: "Награды по рефералам",
     surfaceSubtitle:
-      "Сводка и история начислений по мок-данным. После API здесь появятся реальные строки и статусы выплат.",
+      "Сводка и история начислений из вашего реферального профиля Spliton.",
     zoneLabel: "Rewards",
   },
 };

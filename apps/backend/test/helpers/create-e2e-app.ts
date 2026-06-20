@@ -15,6 +15,10 @@ const throttleBypass = {
 export type E2eApp = INestApplication & { fakeEmailService: FakeEmailService };
 
 export async function createE2eApp(): Promise<E2eApp> {
+  process.env.REPORT_WORKER_ENABLED = 'false';
+  process.env.EVENT_OUTBOX_WORKER_ENABLED = 'false';
+  process.env.DEPOSIT_INGESTION_ENABLED = 'false';
+  process.env.SKIP_SCHEMA_BOOTSTRAP = 'true';
   const fakeEmailService = new FakeEmailService();
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -36,6 +40,7 @@ export async function createE2eApp(): Promise<E2eApp> {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.enableShutdownHooks();
   await app.init();
   (app as E2eApp).fakeEmailService = fakeEmailService;
   return app as E2eApp;

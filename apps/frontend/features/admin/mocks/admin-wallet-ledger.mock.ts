@@ -1,0 +1,61 @@
+import type { WalletDetailDto, WalletLedgerEntryDto } from "@/features/admin/api/types";
+
+export const MOCK_WALLET_LEDGER: WalletLedgerEntryDto[] = [
+  {
+    id: "led-1",
+    walletId: "wal-501",
+    type: "deposit",
+    amountUsdt: "500.00",
+    balanceAfterUsdt: "500.00",
+    referenceType: "deposit",
+    referenceId: "dep-9001",
+    createdAt: "2026-05-28T10:00:00Z",
+    note: null,
+  },
+  {
+    id: "led-2",
+    walletId: "wal-501",
+    type: "trade_buy",
+    amountUsdt: "-200.00",
+    balanceAfterUsdt: "300.00",
+    referenceType: "trade",
+    referenceId: "trd-801",
+    createdAt: "2026-05-28T14:00:00Z",
+    note: "Secondary market purchase",
+  },
+  {
+    id: "led-3",
+    walletId: "wal-501",
+    type: "payout",
+    amountUsdt: "45.00",
+    balanceAfterUsdt: "345.00",
+    referenceType: "payout",
+    referenceId: "rev-301",
+    createdAt: "2026-05-29T09:00:00Z",
+    note: "Revenue share distribution",
+  },
+  {
+    id: "led-4",
+    walletId: "wal-501",
+    type: "lock",
+    amountUsdt: "-200.00",
+    balanceAfterUsdt: "145.00",
+    referenceType: "listing",
+    referenceId: "lst-701",
+    createdAt: "2026-05-29T12:00:00Z",
+    note: "Units locked for listing",
+  },
+];
+
+export const MOCK_WALLET_DETAIL: WalletDetailDto = {
+  id: "wal-501",
+  userId: "usr-1001",
+  userEmail: "holder@example.com",
+  availableUsdt: "1 240.00",
+  lockedUsdt: "200.00",
+  earnedTotalUsdt: "4 800.00",
+  withdrawnTotalUsdt: "2 100.00",
+  depositsTotalUsdt: "6 000.00",
+  withdrawalsTotalUsdt: "2 100.00",
+  ledger: MOCK_WALLET_LEDGER,
+};

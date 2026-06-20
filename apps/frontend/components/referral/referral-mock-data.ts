@@ -1,6 +1,6 @@
 /** UI-мок: ссылка, код, статистика и история наград. Подключение API заменит источник данных. */
 
-export const REFERRAL_APP_ORIGIN = "https://revshare.app";
+export const REFERRAL_APP_ORIGIN = "https://spliton.app";
 
 export const REFERRAL_CODE = "RS7K2M";
 
@@ -96,7 +96,7 @@ export type ReferralFaqItem = { id: string; question: string; answer: string };
 export const referralFaqItems: ReferralFaqItem[] = [
   {
     id: "faq-1",
-    question: "Как работает реферальная программа RevShare?",
+    question: "Как работает реферальная программа Spliton?",
     answer:
       "Вы делитесь персональной ссылкой или кодом. Когда приглашённый пользователь регистрируется и выполняет условия программы (например, проходит верификацию или совершает квалифицирующую операцию), платформа фиксирует событие и начисляет награду согласно правилам на момент действия.",
   },

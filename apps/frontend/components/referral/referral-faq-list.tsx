@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/lib/lucide";
 import { useCallback, useId, useState } from "react";
 
 import type { ReferralFaqItem } from "@/components/referral/referral-mock-data";

@@ -1,0 +1,283 @@
+/* Реферальная программа — сцена «Как это работает» */
+
+.referral-how-scene {
+  --rhs-duration: 16s;
+}
+
+[class*="referral-how-panel--"] {
+  animation-duration: var(--rhs-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.referral-how-panel--invite { animation-name: rhs-panel-invite; }
+.referral-how-panel--register { animation-name: rhs-panel-register; }
+.referral-how-panel--qualify { animation-name: rhs-panel-qualify; }
+.referral-how-panel--reward { animation-name: rhs-panel-reward; }
+
+@keyframes rhs-panel-invite {
+  0%, 2% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  4%, 22% { opacity: 1; visibility: visible; transform: translateY(0); }
+  24%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes rhs-panel-register {
+  0%, 22% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  24%, 44% { opacity: 1; visibility: visible; transform: translateY(0); }
+  46%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes rhs-panel-qualify {
+  0%, 44% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  46%, 66% { opacity: 1; visibility: visible; transform: translateY(0); }
+  68%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes rhs-panel-reward {
+  0%, 66% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  68%, 90% { opacity: 1; visibility: visible; transform: translateY(0); }
+  92%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+.referral-how-toast,
+.referral-how-copy,
+.referral-how-check-row,
+.referral-how-reward-box,
+.referral-how-progress {
+  animation-duration: var(--rhs-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.referral-how-toast--invite { animation-name: rhs-toast-invite; }
+.referral-how-toast--register { animation-name: rhs-toast-register; }
+.referral-how-toast--qualify { animation-name: rhs-toast-qualify; }
+.referral-how-toast--reward { animation-name: rhs-toast-reward; }
+
+.referral-how-copy { animation-name: rhs-copy-pulse; }
+
+.referral-how-check-row--1 { animation-name: rhs-check-1; }
+.referral-how-check-row--2 { animation-name: rhs-check-2; }
+.referral-how-check-row--3 { animation-name: rhs-check-3; }
+
+.referral-how-reward-box { animation-name: rhs-reward-box; }
+
+.referral-how-progress { animation-name: rhs-progress; }
+
+.referral-how-step-label--invite { animation-name: rhs-label-invite; }
+.referral-how-step-label--register { animation-name: rhs-label-register; }
+.referral-how-step-label--qualify { animation-name: rhs-label-qualify; }
+.referral-how-step-label--reward { animation-name: rhs-label-reward; }
+
+.referral-how-underline--invite { animation-name: rhs-underline-invite; }
+.referral-how-underline--register { animation-name: rhs-underline-register; }
+.referral-how-underline--qualify { animation-name: rhs-underline-qualify; }
+.referral-how-underline--reward { animation-name: rhs-underline-reward; }
+
+.referral-how-dot--invite { animation-name: rhs-dot-invite; }
+.referral-how-dot--register { animation-name: rhs-dot-register; }
+.referral-how-dot--qualify { animation-name: rhs-dot-qualify; }
+.referral-how-dot--reward { animation-name: rhs-dot-reward; }
+
+[class*="referral-how-detail--"] {
+  animation-duration: var(--rhs-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.referral-how-detail--invite { animation-name: rhs-detail-invite; }
+.referral-how-detail--register { animation-name: rhs-detail-register; }
+.referral-how-detail--qualify { animation-name: rhs-detail-qualify; }
+.referral-how-detail--reward { animation-name: rhs-detail-reward; }
+
+@keyframes rhs-toast-invite {
+  0%, 8% { opacity: 0; transform: translateY(-6px); }
+  10%, 20% { opacity: 1; transform: translateY(0); }
+  22%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes rhs-toast-register {
+  0%, 28% { opacity: 0; transform: translateY(-6px); }
+  30%, 40% { opacity: 1; transform: translateY(0); }
+  42%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes rhs-toast-qualify {
+  0%, 50% { opacity: 0; transform: translateY(-6px); }
+  52%, 62% { opacity: 1; transform: translateY(0); }
+  64%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes rhs-toast-reward {
+  0%, 72% { opacity: 0; transform: translateY(-6px); }
+  74%, 86% { opacity: 1; transform: translateY(0); }
+  88%, 100% { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes rhs-copy-pulse {
+  0%, 6% { box-shadow: none; }
+  8%, 14% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.35); }
+  16%, 100% { box-shadow: none; }
+}
+
+@keyframes rhs-check-1 {
+  0%, 48% { background: rgb(0 0 0 / 0.3); }
+  50%, 58% { background: rgb(183 245 0 / 0.12); }
+  60%, 100% { background: rgb(0 0 0 / 0.3); }
+}
+
+@keyframes rhs-check-2 {
+  0%, 54% { background: rgb(0 0 0 / 0.3); }
+  56%, 64% { background: rgb(183 245 0 / 0.12); }
+  66%, 100% { background: rgb(0 0 0 / 0.3); }
+}
+
+@keyframes rhs-check-3 {
+  0%, 60% { background: rgb(0 0 0 / 0.3); }
+  62%, 66% { background: rgb(183 245 0 / 0.12); }
+  68%, 100% { background: rgb(0 0 0 / 0.3); }
+}
+
+@keyframes rhs-reward-box {
+  0%, 70% { box-shadow: none; }
+  72%, 88% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); }
+  90%, 100% { box-shadow: none; }
+}
+
+@keyframes rhs-progress {
+  0% { width: 6%; }
+  22% { width: 28%; }
+  44% { width: 52%; }
+  66% { width: 76%; }
+  90% { width: 100%; }
+  100% { width: 100%; }
+}
+
+@keyframes rhs-label-invite {
+  0%, 3% { color: rgb(161 161 170); font-weight: 500; }
+  4%, 22% { color: rgb(255 255 255); font-weight: 600; }
+  24%, 100% { color: rgb(161 161 170); font-weight: 500; }
+}
+
+@keyframes rhs-label-register {
+  0%, 22% { color: rgb(161 161 170); font-weight: 500; }
+  24%, 44% { color: rgb(255 255 255); font-weight: 600; }
+  46%, 100% { color: rgb(161 161 170); font-weight: 500; }
+}
+
+@keyframes rhs-label-qualify {
+  0%, 44% { color: rgb(161 161 170); font-weight: 500; }
+  46%, 66% { color: rgb(255 255 255); font-weight: 600; }
+  68%, 100% { color: rgb(161 161 170); font-weight: 500; }
+}
+
+@keyframes rhs-label-reward {
+  0%, 66% { color: rgb(161 161 170); font-weight: 500; }
+  68%, 90% { color: rgb(255 255 255); font-weight: 600; }
+  92%, 100% { color: rgb(161 161 170); font-weight: 500; }
+}
+
+@keyframes rhs-underline-invite {
+  0%, 3% { transform: scaleX(0); opacity: 0; }
+  4%, 22% { transform: scaleX(1); opacity: 1; }
+  24%, 100% { transform: scaleX(0); opacity: 0; }
+}
+
+@keyframes rhs-underline-register {
+  0%, 22% { transform: scaleX(0); opacity: 0; }
+  24%, 44% { transform: scaleX(1); opacity: 1; }
+  46%, 100% { transform: scaleX(0); opacity: 0; }
+}
+
+@keyframes rhs-underline-qualify {
+  0%, 44% { transform: scaleX(0); opacity: 0; }
+  46%, 66% { transform: scaleX(1); opacity: 1; }
+  68%, 100% { transform: scaleX(0); opacity: 0; }
+}
+
+@keyframes rhs-underline-reward {
+  0%, 66% { transform: scaleX(0); opacity: 0; }
+  68%, 90% { transform: scaleX(1); opacity: 1; }
+  92%, 100% { transform: scaleX(0); opacity: 0; }
+}
+
+@keyframes rhs-dot-invite {
+  0%, 3% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); transform: scale(1); }
+  4%, 22% { background: rgb(183 245 0); color: rgb(0 0 0); transform: scale(1.08); }
+  24%, 100% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); transform: scale(1); }
+}
+
+@keyframes rhs-dot-register {
+  0%, 22% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); }
+  24%, 44% { background: rgb(183 245 0); color: rgb(0 0 0); transform: scale(1.08); }
+  46%, 100% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); transform: scale(1); }
+}
+
+@keyframes rhs-dot-qualify {
+  0%, 44% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); }
+  46%, 66% { background: rgb(183 245 0); color: rgb(0 0 0); transform: scale(1.08); }
+  68%, 100% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); transform: scale(1); }
+}
+
+@keyframes rhs-dot-reward {
+  0%, 66% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); }
+  68%, 90% { background: rgb(183 245 0); color: rgb(0 0 0); transform: scale(1.08); }
+  92%, 100% { background: rgb(255 255 255 / 0.08); color: rgb(161 161 170); transform: scale(1); }
+}
+
+@keyframes rhs-detail-invite {
+  0%, 3% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  4%, 22% { opacity: 1; visibility: visible; transform: translateY(0); }
+  24%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes rhs-detail-register {
+  0%, 22% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  24%, 44% { opacity: 1; visibility: visible; transform: translateY(0); }
+  46%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes rhs-detail-qualify {
+  0%, 44% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  46%, 66% { opacity: 1; visibility: visible; transform: translateY(0); }
+  68%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes rhs-detail-reward {
+  0%, 66% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  68%, 90% { opacity: 1; visibility: visible; transform: translateY(0); }
+  92%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .referral-how-scene *,
+  .referral-how-scene *::before,
+  .referral-how-scene *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .referral-how-panel--invite,
+  .referral-how-detail--invite,
+  [class*="referral-how-panel--"],
+  [class*="referral-how-detail--"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    animation: none !important;
+  }
+
+  .referral-how-panel--register,
+  .referral-how-panel--qualify,
+  .referral-how-panel--reward,
+  .referral-how-detail--register,
+  .referral-how-detail--qualify,
+  .referral-how-detail--reward {
+    display: none !important;
+  }
+}

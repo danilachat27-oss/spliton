@@ -1,20 +1,30 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
+
 import Link from "next/link";
-import { Dialog } from "@base-ui/react/dialog";
+
+import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { statusLabel } from "@/lib/i18n/status-labels";
+import type { AppLocale } from "@/lib/i18n/types";
+import { ROUTES } from "@/constants/routes";
+import { getWalletDataSource } from "@/services/wallet.service";
+import { useSecondaryMarketTrades } from "@/hooks/use-secondary-market-live";
 import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  Download,
-  ExternalLink,
-  Loader2,
-  LayoutPanelTop,
-  MoreHorizontal,
-  Search,
-  X,
-} from "lucide-react";
+  SecondaryMarketAuthGate,
+  SecondaryMarketErrorState,
+  SecondaryMarketLoadingState,
+} from "@/components/dashboard/secondary-market/secondary-market-fetch-states";
+import {
+  countActiveTradeHistoryFilters,
+  SecondaryMarketTradeHistoryFiltersSheet,
+  tradeHistoryFiltersSummary,
+  type TradeHistoryFiltersState,
+} from "@/components/dashboard/secondary-market/secondary-market-trade-history-filters-sheet";
+import { SecondaryMarketTradeDetailSheet } from "@/components/dashboard/secondary-market/secondary-market-trade-detail-sheet";
+import { ArrowDown, ArrowUp, ChevronDown, Download, ExternalLink, LayoutPanelTop, MoreHorizontal, Search, SlidersHorizontal } from "@/lib/lucide";
+import { SplitonLoader } from "@/components/ui/spliton-loader";
 
 import {
   secondaryMarketBookHref,
@@ -23,7 +33,6 @@ import {
 } from "@/constants/dashboard/secondary-market";
 import {
   analyticsReleaseDetailPath,
-  ROUTES,
   secondaryMarketReleaseAnalyticsPath,
 } from "@/constants/routes";
 import { getSecondaryMarketAnalyticsCatalogIdForReleaseSlug } from "@/mocks/dashboard/secondary-market-listings.mock";
@@ -299,22 +308,18 @@ const MOCK_TRADES_SEED: SecondaryMarketUserTradeMock[] = [
   },
 ];
 
-const PERIOD_OPTIONS = [
-  { id: "7d" as const, label: "7д" },
-  { id: "30d" as const, label: "30д" },
-  { id: "90d" as const, label: "90д" },
-  { id: "all" as const, label: "Все" },
-] as const;
+const DEFAULT_FILTERS: TradeHistoryFiltersState = {
+  period: "30d",
+  sideFilter: "all",
+  settlementFilter: "all",
+  genreFilter: "all",
+  query: "",
+  sortKey: "time",
+  sortDir: "desc",
+};
 
-const SETTLEMENT_FILTER = [
-  { id: "all" as const, label: "Все" },
-  { id: "settled" as const, label: "Зачислено" },
-  { id: "processing" as const, label: "В обработке" },
-  { id: "failed" as const, label: "Ошибка" },
-] as const;
-
-type SortKey = "time" | "gross" | "price";
-type SortDir = "asc" | "desc";
+type SortKey = TradeHistoryFiltersState["sortKey"];
+type SortDir = TradeHistoryFiltersState["sortDir"];
 
 function formatUsdt(n: number) {
   return n.toLocaleString("ru-RU", {
@@ -334,13 +339,13 @@ function formatDateTime(iso: string) {
   });
 }
 
-function periodCutoffMs(period: (typeof PERIOD_OPTIONS)[number]["id"]): number | null {
+function periodCutoffMs(period: TradeHistoryFiltersState["period"]): number | null {
   if (period === "all") return null;
   const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
   return Date.now() - days * 86400000;
 }
 
-function inPeriod(row: SecondaryMarketUserTradeMock, period: (typeof PERIOD_OPTIONS)[number]["id"]): boolean {
+function inPeriod(row: SecondaryMarketUserTradeMock, period: TradeHistoryFiltersState["period"]): boolean {
   const ms = periodCutoffMs(period);
   if (ms == null) return true;
   return new Date(row.timestamp).getTime() >= ms;
@@ -359,27 +364,30 @@ function CoverThumb({ ticker }: { ticker: string }) {
   );
 }
 
-function settlementLabel(s: SettlementStatus): string {
-  switch (s) {
-    case "settled":
-      return "Зачислено";
-    case "processing":
-      return "В обработке";
-    case "failed":
-      return "Сбой";
-    default:
-      return s;
-  }
+function settlementLabel(s: SettlementStatus, locale: AppLocale): string {
+  return statusLabel("trade", s, locale);
 }
 
-function settlementTooltip(s: SettlementStatus): string {
+function formatMessage(template: string, params: Record<string, string | number>): string {
+  return Object.entries(params).reduce(
+    (acc, [key, value]) => acc.replace(new RegExp(`\\{${key}\\}`, "g"), String(value)),
+    template,
+  );
+}
+
+function tm(t: (key: string) => string, key: string, params?: Record<string, string | number>): string {
+  const raw = t(key);
+  return params ? formatMessage(raw, params) : raw;
+}
+
+function settlementTooltip(s: SettlementStatus, t: (key: string) => string): string {
   switch (s) {
     case "settled":
-      return "Клиринг завершён: USDT или units отражены на балансе.";
+      return t("secondaryMarket.trade.settlementTooltip.settled");
     case "processing":
-      return "Сделка исполнена на рынке; внутреннее зачисление ещё не финализировано.";
+      return t("secondaryMarket.trade.settlementTooltip.processing");
     case "failed":
-      return "Исключение при settlement: требуется проверка операций (макет).";
+      return t("secondaryMarket.trade.settlementTooltip.failed");
     default:
       return "";
   }
@@ -412,9 +420,12 @@ function stackHrefForTicker(ticker: string): string | null {
   return id ? secondaryMarketBookHref(id) : null;
 }
 
-/** Как у модалки деталей заявок: по центру, без ring, только тень. */
-const tradeHistoryDetailModalPopupClass =
-  "rounded-2xl bg-[#101010] text-white shadow-[0_32px_120px_rgba(0,0,0,0.78)] transition-[opacity,transform] duration-200 data-ending-style:scale-[0.98] data-ending-style:opacity-0 data-starting-style:scale-[0.98] data-starting-style:opacity-0";
+const PERIOD_QUICK = [
+  { id: "7d" as const, key: "secondaryMarket.filters.period7d" },
+  { id: "30d" as const, key: "secondaryMarket.filters.period30d" },
+  { id: "90d" as const, key: "secondaryMarket.filters.period90d" },
+  { id: "all" as const, key: "secondaryMarket.filters.periodAll" },
+] as const;
 
 function buildCsv(rows: SecondaryMarketUserTradeMock[]): string {
   const header = [
@@ -511,26 +522,29 @@ function TableSkeleton() {
 }
 
 export function SecondaryMarketTradeHistoryTab() {
-  const [trades, setTrades] = React.useState<SecondaryMarketUserTradeMock[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [period, setPeriod] = React.useState<(typeof PERIOD_OPTIONS)[number]["id"]>("30d");
-  const [sideFilter, setSideFilter] = React.useState<"all" | TradeSide>("all");
-  const [settlementFilter, setSettlementFilter] = React.useState<(typeof SETTLEMENT_FILTER)[number]["id"]>("all");
-  const [query, setQuery] = React.useState("");
-  const [sortKey, setSortKey] = React.useState<SortKey>("time");
-  const [sortDir, setSortDir] = React.useState<SortDir>("desc");
+  const isLive = getWalletDataSource() === "live";
+  const { isAuthenticated, authorizedFetch } = useAuth();
+  const { locale, t } = useI18n();
+  const liveTrades = useSecondaryMarketTrades();
+  const [mockTrades, setMockTrades] = React.useState<SecondaryMarketUserTradeMock[]>([]);
+  const [mockLoading, setMockLoading] = React.useState(!isLive);
+  const trades = isLive ? liveTrades.trades : mockTrades;
+  const loading = isLive ? liveTrades.loading : mockLoading;
+  const [filters, setFilters] = React.useState<TradeHistoryFiltersState>(DEFAULT_FILTERS);
+  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
   const [selectedTrade, setSelectedTrade] = React.useState<SecondaryMarketUserTradeMock | null>(null);
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = React.useState<string | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
+    if (isLive) return;
     const t = window.setTimeout(() => {
-      setTrades(MOCK_TRADES_SEED);
-      setLoading(false);
+      setMockTrades(MOCK_TRADES_SEED);
+      setMockLoading(false);
     }, 520);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [isLive]);
 
   React.useEffect(() => {
     if (!openMenuId) return;
@@ -558,8 +572,8 @@ export function SecondaryMarketTradeHistoryTab() {
   }, []);
 
   const summaryRows = React.useMemo(
-    () => trades.filter((t) => inPeriod(t, period)),
-    [trades, period],
+    () => trades.filter((t) => inPeriod(t, filters.period)),
+    [trades, filters.period],
   );
 
   const summary = React.useMemo(() => {
@@ -577,11 +591,12 @@ export function SecondaryMarketTradeHistoryTab() {
   }, [summaryRows]);
 
   const filteredSorted = React.useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = filters.query.trim().toLowerCase();
     const rows = trades.filter((row) => {
-      if (!inPeriod(row, period)) return false;
-      if (sideFilter !== "all" && row.side !== sideFilter) return false;
-      if (settlementFilter !== "all" && row.settlementStatus !== settlementFilter) return false;
+      if (!inPeriod(row, filters.period)) return false;
+      if (filters.sideFilter !== "all" && row.side !== filters.sideFilter) return false;
+      if (filters.settlementFilter !== "all" && row.settlementStatus !== filters.settlementFilter) return false;
+      if (filters.genreFilter !== "all" && row.genre !== filters.genreFilter) return false;
       if (!q) return true;
       return (
         row.id.toLowerCase().includes(q) ||
@@ -591,34 +606,33 @@ export function SecondaryMarketTradeHistoryTab() {
         row.linkedOrderId.toLowerCase().includes(q)
       );
     });
-    const dir = sortDir === "asc" ? 1 : -1;
+    const dir = filters.sortDir === "asc" ? 1 : -1;
     return [...rows].sort((a, b) => {
-      if (sortKey === "time") {
+      if (filters.sortKey === "time") {
         return dir * (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       }
-      if (sortKey === "gross") return dir * (a.grossAmount - b.grossAmount);
+      if (filters.sortKey === "gross") return dir * (a.grossAmount - b.grossAmount);
       return dir * (a.price - b.price);
     });
-  }, [trades, period, sideFilter, settlementFilter, query, sortKey, sortDir]);
+  }, [trades, filters]);
+
+  const activeFilterCount = countActiveTradeHistoryFilters(filters);
+
+  const patchFilters = React.useCallback((patch: Partial<TradeHistoryFiltersState>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  }, []);
 
   const toggleSort = (key: SortKey) => {
-    setSortKey((prev) => {
-      if (prev === key) {
-        setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-        return prev;
+    setFilters((prev) => {
+      if (prev.sortKey === key) {
+        return { ...prev, sortDir: prev.sortDir === "desc" ? "asc" : "desc" };
       }
-      setSortDir(key === "time" ? "desc" : "desc");
-      return key;
+      return { ...prev, sortKey: key, sortDir: "desc" };
     });
   };
 
   const resetFilters = () => {
-    setPeriod("30d");
-    setSideFilter("all");
-    setSettlementFilter("all");
-    setQuery("");
-    setSortKey("time");
-    setSortDir("desc");
+    setFilters(DEFAULT_FILTERS);
   };
 
   const exportCsv = () => {
@@ -626,10 +640,10 @@ export function SecondaryMarketTradeHistoryTab() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `revshare-secondary-trades-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `Spliton-secondary-trades-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast("CSV сформирован (демо, без отправки на сервер)");
+    showToast(t("secondaryMarket.trade.toastCsvExported"));
   };
 
   const drawerTrade = React.useMemo(() => {
@@ -640,154 +654,130 @@ export function SecondaryMarketTradeHistoryTab() {
   const marketHref = secondaryMarketHref("market");
   const catalogOverviewHref = ROUTES.catalogMarketOverview;
 
+  if (isLive && !isAuthenticated) {
+    return <SecondaryMarketAuthGate />;
+  }
+  if (isLive && liveTrades.loading && liveTrades.trades.length === 0) {
+    return <SecondaryMarketLoadingState label={t("secondaryMarket.trade.loadingHistory")} />;
+  }
+  if (isLive && liveTrades.error) {
+    return (
+      <SecondaryMarketErrorState message={liveTrades.error} onRetry={() => void liveTrades.reload()} />
+    );
+  }
+
   return (
     <div className="relative space-y-6">
       <p className="max-w-[62ch] font-mono text-[11px] leading-relaxed text-zinc-600">
-        Журнал факта исполнения: только состоявшиеся сделки. Активные заявки, стакан и формы торговли — на других
-        экранах.
+        {t("secondaryMarket.trade.intro")}
       </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Сделок</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.trade.kpiTrades")}</p>
           <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-white">{summary.count}</p>
-          <p className="mt-1 font-mono text-[10px] text-zinc-600">за выбранный период</p>
+          <p className="mt-1 font-mono text-[10px] text-zinc-600">{t("secondaryMarket.trade.kpiForPeriod")}</p>
         </div>
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Оборот</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.trade.kpiTurnover")}</p>
           <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-white">{formatUsdt(summary.turnover)}</p>
-          <p className="mt-1 font-mono text-[10px] text-zinc-600">USDT gross</p>
+          <p className="mt-1 font-mono text-[10px] text-zinc-600">{t("secondaryMarket.trade.kpiGrossUsdt")}</p>
         </div>
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Комиссии</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.trade.fee")}</p>
           <p className="mt-1 font-mono text-2xl font-semibold tabular-nums text-zinc-300">{formatUsdt(summary.fees)}</p>
-          <p className="mt-1 font-mono text-[10px] text-zinc-600">USDT всего</p>
+          <p className="mt-1 font-mono text-[10px] text-zinc-600">{t("secondaryMarket.trade.kpiFeesTotal")}</p>
         </div>
         <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Покупка / продажа</p>
+          <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("secondaryMarket.trade.kpiBuySell")}</p>
           <div className="mt-1 flex items-baseline gap-4 font-mono text-2xl font-semibold tabular-nums">
             <span className="text-[#B7F500]">{summary.buys}</span>
             <span className="text-fuchsia-300/95">{summary.sells}</span>
           </div>
-          <p className="mt-1 font-mono text-[10px] text-zinc-600">кол-во сделок</p>
+          <p className="mt-1 font-mono text-[10px] text-zinc-600">{t("secondaryMarket.trade.kpiTradeCount")}</p>
         </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Период для сводки и таблицы">
-          {PERIOD_OPTIONS.map((opt) => (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("secondaryMarket.aria.periodSummary")}>
+          {PERIOD_QUICK.map((opt) => (
             <button
               key={opt.id}
               type="button"
-              onClick={() => setPeriod(opt.id)}
+              onClick={() => patchFilters({ period: opt.id })}
               className={cn(
                 "rounded-full px-2.5 py-1 font-mono text-[11px] font-medium transition-colors",
-                period === opt.id ? "bg-[#B7F500] text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
+                filters.period === opt.id
+                  ? "bg-[#B7F500] text-black"
+                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
               )}
             >
-              {opt.label}
+              {t(opt.key)}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-600" aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Релиз, артист, тикер, id сделки или ордера"
-              className="h-10 w-full rounded-xl bg-black/50 py-2 pl-10 pr-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none ring-1 ring-white/10 focus:ring-[#B7F500]/35"
-              aria-label="Поиск по журналу сделок"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={exportCsv}
-              disabled={loading || filteredSorted.length === 0}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/12 bg-white/5 px-3 font-mono text-[11px] font-medium text-zinc-200 transition hover:border-[#B7F500]/35 hover:text-white disabled:pointer-events-none disabled:opacity-40"
-            >
-              <Download className="size-4 shrink-0 text-zinc-500" aria-hidden />
-              Экспорт CSV
-            </button>
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="h-10 rounded-xl px-3 font-mono text-[11px] text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
-            >
-              Сбросить
-            </button>
-          </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-600"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={filters.query}
+            onChange={(e) => patchFilters({ query: e.target.value })}
+            placeholder={t("secondaryMarket.filters.searchTrades")}
+            className="h-10 w-full rounded-xl bg-[#111111] py-2 pl-10 pr-3 font-mono text-sm text-white placeholder:text-zinc-600 outline-none ring-1 ring-white/10 focus:ring-[#B7F500]/35"
+            aria-label={t("secondaryMarket.aria.searchTrades")}
+          />
         </div>
-
-        <div className="mt-4 flex flex-col gap-4 border-t border-white/8 pt-4 sm:flex-row sm:flex-wrap sm:gap-x-10">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Сторона</span>
-            {(
-              [
-                { id: "all" as const, label: "Все" },
-                { id: "buy" as const, label: "Покупка" },
-                { id: "sell" as const, label: "Продажа" },
-              ] as const
-            ).map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setSideFilter(chip.id)}
-                className={cn(
-                  "rounded-full px-2.5 py-1 font-mono text-[11px] font-medium",
-                  sideFilter === chip.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Клиринг</span>
-            {SETTLEMENT_FILTER.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setSettlementFilter(chip.id)}
-                className={cn(
-                  "rounded-full px-2.5 py-1 font-mono text-[11px] font-medium",
-                  settlementFilter === chip.id
-                    ? "bg-white text-black"
-                    : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Период</span>
-            {PERIOD_OPTIONS.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setPeriod(chip.id)}
-                className={cn(
-                  "rounded-full px-2.5 py-1 font-mono text-[11px] font-medium",
-                  period === chip.id ? "bg-white text-black" : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300",
-                )}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsFiltersOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-[#111111] px-4 font-mono text-[12px] font-medium text-zinc-200 ring-1 ring-white/10 transition hover:ring-[#B7F500]/35"
+          >
+            <SlidersHorizontal className="size-4 text-zinc-500" aria-hidden />
+            {t("secondaryMarket.trade.filters")}
+            {activeFilterCount > 0 ? (
+              <span className="flex size-5 items-center justify-center rounded-full bg-[#B7F500] text-[10px] font-bold text-black">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={loading || filteredSorted.length === 0}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/12 bg-white/5 px-4 font-mono text-[12px] font-medium text-zinc-200 transition hover:border-[#B7F500]/35 hover:text-white disabled:pointer-events-none disabled:opacity-40"
+          >
+            <Download className="size-4 shrink-0 text-zinc-500" aria-hidden />
+            CSV
+          </button>
         </div>
       </div>
 
+      <p className="font-mono text-[11px] text-zinc-600">
+        {tradeHistoryFiltersSummary(filters, t, locale)} · {filteredSorted.length}{" "}
+        {filteredSorted.length === 1 ? t("secondaryMarket.trade.tradeCountOne") : t("secondaryMarket.trade.tradeCountMany")}
+      </p>
+
+      <SecondaryMarketTradeHistoryFiltersSheet
+        open={isFiltersOpen}
+        onOpenChange={setIsFiltersOpen}
+        filters={filters}
+        onChange={patchFilters}
+        onReset={resetFilters}
+        resultCount={filteredSorted.length}
+        totalCount={trades.length}
+      />
+
       {loading ? (
         <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-500">
-          <Loader2 className="size-4 animate-spin text-[#B7F500]" aria-hidden />
-          Загрузка журнала…
+          <SplitonLoader size="xxs" variant="dark" className="shrink-0" />
+          {t("secondaryMarket.trade.loadingJournal")}
         </div>
       ) : null}
 
@@ -795,9 +785,9 @@ export function SecondaryMarketTradeHistoryTab() {
         <TableSkeleton />
       ) : trades.length === 0 ? (
         <div className="rounded-2xl bg-[#111111] px-6 py-16 text-center ring-1 ring-white/6">
-          <h2 className="text-lg font-semibold tracking-tight text-white">Сделок пока нет</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-white">{t("secondaryMarket.empty.noTrades")}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-            Когда вы купите или продадите units на вторичном рынке, исполненные сделки появятся здесь.
+            {t("secondaryMarket.empty.noTradesDesc")}
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link
@@ -805,29 +795,37 @@ export function SecondaryMarketTradeHistoryTab() {
               scroll={false}
               className="inline-flex h-10 min-w-[200px] items-center justify-center rounded-full bg-[#B7F500] px-5 font-mono text-[12px] font-semibold text-black hover:opacity-90"
             >
-              Открыть рынок
+              {t("secondaryMarket.trade.openMarket")}
             </Link>
             <Link
               href={catalogOverviewHref}
               scroll={false}
               className="inline-flex h-10 min-w-[200px] items-center justify-center rounded-full border border-white/15 bg-transparent px-5 font-mono text-[12px] font-medium text-zinc-200 hover:border-white/25 hover:text-white"
             >
-              К аналитике рынка
+              {t("secondaryMarket.trade.toMarketAnalytics")}
             </Link>
           </div>
         </div>
       ) : filteredSorted.length === 0 ? (
         <div className="rounded-2xl bg-[#111111] px-6 py-16 text-center ring-1 ring-white/6">
-          <h2 className="text-lg font-semibold tracking-tight text-white">Ничего не найдено</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-white">{t("secondaryMarket.empty.noResults")}</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-500">
-            По текущим фильтрам сделок нет. Измените период, клиринг или поиск.
+            {t("secondaryMarket.trade.emptyFilterDesc")}
           </p>
           <button
             type="button"
             onClick={resetFilters}
-            className="mt-6 font-mono text-[12px] text-zinc-400 underline-offset-2 hover:text-white hover:underline"
+            className="mt-4 font-mono text-[12px] text-zinc-400 underline-offset-2 hover:text-white hover:underline"
           >
-            Сбросить фильтры
+            {t("secondaryMarket.filters.resetFilters")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsFiltersOpen(true)}
+            className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-[#111111] px-4 font-mono text-[12px] font-medium text-zinc-300 ring-1 ring-white/10"
+          >
+            <SlidersHorizontal className="size-4" aria-hidden />
+            {t("secondaryMarket.filters.changeFilters")}
           </button>
         </div>
       ) : (
@@ -837,34 +835,34 @@ export function SecondaryMarketTradeHistoryTab() {
               <table className="w-full min-w-[1040px] border-collapse text-left">
                 <thead className="sticky top-0 z-20 bg-[#111111] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.06)]">
                   <tr className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">
-                    <SortTh label="Время" active={sortKey === "time"} dir={sortDir} onClick={() => toggleSort("time")} />
-                    <th className="px-3 py-2.5 font-normal">ID сделки</th>
-                    <th className="min-w-[200px] px-3 py-2.5 font-normal">Листинг / релиз</th>
-                    <th className="px-3 py-2.5 font-normal">Сторона</th>
-                    <th className="px-3 py-2.5 text-right font-normal">Units</th>
+                    <SortTh label={t("secondaryMarket.sort.time")} active={filters.sortKey === "time"} dir={filters.sortDir} onClick={() => toggleSort("time")} />
+                    <th className="px-3 py-2.5 font-normal">{t("secondaryMarket.trade.tradeId")}</th>
+                    <th className="min-w-[200px] px-3 py-2.5 font-normal">{t("secondaryMarket.trade.columnListingRelease")}</th>
+                    <th className="px-3 py-2.5 font-normal">{t("secondaryMarket.orders.columnSide")}</th>
+                    <th className="px-3 py-2.5 text-right font-normal">{t("secondaryMarket.orders.columnUnits")}</th>
                     <SortTh
-                      label="Цена / u"
+                      label={t("secondaryMarket.sort.price")}
                       align="right"
-                      active={sortKey === "price"}
-                      dir={sortDir}
+                      active={filters.sortKey === "price"}
+                      dir={filters.sortDir}
                       onClick={() => toggleSort("price")}
                     />
                     <SortTh
-                      label="Сумма"
+                      label={t("secondaryMarket.orders.columnAmount")}
                       align="right"
-                      active={sortKey === "gross"}
-                      dir={sortDir}
+                      active={filters.sortKey === "gross"}
+                      dir={filters.sortDir}
                       onClick={() => toggleSort("gross")}
                     />
-                    <th className="hidden px-3 py-2.5 text-right font-normal lg:table-cell">Комиссия</th>
+                    <th className="hidden px-3 py-2.5 text-right font-normal lg:table-cell">{t("secondaryMarket.trade.fee")}</th>
                     <th className="px-3 py-2.5 text-right font-normal">
-                      <span className="block">Итого</span>
+                      <span className="block">{t("secondaryMarket.trade.total")}</span>
                       <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-zinc-600">
-                        покупка: списано · продажа: нетто
+                        {t("secondaryMarket.trade.totalSubheader")}
                       </span>
                     </th>
-                    <th className="hidden px-3 py-2.5 font-normal xl:table-cell">Клиринг</th>
-                    <th className="px-3 py-2.5 text-right font-normal">Действия</th>
+                    <th className="hidden px-3 py-2.5 font-normal xl:table-cell">{t("secondaryMarket.trade.columnSettlement")}</th>
+                    <th className="px-3 py-2.5 text-right font-normal">{t("secondaryMarket.actions.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono text-[12px] text-zinc-300">
@@ -905,7 +903,7 @@ export function SecondaryMarketTradeHistoryTab() {
                               row.side === "buy" ? "text-[#B7F500]" : "text-fuchsia-300/95",
                             )}
                           >
-                            {row.side === "buy" ? "Покупка" : "Продажа"}
+                            {row.side === "buy" ? t("secondaryMarket.side.buy") : t("secondaryMarket.side.sell")}
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-right align-middle tabular-nums">{row.units}</td>
@@ -921,13 +919,13 @@ export function SecondaryMarketTradeHistoryTab() {
                         </td>
                         <td className="hidden px-3 py-2.5 align-middle xl:table-cell">
                           <span
-                            title={settlementTooltip(row.settlementStatus)}
+                            title={settlementTooltip(row.settlementStatus, t)}
                             className={cn(
                               "inline-flex cursor-help rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
                               settlementPillClass(row.settlementStatus),
                             )}
                           >
-                            {settlementLabel(row.settlementStatus)}
+                            {settlementLabel(row.settlementStatus, locale)}
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-right align-middle" onClick={(e) => e.stopPropagation()}>
@@ -939,7 +937,7 @@ export function SecondaryMarketTradeHistoryTab() {
                               type="button"
                               onClick={() => setSelectedTrade(row)}
                               className={smTableActionIconCircle}
-                              aria-label="Детали сделки"
+                              aria-label={t("secondaryMarket.actions.tradeDetails")}
                             >
                               <LayoutPanelTop className="size-[17px]" strokeWidth={1.75} aria-hidden />
                             </button>
@@ -948,7 +946,7 @@ export function SecondaryMarketTradeHistoryTab() {
                               scroll={false}
                               className={smTableActionReleasePill}
                             >
-                              Релиз
+                              {t("secondaryMarket.actions.release")}
                               <ExternalLink className="size-3.5 opacity-55" aria-hidden />
                             </Link>
                             <div className="relative shrink-0">
@@ -956,7 +954,7 @@ export function SecondaryMarketTradeHistoryTab() {
                                 type="button"
                                 aria-expanded={openMenuId === row.id}
                                 aria-haspopup="menu"
-                                aria-label="Ещё действия"
+                                aria-label={t("secondaryMarket.aria.moreActions")}
                                 onClick={() => setOpenMenuId((id) => (id === row.id ? null : row.id))}
                                 className={cn(
                                   smTableActionIconCircle,
@@ -974,7 +972,7 @@ export function SecondaryMarketTradeHistoryTab() {
                                     className={smTableActionMenuItemLink}
                                     onClick={() => setOpenMenuId(null)}
                                   >
-                                    Открыть релиз
+                                    {t("secondaryMarket.actions.openRelease")}
                                   </Link>
                                   <Link
                                     role="menuitem"
@@ -983,7 +981,7 @@ export function SecondaryMarketTradeHistoryTab() {
                                     className={smTableActionMenuItemSecondary}
                                     onClick={() => setOpenMenuId(null)}
                                   >
-                                    Торговая аналитика
+                                    {t("secondaryMarket.actions.tradingAnalytics")}
                                   </Link>
                                   {stack ? (
                                     <Link
@@ -993,10 +991,10 @@ export function SecondaryMarketTradeHistoryTab() {
                                       className={smTableActionMenuItemLink}
                                       onClick={() => setOpenMenuId(null)}
                                     >
-                                      Стакан
+                                      {t("secondaryMarket.actions.orderBook")}
                                     </Link>
                                   ) : (
-                                    <span className={smTableActionMenuItemMuted}>Стакан недоступен</span>
+                                    <span className={smTableActionMenuItemMuted}>{t("secondaryMarket.actions.orderBookUnavailable")}</span>
                                   )}
                                 </div>
                               ) : null}
@@ -1038,7 +1036,7 @@ export function SecondaryMarketTradeHistoryTab() {
                         row.side === "buy" ? "bg-[#B7F500]/14 text-[#d4f570]" : "bg-fuchsia-500/14 text-fuchsia-200/90",
                       )}
                     >
-                      {row.side === "buy" ? "Buy" : "Sell"}
+                      {row.side === "buy" ? t("secondaryMarket.side.buy") : t("secondaryMarket.side.sell")}
                     </span>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 font-mono text-[11px]">
@@ -1047,11 +1045,11 @@ export function SecondaryMarketTradeHistoryTab() {
                       <p className="mt-0.5 tabular-nums text-zinc-200">{formatUsdt(row.grossAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-zinc-600">Итого</p>
+                      <p className="text-zinc-600">{t("secondaryMarket.trade.total")}</p>
                       <p className="mt-0.5 tabular-nums text-white">{formatUsdt(row.netAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-zinc-600">Цена / u</p>
+                      <p className="text-zinc-600">{t("secondaryMarket.sort.price")}</p>
                       <p className="mt-0.5 tabular-nums text-zinc-300">{formatUsdt(row.price)}</p>
                     </div>
                     <div>
@@ -1061,22 +1059,22 @@ export function SecondaryMarketTradeHistoryTab() {
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <span
-                      title={settlementTooltip(row.settlementStatus)}
+                      title={settlementTooltip(row.settlementStatus, t)}
                       className={cn(
                         "inline-flex cursor-help rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold uppercase",
                         settlementPillClass(row.settlementStatus),
                       )}
                     >
-                      {settlementLabel(row.settlementStatus)}
+                      {settlementLabel(row.settlementStatus, locale)}
                     </span>
                     <div className="flex flex-wrap items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <Link href={releaseAssetHref(row.releaseId)} scroll={false} className={smTableActionReleasePill}>
-                        Релиз
+                        {t("secondaryMarket.actions.release")}
                         <ExternalLink className="size-3.5 opacity-55" aria-hidden />
                       </Link>
                       {stack ? (
                         <Link href={stack} scroll={false} className={smTableActionSecondaryPill}>
-                          Стакан
+                          {t("secondaryMarket.actions.orderBook")}
                         </Link>
                       ) : null}
                     </div>
@@ -1088,145 +1086,13 @@ export function SecondaryMarketTradeHistoryTab() {
         </>
       )}
 
-      <Dialog.Root
-        open={drawerTrade != null}
+      <SecondaryMarketTradeDetailSheet
+        trade={drawerTrade}
         onOpenChange={(open) => {
           if (!open) setSelectedTrade(null);
         }}
-        modal
-      >
-        <Dialog.Portal>
-          {drawerTrade ? (
-            <>
-              <Dialog.Backdrop
-                className={cn(
-                  "fixed inset-0 z-[125] bg-black/70 backdrop-blur-[3px]",
-                  "transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
-                )}
-              />
-              <Dialog.Popup
-                className={cn(
-                  "fixed left-1/2 top-1/2 z-[126] flex w-[min(100vw-2rem,720px)] max-h-[min(92vh,900px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto overscroll-contain",
-                  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0",
-                  tradeHistoryDetailModalPopupClass,
-                )}
-              >
-                <div className="flex shrink-0 items-start justify-between gap-4 px-6 pb-4 pt-5">
-                  <div className="min-w-0">
-                    <Dialog.Title className="text-lg font-semibold tracking-tight text-white">
-                      {drawerTrade.title}
-                    </Dialog.Title>
-                    <Dialog.Description className="mt-1 text-sm text-zinc-500">
-                      {drawerTrade.artist} · {drawerTrade.ticker} · {drawerTrade.genre}
-                    </Dialog.Description>
-                  </div>
-                  <Dialog.Close
-                    aria-label="Закрыть"
-                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <X className="size-4" />
-                  </Dialog.Close>
-                </div>
-
-                <div className="px-6 pb-4">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-600">Сделка</p>
-                  <dl className="mt-3 space-y-0 font-mono text-[12px]">
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">ID сделки</dt>
-                      <dd className="text-right tabular-nums text-zinc-200">{drawerTrade.id}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Время</dt>
-                      <dd className="text-right text-zinc-400">{formatDateTime(drawerTrade.timestamp)}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Сторона</dt>
-                      <dd className={drawerTrade.side === "buy" ? "text-[#B7F500]" : "text-fuchsia-300"}>
-                        {drawerTrade.side === "buy" ? "Покупка" : "Продажа"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Цена</dt>
-                      <dd className="tabular-nums text-white">{formatUsdt(drawerTrade.price)} USDT</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Units</dt>
-                      <dd className="tabular-nums text-zinc-200">{drawerTrade.units}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Gross</dt>
-                      <dd className="tabular-nums text-zinc-200">{formatUsdt(drawerTrade.grossAmount)} USDT</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Комиссия</dt>
-                      <dd className="tabular-nums text-zinc-500">{formatUsdt(drawerTrade.feeAmount)} USDT</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Net</dt>
-                      <dd className="tabular-nums text-white">{formatUsdt(drawerTrade.netAmount)} USDT</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Клиринг</dt>
-                      <dd>
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                            settlementPillClass(drawerTrade.settlementStatus),
-                          )}
-                        >
-                          {settlementLabel(drawerTrade.settlementStatus)}
-                        </span>
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Ордер</dt>
-                      <dd className="text-right text-zinc-500">{drawerTrade.linkedOrderId}</dd>
-                    </div>
-                    <div className="flex justify-between gap-4 border-b border-white/[0.05] py-2">
-                      <dt className="text-zinc-600">Листинг</dt>
-                      <dd className="text-right text-zinc-500">{drawerTrade.linkedListingId}</dd>
-                    </div>
-                  </dl>
-                  <p className="mt-4 rounded-xl bg-white/[0.03] p-3 text-[12px] leading-relaxed text-zinc-500">
-                    {drawerTrade.side === "buy"
-                      ? "После успешного клиринга units зачисляются в вашу позицию по релизу."
-                      : "После успешного клиринга USDT зачисляются на ваш баланс."}
-                  </p>
-                </div>
-
-                <div className="shrink-0 space-y-2 border-t border-white/10 bg-black/20 px-6 py-4">
-                  <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
-                    <Link
-                      href={releaseAssetHref(drawerTrade.releaseId)}
-                      scroll={false}
-                      className={cn(smTableActionReleasePill, "h-10 px-5")}
-                    >
-                      Релиз
-                      <ExternalLink className="size-3.5 opacity-55" aria-hidden />
-                    </Link>
-                    <Link
-                      href={tradeAnalyticsHref(drawerTrade.releaseId)}
-                      scroll={false}
-                      className="inline-flex h-10 items-center justify-center rounded-full bg-white/10 px-5 font-mono text-[12px] font-medium text-zinc-200 transition hover:bg-white/14"
-                    >
-                      Торговая аналитика
-                    </Link>
-                    {stackHrefForTicker(drawerTrade.ticker) ? (
-                      <Link
-                        href={stackHrefForTicker(drawerTrade.ticker)!}
-                        scroll={false}
-                        className={cn(smTableActionSecondaryPill, "h-10")}
-                      >
-                        Стакан
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              </Dialog.Popup>
-            </>
-          ) : null}
-        </Dialog.Portal>
-      </Dialog.Root>
+        onToast={showToast}
+      />
 
       {toastMessage ? (
         <div

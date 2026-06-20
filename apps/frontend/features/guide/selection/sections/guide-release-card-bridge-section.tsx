@@ -1,27 +1,40 @@
-import Link from "next/link";
+"use client";
 
-import { GUIDE_CATALOG_CARD_HREF } from "@/constants/guide/selection";
+import Link from "next/link";
+import { ArrowRight } from "@/lib/lucide";
+import { useState } from "react";
+
+import { GUIDE_CATALOG_HREF, GUIDE_RELEASE_CARD_STEP_IDS, type GuideReleaseCardStepId } from "@/constants/guide/selection";
+import { useI18n } from "@/components/providers/i18n-provider";
 
 import { GuideSectionShell } from "../ui/guide-section-shell";
+import { GuideReleaseCardDemo, GuideReleaseCardSteps } from "../ui/guide-release-card-demo";
 
 export function GuideReleaseCardBridgeSection() {
+  const { t } = useI18n();
+  const [activeStep, setActiveStep] = useState<GuideReleaseCardStepId>(GUIDE_RELEASE_CARD_STEP_IDS[0]);
+
   return (
     <GuideSectionShell
       id="release-card"
-      title="Язык карточки в каталоге"
-      subtitle="Разбор полей, mock UI и словарь терминов вынесены на страницу каталога — гид остаётся про выбор релиза, без повтора инструкции по UI."
-      headerAlign="center"
+      title={t("guide.releaseCard.title")}
+      subtitle={t("guide.releaseCard.subtitle")}
     >
-      <div className="w-full text-center">
-        <p className="text-sm leading-relaxed text-zinc-400">
-          Откройте «Параметры релиза»: зоны карточки, ключевые поля, порядок «сначала смотреть», пример и FAQ именно по
-          карточке.
-        </p>
+      <div className="guide-release-card-layout">
+        <div className="guide-release-card-col">
+          <GuideReleaseCardDemo activeStep={activeStep} />
+        </div>
+        <div className="guide-release-card-col">
+          <GuideReleaseCardSteps activeStep={activeStep} onStepSelect={setActiveStep} />
+        </div>
+      </div>
+      <div className="mt-5 text-center">
         <Link
-          href={GUIDE_CATALOG_CARD_HREF}
-          className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#111111] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/4"
+          href={GUIDE_CATALOG_HREF}
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-zinc-300 underline decoration-white/20 underline-offset-[3px] transition hover:text-white hover:decoration-white/40"
         >
-          Параметры релиза в каталоге
+          {t("guide.releaseCard.cta")}
+          <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
         </Link>
       </div>
     </GuideSectionShell>

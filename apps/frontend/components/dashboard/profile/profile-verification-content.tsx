@@ -13,10 +13,9 @@ import {
   Clock,
   FileText,
   HelpCircle,
-  Lock,
   Shield,
   XCircle,
-} from "lucide-react";
+} from "@/lib/lucide";
 
 import {
   VERIFICATION_STATUS_QUERY,
@@ -26,10 +25,16 @@ import {
   type VerificationUiStatus,
 } from "@/constants/dashboard/profile-verification";
 import { profileDashboardHref } from "@/constants/dashboard/profile-page";
+import { ProfileVerificationLiveContent } from "@/components/dashboard/profile/profile-verification-live-content";
+import { ProfileAccessRows } from "@/components/dashboard/profile/profile-access-rows";
+import { profileCardClass, profileListClass, profileMutedCardClass, profilePrimaryButtonClass, profileSecondaryButtonClass } from "@/components/dashboard/profile/profile-ui";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { isAccountCenterPrototypeAllowed, isLiveAccountEnabled } from "@/lib/public-env";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
-function statusMeta(status: VerificationUiStatus): {
+function statusMeta(status: VerificationUiStatus, t: (key: string) => string): {
   label: string;
   tone: string;
   description: string;
@@ -37,33 +42,33 @@ function statusMeta(status: VerificationUiStatus): {
   switch (status) {
     case "not_started":
       return {
-        label: "Не начата",
-        tone: "bg-neutral-100 text-neutral-700 ring-1 ring-neutral-200/80",
-        description: "Подтвердите личность, чтобы снять ограничения по операциям в USDT и на вторичном рынке.",
+        label: t("verification.status.notStarted"),
+        tone: "bg-neutral-100 text-neutral-700",
+        description: t("verification.status.notStartedDesc"),
       };
     case "in_progress":
       return {
-        label: "В процессе",
-        tone: "bg-amber-50 text-amber-900 ring-1 ring-amber-200/80",
-        description: "Заполните шаги ниже и отправьте заявку — черновик можно дополнить до отправки.",
+        label: t("verification.status.inProgress"),
+        tone: "bg-amber-50 text-amber-900",
+        description: t("verification.status.inProgressDesc"),
       };
     case "pending_review":
       return {
-        label: "На проверке",
-        tone: "bg-blue-50 text-blue-900 ring-1 ring-blue-200/80",
-        description: "Заявка получена. Команда RevShare проверяет документы — обычно это 1–2 рабочих дня.",
+        label: t("verification.status.pendingReview"),
+        tone: "bg-blue-50 text-blue-900",
+        description: t("verification.status.pendingReviewDesc"),
       };
     case "approved":
       return {
-        label: "Подтверждена",
-        tone: "bg-lime-100/90 text-lime-950 ring-1 ring-lime-200/80",
-        description: "Аккаунт соответствует требованиям платформы. Доступны полные лимиты по пополнению, выводу и вторичному рынку.",
+        label: t("verification.status.approved"),
+        tone: "bg-lime-100/90 text-lime-950",
+        description: t("verification.status.approvedDesc"),
       };
     case "rejected":
       return {
-        label: "Требуются правки",
-        tone: "bg-red-50 text-red-900 ring-1 ring-red-200/80",
-        description: "Проверка не пройдена. Исправьте замечания и отправьте документы снова — это бесплатно.",
+        label: t("verification.status.rejected"),
+        tone: "bg-red-50 text-red-900",
+        description: t("verification.status.rejectedDesc"),
       };
   }
 }
@@ -89,65 +94,12 @@ function VerificationHref(next: VerificationUiStatus) {
   return `${ROUTES.dashboardProfile}?${u.toString()}`;
 }
 
-const ACCESS_ROWS: Array<{
-  id: string;
-  label: string;
-  hint: string;
-  before: "full" | "limited" | "none";
-  after: "full" | "limited" | "none";
-}> = [
-  {
-    id: "deposit",
-    label: "Пополнение USDT (TRC20)",
-    hint: "Ввод средств на баланс кабинета",
-    before: "limited",
-    after: "full",
-  },
-  {
-    id: "withdraw",
-    label: "Вывод на кошелёк",
-    hint: "Перевод USDT на ваш внешний адрес",
-    before: "limited",
-    after: "full",
-  },
-  {
-    id: "secondary",
-    label: "Вторичный рынок",
-    hint: "Сделки с долями rights / units",
-    before: "limited",
-    after: "full",
-  },
-  {
-    id: "limits",
-    label: "Лимиты заявок",
-    hint: "Размер и частота операций",
-    before: "limited",
-    after: "full",
-  },
+const ACCESS_ROW_DEFS = [
+  { id: "deposit", labelKey: "verification.access.deposit", before: "limited" as const, after: "full" as const },
+  { id: "withdraw", labelKey: "verification.access.withdraw", before: "limited" as const, after: "full" as const },
+  { id: "secondary", labelKey: "verification.access.secondary", before: "limited" as const, after: "full" as const },
+  { id: "limits", labelKey: "verification.access.limits", before: "limited" as const, after: "full" as const },
 ];
-
-function AccessPill({ kind }: { kind: "full" | "limited" | "none" }) {
-  if (kind === "full")
-    return (
-      <span className="inline-flex items-center gap-1 rounded-lg bg-lime-100/90 px-2 py-1 text-[11px] font-semibold text-lime-950">
-        <Check className="size-3.5 shrink-0" aria-hidden />
-        Полный доступ
-      </span>
-    );
-  if (kind === "limited")
-    return (
-      <span className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 text-[11px] font-semibold text-neutral-700">
-        <Lock className="size-3.5 shrink-0 text-neutral-500" aria-hidden />
-        С лимитами
-      </span>
-    );
-  return (
-    <span className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2 py-1 text-[11px] font-semibold text-neutral-500">
-      <Lock className="size-3.5 shrink-0" aria-hidden />
-      Недоступно
-    </span>
-  );
-}
 
 function DocumentsList({ status }: { status: VerificationUiStatus }) {
   const idOk =
@@ -177,7 +129,7 @@ function DocumentsList({ status }: { status: VerificationUiStatus }) {
   ];
 
   return (
-    <ul className="divide-y divide-neutral-100 rounded-2xl border border-neutral-100 bg-white">
+    <ul className={cn(profileListClass, profileCardClass, "p-0")}>
       {items.map((item) => (
         <li key={item.id} className="flex items-start gap-3 px-4 py-3.5 sm:px-5">
           <div
@@ -228,30 +180,45 @@ function SubmittedSummary({ status }: { status: VerificationUiStatus }) {
 }
 
 export function ProfileVerificationContent() {
+  const { isAuthenticated } = useAuth();
+  const { t } = useI18n();
+  const live = isLiveAccountEnabled() && isAuthenticated;
+  const prototype = isAccountCenterPrototypeAllowed();
+
+  if (live) {
+    return <ProfileVerificationLiveContent />;
+  }
+
+  if (!prototype) {
+    return (
+      <div className="rounded-2xl bg-neutral-50 px-4 py-6 text-center">
+        <p className="text-sm font-medium text-neutral-900">{t("verification.signInRequiredTitle")}</p>
+        <p className="mt-1 text-sm text-neutral-500">{t("verification.signInRequiredBody")}</p>
+        <Link
+          href={ROUTES.login}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-neutral-900 px-5 text-xs font-semibold text-white"
+        >
+          {t("verification.signInCta")}
+        </Link>
+      </div>
+    );
+  }
+
+  return <ProfileVerificationDemoContent />;
+}
+
+function ProfileVerificationDemoContent() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const status = useMemo(
     () => parseVerificationUiStatus(searchParams.get(VERIFICATION_STATUS_QUERY)),
     [searchParams],
   );
-  const meta = statusMeta(status);
-
-  const beforeAccess = status === "approved" ? ("full" as const) : ("limited" as const);
-  const afterAccess = "full" as const;
+  const meta = statusMeta(status, t);
 
   return (
-    <div className="space-y-6">
-      {/* 1. Заголовок страницы */}
-      <header className="space-y-1">
-        <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-neutral-400">Аккаунт</p>
-        <h1 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">Верификация</h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-neutral-500">
-          Подтверждение личности для RevShare: безопасные выплаты в USDT, контроль лимитов и доступ к вторичному рынку
-          rights / units по трекам.
-        </p>
-      </header>
-
-      {/* 2. Статус */}
-      <section className="rounded-3xl bg-white px-4 py-5 sm:px-6 sm:py-6">
+    <div className="space-y-3 sm:space-y-4">
+      <section className={profileCardClass}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <div
@@ -276,14 +243,14 @@ export function ProfileVerificationContent() {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
-                Статус верификации
+                {t("verification.statusLabel")}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold", meta.tone)}>
                   {meta.label}
                 </span>
                 {(status === "pending_review" || status === "approved" || status === "rejected") && (
-                  <span className="text-xs text-neutral-500">Обновлено: 18.04.2026</span>
+                  <span className="text-xs text-neutral-500">{t("verification.updated")}: 18.04.2026</span>
                 )}
               </div>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-neutral-600">{meta.description}</p>
@@ -295,66 +262,39 @@ export function ProfileVerificationContent() {
       {/* Отклонение */}
       {status === "rejected" && (
         <section
-          className="rounded-2xl border border-red-100 bg-red-50/50 px-4 py-4 sm:px-5"
+          className="rounded-2xl bg-red-50 px-4 py-4 sm:px-5"
           role="status"
           aria-live="polite"
         >
           <div className="flex gap-2">
             <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-700" aria-hidden />
             <div>
-              <p className="text-sm font-semibold text-red-900">Что не так с заявкой</p>
+              <p className="text-sm font-semibold text-red-900">{t("verification.rejectionTitle")}</p>
               <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-red-800/95">
-                <li>Фото разворота паспорта размыто — загрузите файл в лучшем качестве.</li>
-                <li>Адрес в документе не совпадает с выпиской по адресу.</li>
+                <li>{t("verification.rejectionPhoto")}</li>
+                <li>{t("verification.rejectionAddress")}</li>
               </ul>
-              <p className="mt-3 text-xs text-red-800/80">
-                Исправьте пункты и отправьте снова — повторная подача бесплатна.
-              </p>
+              <p className="mt-3 text-xs text-red-800/80">{t("verification.rejectionResubmit")}</p>
             </div>
           </div>
         </section>
       )}
 
-      {/* 3. Доступ и лимиты */}
-      <section className="rounded-3xl bg-white px-4 py-5 sm:px-6 sm:py-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Доступ</p>
-        <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-neutral-900">Что доступно сейчас и после проверки</h2>
-        <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-          Это не инвестиционный продукт и не брокерский счёт — мы проверяем личность, чтобы защитить выплаты и сделки с
-          долями в доходе треков.
-        </p>
-        <div className="mt-4 overflow-x-auto rounded-2xl bg-neutral-50/80">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead>
-              <tr className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                <th className="px-3 py-3 pl-4 font-medium">Операция</th>
-                <th className="px-3 py-3 font-medium">Сейчас</th>
-                <th className="px-3 py-3 pr-4 font-medium">После подтверждения</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white">
-              {ACCESS_ROWS.map((row, i) => (
-                <tr key={row.id} className={cn(i !== ACCESS_ROWS.length - 1 && "border-b border-neutral-100")}>
-                  <td className="px-3 py-3 pl-4">
-                    <p className="font-medium text-neutral-900">{row.label}</p>
-                    <p className="text-xs text-neutral-500">{row.hint}</p>
-                  </td>
-                  <td className="px-3 py-3 align-top">
-                    <AccessPill kind={status === "approved" ? "full" : row.before} />
-                  </td>
-                  <td className="px-3 py-3 pr-4 align-top">
-                    <AccessPill kind={afterAccess} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <section className={profileCardClass}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">{t("verification.accessTitle")}</p>
+        <ProfileAccessRows
+          rows={ACCESS_ROW_DEFS.map((row) => ({
+            id: row.id,
+            label: t(row.labelKey),
+            hint: "",
+            before: status === "approved" ? "full" : row.before,
+            after: row.after,
+          }))}
+        />
       </section>
 
-      {/* 4–5. Шаги и документы */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] lg:items-start">
-        <section className="rounded-3xl bg-white px-4 py-5 sm:px-6 sm:py-6">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] lg:items-start">
+        <section className={profileCardClass}>
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Шаги</p>
           <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-neutral-900">Как пройти проверку</h2>
           <ol className="mt-5 space-y-0">
@@ -376,7 +316,7 @@ export function ProfileVerificationContent() {
                     className={cn(
                       "relative z-1 grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold",
                       visual === "done" && "bg-lime-400 text-neutral-950",
-                      visual === "current" && "bg-neutral-900 text-white ring-4 ring-neutral-900/10",
+                      visual === "current" && "bg-neutral-900 text-white",
                       visual === "upcoming" && "bg-neutral-100 text-neutral-400",
                       visual === "locked" && "bg-neutral-100 text-neutral-400",
                     )}
@@ -409,8 +349,7 @@ export function ProfileVerificationContent() {
         </div>
       </div>
 
-      {/* 6–7. CTA и сроки */}
-      <section className="rounded-3xl bg-neutral-50 px-4 py-5 sm:px-6 sm:py-6">
+      <section className={profileMutedCardClass}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold tracking-tight text-neutral-900">Дальнейшие действия</h2>
@@ -439,7 +378,7 @@ export function ProfileVerificationContent() {
             {(status === "not_started" || status === "rejected") && (
               <Link
                 href={VerificationHref("in_progress")}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-lime-400 px-5 text-xs font-semibold text-neutral-950 transition hover:bg-lime-300"
+                className={profilePrimaryButtonClass}
               >
                 {status === "rejected" ? "Исправить и продолжить" : "Начать верификацию"}
               </Link>
@@ -448,13 +387,13 @@ export function ProfileVerificationContent() {
               <>
                 <Link
                   href={VerificationHref("pending_review")}
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-lime-400 px-5 text-xs font-semibold text-neutral-950 transition hover:bg-lime-300"
+                  className={profilePrimaryButtonClass}
                 >
                   Отправить на проверку
                 </Link>
                 <button
                   type="button"
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-neutral-100 px-5 text-xs font-semibold text-neutral-800 transition hover:bg-neutral-200/90"
+                  className={profileSecondaryButtonClass}
                 >
                   Сохранить черновик
                 </button>
@@ -482,8 +421,7 @@ export function ProfileVerificationContent() {
         </div>
       </section>
 
-      {/* 9. Поддержка */}
-      <section className="flex flex-col gap-3 rounded-2xl border border-neutral-100 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <section className={cn(profileCardClass, "flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:py-4")}>
         <div className="flex gap-3">
           <HelpCircle className="mt-0.5 size-5 shrink-0 text-neutral-400" aria-hidden />
           <div>

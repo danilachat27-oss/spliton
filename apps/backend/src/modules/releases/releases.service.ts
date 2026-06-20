@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { ReleasesRepository } from './releases.repository';
+import { PublicCatalogService } from '../catalog/public-catalog.service';
 
 @Injectable()
 export class ReleasesService {
-  constructor(private readonly releasesRepository: ReleasesRepository) {}
+  constructor(private readonly publicCatalog: PublicCatalogService) {}
 
   findAll() {
-    return this.releasesRepository.findAll();
+    return this.publicCatalog.listLegacyReleases();
   }
 }

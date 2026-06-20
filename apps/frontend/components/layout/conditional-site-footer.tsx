@@ -10,6 +10,9 @@ function hideFooterForPath(pathname: string | null) {
   if (pathname === ROUTES.login) return true;
   if (pathname === ROUTES.register) return true;
   if (pathname === ROUTES.verifyEmail) return true;
+  if (pathname === ROUTES.adminLogin) return true;
+  if (pathname === ROUTES.admin) return true;
+  if (pathname.startsWith(`${ROUTES.admin}/`)) return true;
   if (pathname === ROUTES.dashboardCatalog) return true;
   if (pathname.startsWith(`${ROUTES.dashboardCatalog}/`)) return true;
   if (pathname === ROUTES.analyticsReleases) return true;

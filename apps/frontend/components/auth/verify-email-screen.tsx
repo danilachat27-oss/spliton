@@ -5,14 +5,17 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { ROUTES } from "@/constants/routes";
+import { tf } from "@/lib/i18n/auth-messages";
 
 type VerifyStatus = "idle" | "loading" | "success" | "error";
 
 export function VerifyEmailScreen() {
   const searchParams = useSearchParams();
   const { verifyEmail, resendEmail } = useAuth();
+  const { t } = useI18n();
   const token = searchParams.get("token")?.trim() ?? "";
   const email = searchParams.get("email")?.trim() ?? "";
 
@@ -28,17 +31,17 @@ export function VerifyEmailScreen() {
         await verifyEmail(token);
         if (!active) return;
         setStatus("success");
-        setMessage("Email успешно подтверждён. Теперь можно войти в аккаунт.");
+        setMessage(t("auth.verify.successBody"));
       } catch {
         if (!active) return;
         setStatus("error");
-        setMessage("Ссылка недействительна или истекла. Запросите новое письмо подтверждения.");
+        setMessage(t("auth.verify.errorBody"));
       }
     })();
     return () => {
       active = false;
     };
-  }, [token, verifyEmail]);
+  }, [token, verifyEmail, t]);
 
   const hasEmail = Boolean(email);
 
@@ -47,11 +50,9 @@ export function VerifyEmailScreen() {
     setIsResending(true);
     try {
       await resendEmail(email);
-      setMessage(
-        "Если аккаунт существует и email ещё не подтверждён, мы отправим новое письмо.",
-      );
+      setMessage(t("auth.verify.resendSuccess"));
     } catch {
-      setMessage("Не удалось отправить запрос. Попробуйте ещё раз чуть позже.");
+      setMessage(t("auth.verify.resendFailed"));
     } finally {
       setIsResending(false);
     }
@@ -59,25 +60,25 @@ export function VerifyEmailScreen() {
 
   const title =
     status === "loading"
-      ? "Подтверждаем email"
+      ? t("auth.verify.loadingTitle")
       : status === "success"
-        ? "Email подтверждён"
+        ? t("auth.verify.successTitle")
         : status === "error"
-          ? "Ссылка недействительна или устарела"
+          ? t("auth.verify.errorTitle")
           : hasEmail
-            ? "Проверьте почту"
-            : "Подтверждение email";
+            ? t("auth.verify.checkInboxTitle")
+            : t("auth.verify.defaultTitle");
 
   const bodyText =
     status === "loading"
-      ? "Проверяем ссылку подтверждения..."
+      ? t("auth.verify.loadingBody")
       : status === "success"
-        ? "Email успешно подтверждён. Теперь можно войти в аккаунт."
+        ? t("auth.verify.successBody")
         : status === "error"
-          ? "Срок действия ссылки мог истечь. Запросите новое письмо подтверждения."
+          ? t("auth.verify.errorBody")
           : hasEmail
-            ? `Мы отправили ссылку подтверждения на ${email}.`
-            : "Откройте ссылку из письма или войдите в аккаунт, чтобы запросить письмо повторно.";
+            ? tf(t("auth.verify.checkInboxBody"), { email })
+            : t("auth.verify.defaultBody");
 
   return (
     <div className="w-full text-neutral-900">
@@ -100,7 +101,7 @@ export function VerifyEmailScreen() {
             onClick={handleResend}
             disabled={isResending || status === "loading"}
           >
-            {isResending ? "Отправляем..." : "Отправить письмо ещё раз"}
+            {isResending ? t("auth.verify.resendSending") : t("auth.verify.resendAgain")}
           </Button>
         ) : null}
 
@@ -109,7 +110,7 @@ export function VerifyEmailScreen() {
             href={ROUTES.login}
             className="inline-flex h-[52px] w-full items-center justify-center rounded-xl border border-neutral-900 bg-neutral-900 text-[15px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px"
           >
-            Войти
+            {t("auth.reset.signIn")}
           </Link>
         ) : null}
 
@@ -117,7 +118,7 @@ export function VerifyEmailScreen() {
           href={ROUTES.login}
           className="inline-flex h-[52px] w-full items-center justify-center rounded-xl border border-neutral-200 bg-white text-[15px] font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
         >
-          Вернуться ко входу
+          {t("auth.verify.backToLogin")}
         </Link>
 
         {!hasEmail && status !== "success" ? (
@@ -125,7 +126,7 @@ export function VerifyEmailScreen() {
             href={ROUTES.register}
             className="inline-flex h-[52px] w-full items-center justify-center rounded-xl border border-neutral-200 bg-white text-[15px] font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
           >
-            Перейти к регистрации
+            {t("auth.verify.goRegister")}
           </Link>
         ) : null}
       </div>

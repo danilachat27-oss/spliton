@@ -19,9 +19,9 @@ export function GuideSectionHeader({
         className,
       )}
     >
-      <h2 className="text-xl font-semibold tracking-tight text-white md:text-2xl">{title}</h2>
+      <h2 className="text-lg font-semibold tracking-tight text-white sm:text-xl md:text-2xl">{title}</h2>
       {subtitle ? (
-        <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 md:text-sm">{subtitle}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 sm:text-sm">{subtitle}</p>
       ) : null}
     </div>
   );

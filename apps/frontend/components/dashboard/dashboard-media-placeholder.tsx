@@ -1,4 +1,4 @@
-import { ImageIcon } from "lucide-react";
+import { ImageIcon } from "@/lib/lucide";
 
 import { cn } from "@/lib/utils";
 
@@ -6,6 +6,8 @@ type MediaPlaceholderProps = {
   /** Короткая подпись, например «Обложка — фото позже» */
   label: string;
   className?: string;
+  /** Без рамок и фона (для случаев поверх градиентов/абсолютного слоя) */
+  frameless?: boolean;
   /** Tailwind aspect class */
   aspectClassName?: string;
 };
@@ -14,12 +16,14 @@ type MediaPlaceholderProps = {
 export function MediaPlaceholder({
   label,
   className,
+  frameless = false,
   aspectClassName = "aspect-[4/3]",
 }: MediaPlaceholderProps) {
   return (
     <div
       className={cn(
         "flex flex-col items-center justify-center gap-2 border border-dashed border-white/10 bg-neutral-900/80 text-center",
+        frameless && "border-0 bg-transparent",
         aspectClassName,
         className
       )}

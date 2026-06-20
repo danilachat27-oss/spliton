@@ -1,6 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, Calculator, Library } from "@/lib/lucide";
+
+import { UntMark } from "@/components/shared/asset-marks";
+import {
+  UNT_SCENE_PANELS,
+  UntSceneFrame,
+} from "@/components/shared/unt-explainer-scenes";
+import { UNT_ACTIONS, UNT_SCENES } from "@/constants/unt-explainer-data";
+import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
 type UntExplainerProps = { className?: string };
@@ -8,11 +18,11 @@ type UntExplainerProps = { className?: string };
 export function UntExplainer({ className }: UntExplainerProps) {
   return (
     <section className={cn("text-neutral-900", className)} aria-labelledby="unt-explainer-title">
-      <header className="flex min-h-[min(48vh,480px)] items-center justify-center gap-4 px-5 pb-12 pt-8 text-center sm:px-6 sm:pb-16 sm:pt-10">
+      <header className="flex min-h-[min(44vh,420px)] flex-col items-center justify-center gap-4 px-5 pb-10 pt-8 text-center sm:px-6 sm:pb-12 sm:pt-10">
         <div className="inline-flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm">
           <Image
             src="/images/urrency/units.png"
-            alt="UNT icon"
+            alt=""
             width={40}
             height={40}
             className="h-10 w-10 object-contain"
@@ -20,97 +30,150 @@ export function UntExplainer({ className }: UntExplainerProps) {
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-white/75 [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">
-            UNT icon
+            Spliton · образование
           </p>
-          <h2
+          <h1
             id="unt-explainer-title"
-            className="text-[56px] font-semibold leading-tight tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)]"
+            className="text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.55)] sm:text-5xl lg:text-[56px]"
           >
-            Что такое UNT?
-          </h2>
+            Что такое UNT и релиз?
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-base">
+            Пять интерактивных сцен ниже показывают путь от релиза в каталоге до начислений и secondary market.
+            UNT — внутренняя единица доли дохода по конкретному релизу, не отдельная криптовалюта.
+          </p>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <Link
+            href={ROUTES.dashboardCatalog}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/18"
+          >
+            <Library className="size-4" aria-hidden />
+            Каталог релизов
+          </Link>
+          <Link
+            href={ROUTES.calculator}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/18"
+          >
+            <Calculator className="size-4" aria-hidden />
+            Калькулятор
+          </Link>
+          <Link
+            href={ROUTES.catalogReleaseParameters}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur-sm transition hover:bg-white/18"
+          >
+            Параметры карточки
+            <ArrowRight className="size-3.5" aria-hidden />
+          </Link>
         </div>
       </header>
 
-      <div className="mt-4 space-y-5 px-5 pb-5 pt-5 sm:mt-6 sm:px-6">
-        <div className="mx-auto max-w-[65ch] space-y-5 text-[17px] leading-[1.72] text-neutral-700 sm:text-[17px]">
-          <p className="text-lg font-medium leading-snug text-neutral-900 sm:text-xl">
-            UNT — это внутренняя единица учёта доли дохода трека внутри платформы Spliton. Она используется для того,
-            чтобы система могла точно определять, какая часть пользовательского пула дохода принадлежит каждому
-            пользователю по конкретному музыкальному треку.
-          </p>
-          <p>
-            Когда пользователь участвует в сделке по треку, он получает определённое количество UNT. Эти единицы не
-            являются отдельной криптовалютой, токеном или акцией. UNT существует только внутри Spliton и используется
-            как техническая единица для расчёта доли дохода, отображения позиции пользователя и передачи прав между
-            пользователями внутри платформы.
-          </p>
-          <p>
-            Лучший способ понять UNT — представить его как доли внутри отдельного трека. У каждого трека есть своё
-            общее количество UNT, например 10&nbsp;000 UNT. Если пользователь получил 1&nbsp;000 UNT по этому треку,
-            это означает, что он держит 10% пользовательского пула дохода именно этого трека. Если другой трек тоже
-            имеет UNT, его единицы считаются отдельно, потому что у каждого трека свои параметры, свой доход, своя
-            сделка и свой пользовательский пул.
-          </p>
-          <p>
-            UNT нужен для прозрачного распределения дохода. Когда трек приносит доход, система сначала определяет,
-            какая часть дохода относится к пользователям. После этого эта сумма распределяется между держателями UNT
-            пропорционально их количеству. Например, если трек заработал 1&nbsp;000, а пользовательский пул составляет
-            50%, то между пользователями распределяется 500. Если пользователь держит 1&nbsp;000 UNT из 10&nbsp;000 UNT,
-            он получает 10% от этого пула, то есть 50.
-          </p>
-          <p>
-            Важно понимать, что UNT не даёт пользователю право собственности на музыкальный трек. Пользователь не
-            получает copyright, ownership, контроль над произведением или право управлять треком. UNT отражает только
-            право на долю дохода, которое учитывается внутри системы Spliton. Это делает модель понятной: пользователь
-            получает не сам трек, а долю дохода, которая рассчитывается через количество UNT.
-          </p>
-          <p>
-            Также UNT используется на secondary market внутри Spliton. Пользователь может передать свои UNT другому
-            пользователю, если такая функция доступна для конкретной сделки. В этом случае система переводит
-            соответствующее количество UNT от одного пользователя к другому, а вместе с ними переходит и право на
-            будущую долю дохода по этому треку. Так UNT помогает не только рассчитывать начисления, но и учитывать
-            передачу долей между пользователями.
-          </p>
-          <p>
-            UNT нельзя рассматривать как инвестиционный актив в классическом смысле. Это не акция, не ценная бумага, не
-            облигация, не криптовалюта и не гарантированный доход. Размер будущих начислений зависит от фактического
-            дохода конкретного трека. Если трек приносит больше дохода, пользовательский пул может быть выше. Если
-            дохода нет, начисления по UNT также могут отсутствовать.
-          </p>
-          <p>
-            Главная задача UNT — сделать долю пользователя понятной, измеримой и удобной для учёта. Благодаря UNT
-            пользователь может видеть, сколько единиц он держит по каждому треку, какую долю пользовательского пула это
-            представляет, какие начисления были получены и какую часть своей позиции он может передать другому
-            пользователю внутри платформы.
-          </p>
-          <p className="border-t border-neutral-200/90 pt-5 text-neutral-800">
-            Проще говоря, UNT — это способ Spliton перевести долю дохода трека в понятные числовые единицы. Чем больше
-            UNT у пользователя по конкретному треку, тем больше его доля внутри пользовательского пула дохода этого
-            трека.
-          </p>
+      <div className="rounded-3xl bg-white px-5 py-6 shadow-sm ring-1 ring-neutral-200/80 sm:px-8 sm:py-8">
+        <nav className="flex flex-wrap gap-2" aria-label="Сцены объяснения UNT">
+          {UNT_SCENES.map((scene) => (
+            <a
+              key={scene.id}
+              href={`#unt-scene-${scene.id}`}
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-white"
+            >
+              <span className="font-mono text-[10px] text-neutral-400">{scene.step}</span>
+              {scene.title}
+              <span className="unt-scene-live-dot size-1.5 rounded-full bg-emerald-500" aria-hidden />
+            </a>
+          ))}
+        </nav>
+        <p className="mt-3 text-sm text-neutral-500">
+          Все сцены анимированы и работают на этой странице — прокрутите к нужному шагу или нажмите на чип выше.
+        </p>
 
-          <h3 className="mt-12 scroll-mt-24 text-xl font-semibold leading-snug tracking-tight text-neutral-900 sm:text-2xl">
+        <div className="mt-8 space-y-14 sm:space-y-16">
+          {UNT_SCENES.map((scene, index) => {
+            const Panel = UNT_SCENE_PANELS[scene.id];
+            const reversed = index % 2 === 1;
+
+            return (
+              <article
+                key={scene.id}
+                id={`unt-scene-${scene.id}`}
+                className="scroll-mt-28 grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-10"
+              >
+                <div className={cn(reversed && "lg:order-2")}>
+                  <p className="font-mono text-xs font-semibold text-neutral-400">{scene.step}</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">{scene.title}</h2>
+                  <p className="mt-1 text-sm font-medium text-neutral-500">{scene.subtitle}</p>
+                  <p className="mt-4 text-base leading-relaxed text-neutral-600">{scene.description}</p>
+                  {scene.id === "release" ? (
+                    <p className="mt-4 rounded-xl bg-neutral-50 px-4 py-3 text-sm leading-relaxed text-neutral-600">
+                      <span className="font-semibold text-neutral-900">Релиз</span> — не «трек в Spotify», а продуктовая
+                      карточка сделки: эмитент, раунд, объём UNT, условия выплат и статус в каталоге Spliton.
+                    </p>
+                  ) : null}
+                  {scene.id === "pool" ? (
+                    <p className="mt-4 text-sm leading-relaxed text-neutral-600">
+                      UNT не даёт copyright на музыку — только долю в пользовательском пуле дохода внутри платформы.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className={cn(reversed && "lg:order-1")}>
+                  <UntSceneFrame label={`Spliton · ${scene.title}`}>
+                    <Panel />
+                  </UntSceneFrame>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <section className="mt-14 border-t border-neutral-200/80 pt-10" aria-labelledby="unt-summary-title">
+          <h2 id="unt-summary-title" className="text-xl font-semibold text-neutral-900 sm:text-2xl">
+            Коротко про UNT
+          </h2>
+          <div className="mt-5 max-w-[65ch] space-y-4 text-base leading-relaxed text-neutral-600">
+            <p>
+              <UntMark className="mr-1 inline-block align-middle" />
+              <span className="font-semibold text-neutral-900">UNT</span> — единица учёта доли дохода по релизу внутри
+              Spliton. Покупая UNT на первичном рынке или на secondary, вы участвуете в распределении дохода этого
+              релиза пропорционально количеству единиц.
+            </p>
+            <p>
+              Это не акция, не криптовалюта и не гарантия дохода. Размер начислений зависит от фактических результатов
+              релиза. Все суммы в интерфейсе — в USDT (TRC20), комиссии видны до подтверждения операции.
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-10" aria-labelledby="unt-actions-title">
+          <h2 id="unt-actions-title" className="text-lg font-semibold text-neutral-900">
             Что можно делать с UNT?
-          </h3>
-          <p>
-            <span className="font-semibold text-neutral-900">Получать начисления.</span> Доход распределяется
-            пропорционально количеству UNT.
-          </p>
-          <p>
-            <span className="font-semibold text-neutral-900">Отслеживать долю.</span> UNT показывает вашу долю внутри
-            пользовательского пула дохода по треку.
-          </p>
-          <p>
-            <span className="font-semibold text-neutral-900">Передавать права.</span> UNT можно передать другому
-            пользователю внутри системы, когда это предусмотрено сделкой.
-          </p>
-          <p>
-            <span className="font-semibold text-neutral-900">Хранить в профиле.</span> Ваши UNT отображаются в профиле
-            и в аналитике по позициям.
-          </p>
+          </h2>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+            {UNT_ACTIONS.map((action) => (
+              <li key={action.title} className="rounded-2xl bg-neutral-50 px-4 py-4">
+                <p className="font-semibold text-neutral-900">{action.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-neutral-600">{action.text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Link
+            href={ROUTES.dashboardCatalog}
+            className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800"
+          >
+            Смотреть релизы в каталоге
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+          <Link
+            href={ROUTES.fees}
+            className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 px-5 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50"
+          >
+            Комиссии и расчёты
+          </Link>
         </div>
       </div>
     </section>
   );
 }
-

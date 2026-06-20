@@ -1,18 +1,16 @@
-"use client";
+﻿"use client";
 
 import {
   Check,
   Copy,
-  Gift,
   Share2,
-  UserCheck,
-  UserPlus,
-  Wallet,
-} from "lucide-react";
+} from "@/lib/lucide";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 
 import { ReferralFaqList } from "@/components/referral/referral-faq-list";
+import { ReferralHowScene } from "@/components/referral/referral-how-scene";
+import { useI18n } from "@/components/providers/i18n-provider";
 import {
   buildReferralLink,
   getReferralRewardsHistory,
@@ -30,25 +28,8 @@ const usdt = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 2,
 });
 
-const FILTER_OPTIONS: { id: "all" | ReferralRewardStatus; label: string }[] = [
-  { id: "all", label: "Все" },
-  { id: "pending", label: "В ожидании" },
-  { id: "available", label: "Доступно" },
-  { id: "paid", label: "Выплачено" },
-  { id: "rejected", label: "Отклонено" },
-  { id: "cancelled", label: "Отменено" },
-];
-
-function statusLabel(s: ReferralRewardStatus) {
-  const map: Record<ReferralRewardStatus, string> = {
-    pending: "В ожидании",
-    available: "Доступно",
-    paid: "Выплачено",
-    rejected: "Отклонено",
-    cancelled: "Отменено",
-  };
-  return map[s];
-}
+const REWARD_FILTER_IDS = ["all", "pending", "available", "paid", "rejected", "cancelled"] as const;
+type RewardFilterId = (typeof REWARD_FILTER_IDS)[number];
 
 function statusPillClass(s: ReferralRewardStatus) {
   const map: Record<ReferralRewardStatus, string> = {
@@ -83,6 +64,7 @@ function CopyField({
   copiedKey: string | null;
   onCopy: (text: string, id: string) => void;
 }) {
+  const { t } = useI18n();
   const done = copiedKey === copyId;
   return (
     <div className="space-y-2">
@@ -99,7 +81,7 @@ function CopyField({
           className="h-9 shrink-0 border-white/12 bg-[#0a0a0a] text-zinc-100 ring-1 ring-white/10 hover:bg-white/6"
         >
           {done ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-          <span className="ml-1.5">{done ? "Скопировано" : "Копировать"}</span>
+          <span className="ml-1.5">{done ? t("referral.program.copy.copied") : t("referral.program.copy.copy")}</span>
         </Button>
       </div>
     </div>
@@ -112,7 +94,8 @@ export type ReferralProgramPageContentProps = {
 };
 
 export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: ReferralProgramPageContentProps) {
-  const [rewardFilter, setRewardFilter] = useState<(typeof FILTER_OPTIONS)[number]["id"]>("all");
+  const { t } = useI18n();
+  const [rewardFilter, setRewardFilter] = useState<RewardFilterId>("all");
   const { key: copiedKey, flash } = useCopyFeedback();
 
   const rewards = useMemo(() => getReferralRewardsHistory(), []);
@@ -150,8 +133,8 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
 
   const handleShare = useCallback(async () => {
     const shareData = {
-      title: "RevShare",
-      text: "Присоединяйся к RevShare — revenue share по музыкальным трекам.",
+      title: "Spliton",
+      text: t("referral.program.shareText"),
       url: referralLink,
     };
     try {
@@ -163,33 +146,9 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
       /* user cancelled or share failed */
     }
     await handleCopy(referralLink, "share-fallback");
-  }, [handleCopy, referralLink]);
+  }, [handleCopy, referralLink, t]);
 
-  const steps = [
-    {
-      icon: UserPlus,
-      title: "Пригласите друга",
-      text: "Отправьте ссылку или код — регистрация по ним связывает аккаунт с вашим профилем.",
-    },
-    {
-      icon: UserCheck,
-      title: "Друг создаёт аккаунт",
-      text: "После регистрации событие фиксируется в реферальной системе RevShare.",
-    },
-    {
-      icon: Wallet,
-      title: "Квалифицирующие действия",
-      text: "Пополнение USDT (TRC20), покупка units или другие сценарии из актуальных правил.",
-    },
-    {
-      icon: Gift,
-      title: "Вы получаете награду",
-      text: "Начисления отображаются во вкладке «Награды» и учитываются в сводке.",
-    },
-  ];
-
-  const surfaceCard = "rounded-2xl bg-[#111111] ring-1 ring-white/[0.06]";
-  const statTile = "rounded-2xl bg-[#0a0a0a] px-4 py-4 ring-1 ring-white/[0.06] sm:px-5 sm:py-5";
+  const surfaceCard = "rounded-2xl bg-[#111111]";
 
   return (
     <div className="space-y-8 pb-12">
@@ -205,9 +164,9 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
             />
             <div className="pointer-events-none absolute inset-0 bg-black/56" aria-hidden />
             <div className="relative mx-auto max-w-3xl text-center">
-              <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Приглашайте друзей и получайте награды</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{t("referral.program.hero.title")}</h2>
               <p className="mt-3 text-sm leading-relaxed text-zinc-300 sm:text-base">
-                Отправьте ссылку или код. Когда приглашённый выполняет условия программы, награды начисляются в USDT.
+                {t("referral.program.hero.subtitle")}
               </p>
 
               <div className="mx-auto mt-6 w-fit rounded-2xl bg-white p-2.5">
@@ -216,8 +175,8 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
               </div>
 
               <div className="mt-7 space-y-4 text-left">
-                <CopyField label="Реферальная ссылка" value={referralLink} copyId="link" copiedKey={copiedKey} onCopy={handleCopy} />
-                <CopyField label="Реферальный код" value={REFERRAL_CODE} copyId="code" copiedKey={copiedKey} onCopy={handleCopy} />
+                <CopyField label={t("referral.program.copy.link")} value={referralLink} copyId="link" copiedKey={copiedKey} onCopy={handleCopy} />
+                <CopyField label={t("referral.program.copy.code")} value={REFERRAL_CODE} copyId="code" copiedKey={copiedKey} onCopy={handleCopy} />
               </div>
 
               <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -229,47 +188,28 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
                   className="border-white/15 bg-black/55 text-zinc-100 hover:bg-white/10"
                 >
                   {copiedKey === "share-fallback" ? <Check className="size-3.5" aria-hidden /> : <Share2 className="size-3.5" aria-hidden />}
-                  <span className="ml-1.5">{copiedKey === "share-fallback" ? "Ссылка скопирована" : "Поделиться"}</span>
+                  <span className="ml-1.5">{copiedKey === "share-fallback" ? t("referral.program.shareCopied") : t("referral.program.share")}</span>
                 </Button>
               </div>
             </div>
           </section>
 
-          <section className={cn("rounded-3xl bg-[#121212] p-6 sm:p-8")}>
-            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Как это работает</h2>
-            <p className="mt-2 text-sm text-zinc-300 sm:text-base">Четыре шага от приглашения до начисления.</p>
-            <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {steps.map((s, i) => (
-                <li key={s.title} className="relative rounded-2xl bg-zinc-900/55 p-4 sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/12 text-white ring-1 ring-white/18">
-                      <s.icon className="size-4" aria-hidden />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Шаг {i + 1}</p>
-                      <p className="mt-1 font-semibold text-zinc-100">{s.title}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs leading-relaxed text-zinc-300 sm:text-sm">{s.text}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
+          <ReferralHowScene />
 
           <section className="rounded-3xl bg-[#121212] p-6 sm:p-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Сводка по приглашениям</h2>
-            <p className="mt-2 text-sm text-zinc-300 sm:text-base">Ориентиры по мок-данным; после API подставятся реальные значения.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t("referral.invites.summary.title")}</h2>
+            <p className="mt-2 text-sm text-zinc-300 sm:text-base">{t("referral.invites.summary.subtitle")}</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { label: "Приглашено", value: String(referralProgramStats.invitedUsers) },
-                { label: "Активные рефералы", value: String(referralProgramStats.activeReferrals) },
+                { label: t("referral.summary.invited"), value: String(referralProgramStats.invitedUsers) },
+                { label: t("referral.summary.activeReferrals"), value: String(referralProgramStats.activeReferrals) },
                 {
-                  label: "Награды в ожидании",
+                  label: t("referral.summary.pendingRewards"),
                   value: `${usdt.format(referralProgramStats.pendingRewardsUsdt)} USDT`,
                   mono: true,
                 },
                 {
-                  label: "Всего заработано",
+                  label: t("referral.summary.earnedTotal"),
                   value: `${usdt.format(referralProgramStats.earnedRewardsTotalUsdt)} USDT`,
                   mono: true,
                   accent: true,
@@ -298,8 +238,8 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
           </section>
 
           <section className={cn("p-6 sm:p-8", surfaceCard)}>
-            <h2 className="text-lg font-semibold text-white">Вопросы и ответы</h2>
-            <p className="mt-1 text-sm text-zinc-500">Коротко о правилах и статусах — без юридической замены оферты.</p>
+            <h2 className="text-lg font-semibold text-white">{t("referral.faq.sectionTitle")}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t("referral.faq.subtitle")}</p>
             <ReferralFaqList items={referralFaqItems} defaultOpenId={referralFaqItems[0]?.id ?? null} />
           </section>
         </div>
@@ -308,14 +248,14 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
       {activeTab === "rewards" ? (
         <div className="space-y-8">
           <section className="rounded-3xl bg-[#121212] p-6 sm:p-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Сводка по наградам</h2>
-            <p className="mt-2 text-sm text-zinc-300 sm:text-base">Агрегаты по текущему списку начислений в кабинете.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t("referral.rewards.summary.title")}</h2>
+            <p className="mt-2 text-sm text-zinc-300 sm:text-base">{t("referral.rewards.summary.subtitle")}</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { label: "Всего по строкам", value: `${usdt.format(rewardSummary.total)} USDT`, mono: true },
-                { label: "В ожидании", value: `${usdt.format(rewardSummary.pending)} USDT`, mono: true },
-                { label: "Доступно", value: `${usdt.format(rewardSummary.available)} USDT`, mono: true },
-                { label: "Выплачено", value: `${usdt.format(rewardSummary.paid)} USDT`, mono: true, accent: true },
+                { label: t("referral.rewards.summary.totalRows"), value: `${usdt.format(rewardSummary.total)} USDT`, mono: true },
+                { label: t("referral.rewards.summary.pending"), value: `${usdt.format(rewardSummary.pending)} USDT`, mono: true },
+                { label: t("referral.rewards.summary.available"), value: `${usdt.format(rewardSummary.available)} USDT`, mono: true },
+                { label: t("referral.rewards.summary.paid"), value: `${usdt.format(rewardSummary.paid)} USDT`, mono: true, accent: true },
               ].map((c) => (
                 <div
                   key={c.label}
@@ -342,21 +282,21 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
           <section className="rounded-3xl bg-[#121212] p-6 sm:p-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">История наград</h2>
-                <p className="mt-2 text-sm text-zinc-300">Фильтр по статусу, маскированные идентификаторы приглашённых.</p>
+                <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{t("referral.rewards.history.title")}</h2>
+                <p className="mt-2 text-sm text-zinc-300">{t("referral.rewards.history.subtitle")}</p>
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Фильтр по статусу награды">
-              {FILTER_OPTIONS.map((f) => {
-                const active = rewardFilter === f.id;
+            <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label={t("referral.rewards.filter.aria")}>
+              {REWARD_FILTER_IDS.map((id) => {
+                const active = rewardFilter === id;
                 return (
                   <button
-                    key={f.id}
+                    key={id}
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    onClick={() => setRewardFilter(f.id)}
+                    onClick={() => setRewardFilter(id)}
                     className={cn(
                       "rounded-full px-3 py-1.5 text-xs font-medium ring-1 transition-colors",
                       active
@@ -364,7 +304,7 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
                         : "bg-transparent text-zinc-400 ring-white/10 hover:bg-white/4 hover:text-zinc-200",
                     )}
                   >
-                    {f.label}
+                    {t(`referral.rewards.filter.${id}`)}
                   </button>
                 );
               })}
@@ -372,29 +312,27 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
 
             {rewards.length === 0 ? (
               <div className="mt-10 flex flex-col items-center rounded-2xl bg-zinc-900/55 px-6 py-14 text-center">
-                <p className="text-lg font-semibold text-white">Пока нет наград</p>
-                <p className="mt-2 max-w-md text-sm text-zinc-500">
-                  Как только приглашённые пользователи выполнят условия программы, строки появятся здесь автоматически.
-                </p>
+                <p className="text-lg font-semibold text-white">{t("referral.rewards.empty.title")}</p>
+                <p className="mt-2 max-w-md text-sm text-zinc-500">{t("referral.rewards.empty.text")}</p>
                 <Button
                   type="button"
                   className="mt-6 bg-white text-black hover:bg-zinc-200"
                   onClick={() => onRequestProgramTab?.()}
                 >
-                  Пригласить друзей
+                  {t("referral.rewards.inviteFriends")}
                 </Button>
               </div>
             ) : filteredRewards.length === 0 ? (
               <div className="mt-10 flex flex-col items-center rounded-2xl bg-zinc-900/55 px-6 py-12 text-center">
-                <p className="font-medium text-white">Нет записей для выбранного статуса</p>
-                <p className="mt-2 text-sm text-zinc-500">Смените фильтр или сбросьте на «Все».</p>
+                <p className="font-medium text-white">{t("referral.rewards.emptyFiltered.title")}</p>
+                <p className="mt-2 text-sm text-zinc-500">{t("referral.rewards.emptyFiltered.text")}</p>
                 <Button
                   type="button"
                   variant="outline"
                   className="mt-5 border-white/12 bg-[#0a0a0a] text-zinc-100 ring-1 ring-white/10 hover:bg-white/6"
                   onClick={() => setRewardFilter("all")}
                 >
-                  Показать все
+                  {t("referral.rewards.emptyFiltered.showAll")}
                 </Button>
               </div>
             ) : (
@@ -402,12 +340,12 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
                 <table className="w-full min-w-[680px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-white/8 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                      <th className="px-4 py-3 font-medium">Дата</th>
-                      <th className="px-4 py-3 font-medium">Приглашённый</th>
-                      <th className="px-4 py-3 font-medium">Тип</th>
-                      <th className="px-4 py-3 font-medium">Статус</th>
-                      <th className="px-4 py-3 font-medium text-right">Сумма</th>
-                      <th className="px-4 py-3 font-medium">Комментарий</th>
+                      <th className="px-4 py-3 font-medium">{t("referral.rewards.table.date")}</th>
+                      <th className="px-4 py-3 font-medium">{t("referral.rewards.table.invitee")}</th>
+                      <th className="px-4 py-3 font-medium">{t("referral.rewards.table.type")}</th>
+                      <th className="px-4 py-3 font-medium">{t("referral.rewards.table.status")}</th>
+                      <th className="px-4 py-3 font-medium text-right">{t("referral.rewards.table.amount")}</th>
+                      <th className="px-4 py-3 font-medium">{t("referral.rewards.table.comment")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -426,7 +364,7 @@ export function ReferralProgramPageContent({ activeTab, onRequestProgramTab }: R
                               statusPillClass(row.status),
                             )}
                           >
-                            {statusLabel(row.status)}
+                            {t(`referral.status.${row.status}`)}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-right font-mono text-xs text-zinc-100">

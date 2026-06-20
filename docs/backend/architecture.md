@@ -1,5 +1,7 @@
 # Spliton Backend Architecture
 
+> Index: [API Overview](API_OVERVIEW.md) · [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md) · [docs/README.md](../README.md)
+
 ## Structure
 
 Backend lives in `apps/backend/src` and is organized as:

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@/lib/lucide";
 
 import { quickLinks } from "@/components/my-assets/overview/mock-data";
 

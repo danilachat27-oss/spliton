@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { RESEND_SECONDS } from "@/components/auth/register/constants";
+import { readReferralAttribution } from "@/lib/referral-attribution";
 import {
   emailErrorMessage,
   emailPattern,
@@ -13,6 +14,7 @@ import {
 } from "@/components/auth/register/validation";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { ApiError } from "@/services/auth.service";
 
 export type UseRegisterFlowOptions = {
@@ -22,6 +24,7 @@ export type UseRegisterFlowOptions = {
 export function useRegisterFlow(options?: UseRegisterFlowOptions) {
   const onStepChange = options?.onStepChange;
   const router = useRouter();
+  const { t } = useI18n();
   const { register, resendEmail } = useAuth();
   const passwordRef = React.useRef<HTMLInputElement>(null);
   const emailFieldRef = React.useRef<HTMLDivElement>(null);
@@ -47,8 +50,9 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
 
   const trimmedEmail = email.trim();
   const emailValid = trimmedEmail.length > 0 && emailPattern.test(trimmedEmail);
-  const showEmailError = emailTouched && Boolean(emailErrorMessage(trimmedEmail));
-  const emailMessage = emailTouched ? emailErrorMessage(trimmedEmail) : undefined;
+  const showEmailError =
+    emailTouched && Boolean(emailErrorMessage(trimmedEmail, t));
+  const emailMessage = emailTouched ? emailErrorMessage(trimmedEmail, t) : undefined;
   const trackPlaying = !showPassword && password.length > 0;
 
   React.useEffect(() => {
@@ -101,7 +105,7 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
   }, []);
 
   const goToOtpStep = React.useCallback(async () => {
-    const msg = emailErrorMessage(trimmedEmail);
+    const msg = emailErrorMessage(trimmedEmail, t);
     setEmailTouched(true);
     if (msg) {
       setErrors((prev) => ({ ...prev, email: msg }));
@@ -184,21 +188,29 @@ export function useRegisterFlow(options?: UseRegisterFlowOptions) {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       clearSubmitError();
-      const nextErrors = validatePasswordStep({
+      const nextErrors = validatePasswordStep(
+        {
         password,
         confirmPassword,
         termsAccepted,
-      });
+        },
+        t,
+      );
       setErrors((prev) => ({ ...prev, ...nextErrors }));
       if (Object.keys(nextErrors).length > 0) return;
       setDuplicateEmailConflict(false);
 
       setIsSubmitting(true);
       try {
+        const ref = readReferralAttribution();
         await register({
           email: trimmedEmail,
           password,
           acceptedTerms: termsAccepted,
+          acceptedPrivacy: termsAccepted,
+          referralCode: ref.referralCode,
+          utmSource: ref.utmSource,
+          utmCampaign: ref.utmCampaign,
         });
         const next = new URLSearchParams();
         next.set("email", trimmedEmail);

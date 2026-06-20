@@ -1,0 +1,201 @@
+.status-overall-hero {
+  --status-orbit-duration: 10s;
+}
+
+.status-overall-hero__orb-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1.75rem;
+  gap: 1.25rem;
+}
+
+.status-overall-hero__sync {
+  width: min(100%, 40rem);
+  padding-inline: 1rem;
+  text-align: center;
+}
+
+.status-overall-hero__sync-name {
+  margin-top: 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: rgb(228 228 231);
+  overflow-wrap: anywhere;
+}
+
+.status-overall-hero__rail {
+  position: relative;
+  width: min(100%, 40rem);
+  min-height: 2rem;
+  padding-inline: 1rem;
+}
+
+.status-overall-hero__sync-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(113 113 122);
+}
+
+.status-overall-hero__rail-line {
+  position: absolute;
+  left: 1rem;
+  right: calc(1rem + 0.5rem);
+  top: 50%;
+  height: 1px;
+  background: rgb(255 255 255 / 0.08);
+  transform: translateY(-50%);
+}
+
+.status-overall-hero__rail-target {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  transform: translateY(-50%);
+}
+
+.status-overall-hero__fly-chip {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  display: inline-flex;
+  max-width: calc(100% - 2rem);
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  background: rgb(24 24 27);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: rgb(228 228 231);
+  white-space: normal;
+  text-align: left;
+  transform: translateY(-50%);
+  animation: status-rail-slide 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.status-overall-hero__fly-chip-dot {
+  flex-shrink: 0;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 9999px;
+  background: rgb(52 211 153);
+}
+
+.status-overall-hero__orb {
+  position: relative;
+  display: flex;
+  width: 8.5rem;
+  height: 8.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: transparent;
+}
+
+@media (min-width: 640px) {
+  .status-overall-hero__orb {
+    width: 9rem;
+    height: 9rem;
+  }
+}
+
+.status-overall-hero__logo {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  background: rgb(0 0 0);
+}
+
+.status-overall-hero__ring {
+  pointer-events: none;
+  position: absolute;
+  inset: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.status-overall-hero__ring--spin {
+  animation: status-ring-spin var(--status-orbit-duration) linear infinite;
+}
+
+.status-overall-hero__orbit-dot {
+  position: absolute;
+  left: 50%;
+  top: 0.55rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  translate: -50% 0;
+  border-radius: 9999px;
+}
+
+.status-overall-hero__orbit-dot--success {
+  background: rgb(52 211 153);
+}
+
+.status-overall-hero__orbit-dot--warning {
+  background: rgb(251 191 36);
+}
+
+.status-overall-hero__orbit-dot--maintenance {
+  background: rgb(56 189 248);
+}
+
+.status-overall-hero__orbit-dot--danger {
+  background: rgb(244 63 94);
+}
+
+@keyframes status-rail-slide {
+  0% {
+    left: 1rem;
+    right: auto;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  72% {
+    left: auto;
+    right: calc(1rem + 0.5rem);
+    opacity: 1;
+  }
+  100% {
+    left: auto;
+    right: calc(1rem + 0.5rem);
+    opacity: 0;
+  }
+}
+
+@keyframes status-ring-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-overall-hero__fly-chip,
+  .status-overall-hero__ring--spin {
+    animation: none !important;
+  }
+
+  .status-overall-hero__fly-chip {
+    opacity: 0 !important;
+  }
+}

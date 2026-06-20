@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/lib/lucide";
 import { useCallback, useId, useState } from "react";
 
 import type { FeesFaqItem } from "@/constants/fees-mock-data";

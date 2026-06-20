@@ -1,106 +1,159 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "@/lib/lucide";
 
-import { ActivityFiltersBar, type ActivityFilterTab } from "@/components/dashboard/assets/activity-filters-bar";
+import {
+  ActivityFiltersBar,
+} from "@/components/dashboard/assets/activity-filters-bar";
 import { activityRecords } from "@/components/dashboard/assets/activity-mock-data";
-import { ActivitySummaryCards } from "@/components/dashboard/assets/activity-summary-cards";
 import { ActivityTableCard } from "@/components/dashboard/assets/activity-table-card";
-import { ActivityTimelineCard } from "@/components/dashboard/assets/activity-timeline-card";
+import {
+  assetsCardClass,
+  assetsOutlineButtonClass,
+  assetsPrimaryButtonClass,
+} from "@/components/dashboard/assets/assets-ui";
+import { useAssetsActivityPage } from "@/hooks/use-assets-activity-page";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { ReadOnlySectionError } from "@/components/shared/data-states/read-only-section-error";
+import { ProductDemoBanner } from "@/components/shared/product-demo-banner";
 import { ROUTES } from "@/constants/routes";
-
-function matchTab(tab: ActivityFilterTab, kind: string) {
-  if (tab === "all") return true;
-  if (tab === "deposits") return kind === "deposit";
-  if (tab === "buys") return kind === "purchase";
-  if (tab === "sells") return kind === "sale";
-  if (tab === "transfers") return kind === "transfer";
-  if (tab === "withdrawals") return kind === "withdrawal";
-  return true;
-}
+import { cn } from "@/lib/utils";
 
 export function ActivityPageContent() {
-  const [activeTab, setActiveTab] = useState<ActivityFilterTab>("all");
-  const [period, setPeriod] = useState("Последние 30 дней");
-  const [release, setRelease] = useState("Все релизы");
-  const [status, setStatus] = useState("Все статусы");
-  const [query, setQuery] = useState("");
-  const [isLoading] = useState(false);
+  const { t } = useI18n();
+  const {
+    live,
+    filters,
+    updateFilters,
+    setPage,
+    records,
+    total,
+    page,
+    pageSize,
+    hasMore,
+    releaseOptions,
+    loading,
+    error,
+    hasActiveFilters,
+    reload,
+  } = useAssetsActivityPage();
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return activityRecords.filter((row) => {
-      if (!matchTab(activeTab, row.kind)) return false;
-      if (release !== "Все релизы" && row.release !== release) return false;
-      if (status !== "Все статусы" && row.status !== status) return false;
-      if (!q) return true;
-      return (
-        row.txId.toLowerCase().includes(q) ||
-        row.release.toLowerCase().includes(q) ||
-        row.type.toLowerCase().includes(q) ||
-        row.details.toLowerCase().includes(q)
-      );
-    });
-  }, [activeTab, query, release, status]);
+  const rows = live ? (records ?? []) : activityRecords;
+  const isInitialLoad = live && loading && records === null;
+  const isEmpty = !isInitialLoad && rows.length === 0;
+  const tableState: "default" | "empty" | "loading" = isInitialLoad
+    ? "loading"
+    : isEmpty
+      ? "empty"
+      : "default";
 
-  const tableState: "default" | "empty" | "loading" = isLoading ? "loading" : filtered.length === 0 ? "empty" : "default";
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const summary = {
-    totalOps: String(filtered.length),
-    deposits: String(filtered.filter((r) => r.kind === "deposit").length),
-    secondaryTrades: String(filtered.filter((r) => r.kind === "secondary").length),
-    latest: filtered[0]?.relative ?? "n/a",
-  };
+  if (live && error && records === null) {
+    return (
+      <ReadOnlySectionError
+        sectionId="assets-activity"
+        error={error}
+        onRetry={() => void reload()}
+        retryLabel={t("activity.retry")}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <ActivityFiltersBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        period={period}
-        onPeriodChange={setPeriod}
-        release={release}
-        onReleaseChange={setRelease}
-        status={status}
-        onStatusChange={setStatus}
-        query={query}
-        onQueryChange={setQuery}
-      />
+    <div className="space-y-4 sm:space-y-5">
+      {!live ? <ProductDemoBanner messageKey="activity.demoBanner" /> : null}
+      {live && error && records !== null ? (
+        <ReadOnlySectionError
+          sectionId="assets-activity-partial"
+          error={error}
+          onRetry={() => void reload()}
+          retryLabel={t("activity.retry")}
+          compact
+        />
+      ) : null}
 
-      <ActivitySummaryCards
-        totalOps={summary.totalOps}
-        deposits={summary.deposits}
-        secondaryTrades={summary.secondaryTrades}
-        latest={summary.latest}
+      <ActivityFiltersBar
+        activeTab={filters.tab}
+        onTabChange={(tab) => updateFilters({ tab })}
+        period={filters.period}
+        onPeriodChange={(period) =>
+          updateFilters({ period: period as typeof filters.period })
+        }
+        release={filters.releaseId}
+        onReleaseChange={(releaseId) => updateFilters({ releaseId })}
+        releaseOptions={releaseOptions}
+        status={filters.status}
+        onStatusChange={(status) => updateFilters({ status })}
+        direction={filters.direction}
+        onDirectionChange={(direction) =>
+          updateFilters({ direction: direction as typeof filters.direction })
+        }
+        sort={filters.sort}
+        onSortChange={(sort) => updateFilters({ sort: sort as typeof filters.sort })}
+        query={filters.q}
+        onQueryChange={(q) => updateFilters({ q })}
+        disabled={live && loading}
       />
 
       {tableState === "empty" ? (
-        <section className="rounded-3xl bg-white px-5 py-10 text-center sm:px-8 sm:py-12">
-          <p className="text-lg font-semibold tracking-tight text-neutral-900">Пока нет активности</p>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-neutral-500">
-            История действий появится после первых пополнений, входа в релизы или операций на secondary market.
+        <section className={cn(assetsCardClass, "py-14 text-center")}>
+          <p className="text-base font-semibold text-neutral-900">
+            {hasActiveFilters && live ? t("activity.filteredEmptyTitle") : t("activity.emptyTitle")}
           </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={ROUTES.dashboardCatalog}
-              className="inline-flex h-10 items-center rounded-xl bg-blue-700 px-5 text-sm font-semibold text-white transition hover:bg-blue-800"
-            >
-              Открыть каталог
-            </Link>
-            <Link
-              href={`${ROUTES.dashboard}#deposit`}
-              className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-neutral-50/90 px-5 text-sm font-semibold text-neutral-800 ring-1 ring-neutral-100 transition hover:bg-neutral-100"
-            >
-              Пополнить USDT
-            </Link>
-          </div>
+          <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
+            {hasActiveFilters && live ? t("activity.filteredEmptyBody") : t("activity.emptyBody")}
+          </p>
+          {!hasActiveFilters ? (
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <Link href={ROUTES.dashboardCatalog} className={assetsPrimaryButtonClass}>
+                {t("activity.openCatalog")}
+              </Link>
+              <Link href={`${ROUTES.dashboardPayouts}/deposit`} className={assetsOutlineButtonClass}>
+                {t("activity.depositUsdt")}
+              </Link>
+            </div>
+          ) : null}
         </section>
       ) : (
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)] lg:gap-8">
-          <ActivityTableCard rows={filtered} state={tableState} />
-          <ActivityTimelineCard rows={filtered} />
-        </section>
+        <>
+          <ActivityTableCard rows={rows} state={tableState} compact />
+
+          {live && total > pageSize ? (
+            <nav
+              className="flex flex-wrap items-center justify-between gap-3 px-1"
+              aria-label={t("activity.paginationLabel")}
+            >
+              <p className="text-xs text-neutral-500">
+                {t("activity.paginationSummary")
+                  .replace("{page}", String(page))
+                  .replace("{totalPages}", String(totalPages))
+                  .replace("{total}", String(total))}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage(page - 1)}
+                  className={cn(assetsOutlineButtonClass, "h-9 disabled:cursor-not-allowed disabled:opacity-50")}
+                >
+                  <ChevronLeft className="size-3.5" />
+                  {t("activity.paginationPrev")}
+                </button>
+                <button
+                  type="button"
+                  disabled={!hasMore || loading}
+                  onClick={() => setPage(page + 1)}
+                  className={cn(assetsOutlineButtonClass, "h-9 disabled:cursor-not-allowed disabled:opacity-50")}
+                >
+                  {t("activity.paginationNext")}
+                  <ChevronRight className="size-3.5" />
+                </button>
+              </div>
+            </nav>
+          ) : null}
+        </>
       )}
     </div>
   );

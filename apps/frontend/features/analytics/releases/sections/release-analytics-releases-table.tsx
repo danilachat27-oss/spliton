@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Star } from "lucide-react";
+import { Star } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { SortHeader } from "@/components/shared/exchange/sort-header";
 import { analyticsReleaseDetailPath } from "@/constants/routes";
 import { directionFromChangePct } from "@/lib/analytics/change-pct";
@@ -28,6 +29,7 @@ export function ReleaseAnalyticsReleasesTable({
   onToggleWatch: (id: string) => void;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <div className="mt-5 overflow-hidden rounded-xl bg-[#111111]">
@@ -35,14 +37,14 @@ export function ReleaseAnalyticsReleasesTable({
         <table className="w-full min-w-[980px] border-collapse text-left font-mono text-[13px] tabular-nums tracking-tight">
           <thead>
             <tr className="text-zinc-500">
-              <th className="w-9 py-3 pr-1 pl-3" aria-label="Избранное" />
+              <th className="w-9 py-3 pr-1 pl-3" aria-label={t("analytics.releases.table.localMarkAria")} />
               <th className="py-3 pr-4 font-normal">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Название</span>
               </th>
               <th className="py-3 pr-3">
                 <SortHeader
                   tone="neutral"
-                  label="Доходн."
+                  label={t("analytics.releases.table.yield")}
                   active={sort === "yield"}
                   dir={sort === "yield" ? sortDir : "desc"}
                   onClick={() => onSort("yield")}
@@ -60,7 +62,7 @@ export function ReleaseAnalyticsReleasesTable({
               <th className="py-3 pr-3">
                 <SortHeader
                   tone="neutral"
-                  label="Выплаты"
+                  label={t("analytics.releases.table.payouts")}
                   active={sort === "payouts"}
                   dir={sort === "payouts" ? sortDir : "desc"}
                   onClick={() => onSort("payouts")}
@@ -75,6 +77,15 @@ export function ReleaseAnalyticsReleasesTable({
                   dir={sort === "units" ? sortDir : "desc"}
                   onClick={() => onSort("units")}
                 />
+              </th>
+              <th className="py-3 pr-3 font-normal">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Progress</span>
+              </th>
+              <th className="py-3 pr-3 font-normal">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Raised</span>
+              </th>
+              <th className="py-3 pr-3 font-normal">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Holders</span>
               </th>
               <th className="py-3 pr-4 pl-0 font-normal">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Статус</span>
@@ -96,7 +107,7 @@ export function ReleaseAnalyticsReleasesTable({
                 <tr
                   key={r.id}
                   tabIndex={0}
-                  aria-label={`Открыть карточку релиза: ${r.release}`}
+                  aria-label={t("analytics.releases.table.openReleaseAria").replace("{name}", r.release)}
                   className="cursor-pointer text-zinc-300 transition-colors hover:bg-white/4"
                   onClick={go}
                   onKeyDown={(e) => {
@@ -114,7 +125,12 @@ export function ReleaseAnalyticsReleasesTable({
                         onToggleWatch(r.id);
                       }}
                       className="flex size-8 items-center justify-center text-zinc-600 transition-colors hover:text-zinc-300"
-                      aria-label={watched ? "Убрать из избранного" : "В избранное"}
+                      aria-label={
+                        watched
+                          ? t("analytics.releases.table.watchRemoveAria")
+                          : t("analytics.releases.table.watchAddAria")
+                      }
+                      title={t("analytics.releases.table.watchTitle")}
                     >
                       <Star
                         className={cn(
@@ -153,6 +169,13 @@ export function ReleaseAnalyticsReleasesTable({
                   </td>
                   <td className="py-2.5 pr-3 align-middle text-white">{r.payouts}</td>
                   <td className="py-2.5 pr-4 align-middle text-zinc-400">{r.units}</td>
+                  <td className="py-2.5 pr-3 align-middle text-zinc-400">
+                    {r.progressPercent != null ? `${Math.round(r.progressPercent)}%` : "—"}
+                  </td>
+                  <td className="py-2.5 pr-3 align-middle text-zinc-300">{r.raisedUsdt ?? "—"}</td>
+                  <td className="py-2.5 pr-3 align-middle text-zinc-300">
+                    {r.holdersCount != null ? r.holdersCount : "—"}
+                  </td>
                   <td className="py-2.5 pr-4 align-middle font-sans text-[12px] text-zinc-500">
                     {r.status === "Active" ? "Активен" : r.status === "Paused" ? "Пауза" : "Закрыт"}
                   </td>

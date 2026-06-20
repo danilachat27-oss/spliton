@@ -1,11 +1,36 @@
 import type { CatalogItem } from "@/lib/catalog-mock";
+import { catalogItemAvailabilityPriority } from "@/lib/catalog/catalog-purchase.util";
 import type { CatalogFundingPhase, CatalogGridView, CatalogKindFilter, CatalogSortKey } from "@/types/catalog/page";
+
+export type NumericRangeValidation = {
+  min?: number;
+  max?: number;
+  invalid: boolean;
+};
+
+function parseOptionalNonNegative(raw: string | undefined): number | undefined {
+  if (raw == null || !raw.trim()) return undefined;
+  const normalized = raw.replace(/\s/g, "").replace(",", ".").trim();
+  if (!normalized) return undefined;
+  const n = Number.parseFloat(normalized);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return n;
+}
+
+export function validateNumericRange(minRaw?: string, maxRaw?: string): NumericRangeValidation {
+  const min = parseOptionalNonNegative(minRaw);
+  const max = parseOptionalNonNegative(maxRaw);
+  if (min != null && max != null && min > max) {
+    return { invalid: true };
+  }
+  return { min, max, invalid: false };
+}
 
 export function catalogGridClass(view: CatalogGridView) {
   if (view === "list") {
-    return "mx-auto flex w-full max-w-5xl flex-col gap-3 sm:gap-3.5";
+    return "mx-auto flex w-full max-w-5xl flex-col gap-2 sm:gap-2.5";
   }
-  return "grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:gap-10 xl:grid-cols-2 2xl:grid-cols-3";
+  return "grid grid-cols-1 items-start gap-6 sm:grid-cols-2 sm:gap-8 lg:gap-10 xl:grid-cols-2 2xl:grid-cols-3";
 }
 
 function parseYieldPct(item: CatalogItem): number {
@@ -47,8 +72,11 @@ export function catalogMatchesFilters(
     if (!hay.includes(q)) return false;
   }
 
-  const minPriceValue = parseFloat(minPrice.replace(/\s/g, "").replace(",", "."));
-  const maxPriceValue = parseFloat(maxPrice.replace(/\s/g, "").replace(",", "."));
+  const priceRange = validateNumericRange(minPrice, maxPrice);
+  if (priceRange.invalid) return false;
+
+  const minPriceValue = priceRange.min ?? NaN;
+  const maxPriceValue = priceRange.max ?? NaN;
   const minProgressValue = parseFloat(minProgress.replace(/\s/g, "").replace(",", "."));
   const minYieldValue = parseFloat(minYield.replace(/\s/g, "").replace(",", "."));
 
@@ -67,32 +95,54 @@ export function catalogMatchesFilters(
   return true;
 }
 
+function compareWithAvailabilityTier(
+  a: CatalogItem,
+  b: CatalogItem,
+  secondary: (left: CatalogItem, right: CatalogItem) => number,
+): number {
+  const tierDiff = catalogItemAvailabilityPriority(a) - catalogItemAvailabilityPriority(b);
+  if (tierDiff !== 0) return tierDiff;
+  return secondary(a, b);
+}
+
 export function sortCatalogItems(items: CatalogItem[], sort: CatalogSortKey, catalogOrder: Map<string, number>): CatalogItem[] {
   const arr = [...items];
   if (sort === "catalog_order") {
-    arr.sort((a, b) => (catalogOrder.get(a.id) ?? 0) - (catalogOrder.get(b.id) ?? 0));
+    arr.sort((a, b) =>
+      compareWithAvailabilityTier(a, b, (left, right) =>
+        (catalogOrder.get(left.id) ?? 0) - (catalogOrder.get(right.id) ?? 0),
+      ),
+    );
     return arr;
   }
   if (sort === "title_asc") {
-    arr.sort((a, b) => a.title.localeCompare(b.title, "ru", { sensitivity: "base" }));
+    arr.sort((a, b) =>
+      compareWithAvailabilityTier(a, b, (left, right) =>
+        left.title.localeCompare(right.title, "ru", { sensitivity: "base" }),
+      ),
+    );
     return arr;
   }
   if (sort === "progress_desc") {
-    arr.sort((a, b) => {
-      const pa = a.kind === "funding" ? a.pct : -1;
-      const pb = b.kind === "funding" ? b.pct : -1;
-      if (pa !== pb) return pb - pa;
-      return parseSharePrice(b) - parseSharePrice(a);
-    });
+    arr.sort((a, b) =>
+      compareWithAvailabilityTier(a, b, (left, right) => {
+        const pa = left.kind === "funding" ? left.pct : -1;
+        const pb = right.kind === "funding" ? right.pct : -1;
+        if (pa !== pb) return pb - pa;
+        return parseSharePrice(right) - parseSharePrice(left);
+      }),
+    );
     return arr;
   }
   if (sort === "yield_desc") {
-    arr.sort((a, b) => {
-      const ya = parseYieldPct(a);
-      const yb = parseYieldPct(b);
-      if (ya !== yb) return yb - ya;
-      return (catalogOrder.get(a.id) ?? 0) - (catalogOrder.get(b.id) ?? 0);
-    });
+    arr.sort((a, b) =>
+      compareWithAvailabilityTier(a, b, (left, right) => {
+        const ya = parseYieldPct(left);
+        const yb = parseYieldPct(right);
+        if (ya !== yb) return yb - ya;
+        return (catalogOrder.get(left.id) ?? 0) - (catalogOrder.get(right.id) ?? 0);
+      }),
+    );
     return arr;
   }
   return arr;

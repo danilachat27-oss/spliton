@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
+import { tf } from "@/lib/i18n/financial-messages";
 import { cn } from "@/lib/utils";
 
 export function FlowSummaryRow({
@@ -17,13 +19,17 @@ export function FlowSummaryRow({
   value: string;
   onEdit: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="animate-payout-flow-summary-in flex items-center gap-3 rounded-2xl bg-white/90 px-4 py-3 ring-1 ring-neutral-200/60">
       <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
         <Check className="size-4" strokeWidth={2.5} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Шаг {stepId}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
+          {tf(t("payoutFlow.step"), { n: String(stepId) })}
+        </p>
         <p className="truncate text-sm font-semibold text-neutral-900">{title}</p>
       </div>
       <span className="hidden max-w-[min(200px,38%)] truncate font-mono text-xs text-neutral-600 sm:inline">{value}</span>
@@ -33,7 +39,7 @@ export function FlowSummaryRow({
         className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800"
       >
         <Pencil className="size-3.5" aria-hidden />
-        Изменить
+        {t("payoutFlow.edit")}
       </button>
     </div>
   );

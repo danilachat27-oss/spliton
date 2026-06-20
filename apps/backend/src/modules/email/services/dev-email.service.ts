@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EmailService, VerificationEmailInput } from '../email.service';
+import {
+  EmailService,
+  NotificationEmailInput,
+  PasswordResetEmailInput,
+  VerificationEmailInput,
+} from '../email.service';
 import { DevEmailOutboxService } from './dev-email-outbox.service';
 
 @Injectable()
@@ -17,6 +22,30 @@ export class DevEmailService extends EmailService {
     });
     this.logger.log(
       `verification email queued for ${this.maskEmail(input.to)} (userId=${input.userId})`,
+    );
+    return Promise.resolve();
+  }
+
+  sendPasswordResetEmail(input: PasswordResetEmailInput): Promise<void> {
+    this.outbox.push({
+      to: input.to,
+      userId: input.userId,
+      verifyUrl: input.resetUrl,
+    });
+    this.logger.log(
+      `password reset email queued for ${this.maskEmail(input.to)} (userId=${input.userId})`,
+    );
+    return Promise.resolve();
+  }
+
+  sendNotificationEmail(input: NotificationEmailInput): Promise<void> {
+    this.outbox.push({
+      to: input.to,
+      userId: input.userId,
+      verifyUrl: `[notification] ${input.subject}`,
+    });
+    this.logger.log(
+      `notification email queued for ${this.maskEmail(input.to)}: ${input.subject}`,
     );
     return Promise.resolve();
   }

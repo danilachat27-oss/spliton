@@ -1,0 +1,315 @@
+/* Guide payouts — terminal + quest split */
+
+.guide-payout-reveal .guide-reveal-purpose {
+  margin-bottom: 1.25rem;
+}
+
+.guide-payout-split {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .guide-payout-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 1.75rem;
+  }
+}
+
+.guide-payout-split-col {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.guide-payout-terminal {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: rgb(12 12 14);
+}
+
+.guide-payout-terminal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.85rem 1.15rem 0.75rem;
+}
+
+.guide-payout-terminal-toolbar-title {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(161 161 170);
+}
+
+.guide-payout-terminal-badge {
+  border-radius: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(113 113 122);
+  background: rgb(255 255 255 / 0.04);
+}
+
+.guide-payout-terminal-chart-wrap {
+  position: relative;
+  flex: 1;
+  padding: 0.35rem 1rem 0.75rem 0.35rem;
+}
+
+.guide-payout-terminal-yaxis {
+  position: absolute;
+  left: 0.35rem;
+  top: 0.5rem;
+  bottom: 2rem;
+  width: 2.85rem;
+  pointer-events: none;
+}
+
+.guide-payout-terminal-ytick {
+  position: absolute;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  line-height: 1;
+  color: rgb(113 113 122);
+  white-space: nowrap;
+}
+
+.guide-payout-terminal-plot {
+  margin-left: 3rem;
+  min-height: 176px;
+}
+
+.guide-payout-terminal-plot svg {
+  display: block;
+  width: 100%;
+  height: 176px;
+}
+
+.guide-payout-terminal-xaxis {
+  display: grid;
+  margin-top: 0.35rem;
+  margin-left: 3rem;
+  padding-right: 1rem;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: rgb(113 113 122);
+}
+
+.guide-payout-terminal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 1.15rem 0.75rem;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  color: rgb(113 113 122);
+}
+
+.guide-payout-terminal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.guide-payout-terminal-table thead {
+  background: rgb(10 10 10 / 0.6);
+}
+
+.guide-payout-terminal-table th {
+  padding: 0.6rem 1.15rem;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+  color: rgb(113 113 122);
+}
+
+.guide-payout-terminal-table th:last-child,
+.guide-payout-terminal-table td:last-child {
+  text-align: right;
+}
+
+.guide-payout-terminal-table td {
+  padding: 0.65rem 1.15rem;
+  color: rgb(212 212 216);
+}
+
+.guide-payout-terminal-table tbody tr + tr td {
+  border-top: 1px solid rgb(255 255 255 / 0.04);
+}
+
+.guide-payout-terminal-table td.amount {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.guide-payout-terminal-table td.period {
+  color: rgb(113 113 122);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.guide-payout-terminal-status {
+  display: inline-block;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.guide-payout-terminal-status.is-paid {
+  color: rgb(161 161 170);
+  background: rgb(255 255 255 / 0.05);
+}
+
+.guide-payout-terminal-status.is-accrued {
+  color: rgb(196 245 112);
+  background: rgb(183 245 0 / 0.12);
+}
+
+.guide-payout-terminal-table tr.is-accrued-row {
+  background: rgb(183 245 0 / 0.05);
+}
+
+.guide-payout-terminal-table tr.is-accrued-row td.amount {
+  color: rgb(228 228 231);
+}
+
+.guide-payout-example[data-focus="regularity"] .guide-payout-terminal-chart-wrap {
+  background: rgb(183 245 0 / 0.04);
+  border-radius: 0.65rem;
+}
+
+.guide-payout-example[data-focus="regularity"] .guide-payout-chart-line {
+  stroke-width: 2.25;
+  filter: drop-shadow(0 0 4px rgb(183 245 0 / 0.3));
+}
+
+.guide-payout-example[data-focus="accrued"] .guide-payout-terminal-table {
+  background: rgb(183 245 0 / 0.03);
+  border-radius: 0 0 1rem 1rem;
+}
+
+.guide-payout-example[data-focus="accrued"] .guide-payout-terminal-table tr.is-accrued-row {
+  background: rgb(183 245 0 / 0.08);
+}
+
+.guide-payout-example[data-focus="yield"] .guide-payout-range-band {
+  opacity: 1;
+}
+
+.guide-payout-example[data-focus="yield"] .guide-payout-terminal-table td.amount {
+  color: rgb(228 228 231);
+}
+
+.guide-payout-range-band {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.guide-payout-chart-area {
+  opacity: 0.88;
+  transition: opacity 0.45s ease;
+}
+
+.guide-payout-chart-line {
+  transition: stroke-width 0.35s ease, filter 0.35s ease;
+}
+
+.guide-payout-point-last circle {
+  transition: filter 0.35s ease;
+}
+
+.guide-payout-example[data-focus="accrued"] .guide-payout-point-last circle {
+  filter: drop-shadow(0 0 5px rgb(183 245 0 / 0.45));
+}
+
+.guide-payout-quest-terminal {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+  flex-direction: column;
+  border-radius: 1rem;
+  background: rgb(12 12 14);
+  padding: 0.85rem 1rem 1rem;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-header {
+  padding-bottom: 0.75rem;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-track {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  padding: 0.25rem 0;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-step {
+  gap: 0.75rem;
+  padding: 0.75rem 0.65rem;
+  border-radius: 0.65rem;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-step.is-active {
+  background: rgb(183 245 0 / 0.05);
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-dot {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-color: rgb(183 245 0 / 0.35);
+  background: rgb(183 245 0 / 0.08);
+  color: rgb(196 245 112);
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-step:not(.is-active) .guide-payout-quest-dot {
+  border-color: rgb(113 113 122 / 0.4);
+  background: rgb(24 24 27);
+  color: rgb(113 113 122);
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-step.is-active .guide-payout-quest-dot {
+  border-color: rgb(183 245 0 / 0.75);
+  background: rgb(183 245 0 / 0.15);
+  box-shadow: none;
+  animation: none;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-text {
+  margin-top: 0.45rem;
+  line-height: 1.6;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-pointer {
+  margin-top: 0.65rem;
+}
+
+.guide-payout-quest-terminal .guide-payout-quest-progress {
+  margin-top: 0.65rem;
+}

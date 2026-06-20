@@ -4,6 +4,12 @@ import * as React from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import type { DialogRoot } from "@base-ui/react/dialog";
 
+import { useI18n } from "@/components/providers/i18n-provider";
+import { formatUsdtAmount } from "@/lib/i18n/formatters";
+import { statusLabel } from "@/lib/i18n/status-labels";
+import {
+  useSecondaryMarketOrderTypeLabel,
+} from "@/hooks/use-secondary-market-i18n";
 import { cn } from "@/lib/utils";
 
 export type CancelListingModalListing = {
@@ -19,21 +25,6 @@ export type CancelListingModalListing = {
   status: string;
   mode: "limit" | "market";
 };
-
-function formatUsdt(n: number) {
-  return n.toLocaleString("ru-RU", {
-    minimumFractionDigits: n % 1 ? 2 : 0,
-    maximumFractionDigits: 2,
-  });
-}
-
-function sideLabel(side: "buy" | "sell") {
-  return side === "sell" ? "Продажа UNT" : "Покупка UNT";
-}
-
-function modeLabel(mode: "limit" | "market") {
-  return mode === "limit" ? "Лимит" : "Рынок";
-}
 
 function SummaryRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -52,13 +43,20 @@ export type CancelListingModalProps = {
 };
 
 export function CancelListingModal({ open, onOpenChange, listing, onConfirm }: CancelListingModalProps) {
+  const { t, locale } = useI18n();
+  const orderTypeLabel = useSecondaryMarketOrderTypeLabel(listing?.mode ?? "limit");
   const safeRef = React.useRef<HTMLButtonElement>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   if (!listing) return null;
 
   const title =
-    listing.side === "sell" ? "Снять заявку с secondary market?" : "Отменить заявку?";
+    listing.side === "sell"
+      ? t("secondaryMarket.forms.cancelListingSellTitle")
+      : t("secondaryMarket.forms.cancelListingBuyTitle");
+
+  const sideText =
+    listing.side === "sell" ? t("secondaryMarket.forms.sideSellUnt") : t("secondaryMarket.forms.sideBuyUnt");
 
   const handleOpenChange = (next: boolean, eventDetails: DialogRoot.ChangeEventDetails) => {
     if (!next && isSubmitting) {
@@ -102,18 +100,12 @@ export function CancelListingModal({ open, onOpenChange, listing, onConfirm }: C
             {title}
           </Dialog.Title>
           <Dialog.Description className="mt-3 space-y-2 font-sans text-[13px] leading-relaxed text-zinc-400">
-            <p>
-              Неисполненная часть заявки будет снята с вторичного рынка; неиспользованный остаток снова станет доступен
-              в позициях и для новых заявок.
-            </p>
-            <p>
-              Если заявка исполнена частично, исполненная часть сохранится, а неисполненный остаток вернётся к вам.
-            </p>
+            <p>{t("secondaryMarket.forms.cancelListingDesc1")}</p>
           </Dialog.Description>
 
           <div className="mt-4 rounded-xl bg-black/35 px-3 py-2">
             <SummaryRow
-              label="Релиз"
+              label={t("secondaryMarket.actions.release")}
               value={
                 <span className="block">
                   <span className="block font-medium text-white">{listing.releaseTitle}</span>
@@ -127,21 +119,26 @@ export function CancelListingModal({ open, onOpenChange, listing, onConfirm }: C
               }
             />
             <SummaryRow
-              label="Тип заявки"
+              label={t("secondaryMarket.forms.orderType")}
               value={
                 <span>
-                  {sideLabel(listing.side)} · {modeLabel(listing.mode)}
+                  {sideText} · {orderTypeLabel}
                 </span>
               }
             />
             <SummaryRow
-              label="Цена за UNT"
-              value={listing.pricePerUnit != null ? `${formatUsdt(listing.pricePerUnit)} USDT` : "—"}
+              label={t("secondaryMarket.forms.pricePerUnit")}
+              value={
+                listing.pricePerUnit != null ? formatUsdtAmount(listing.pricePerUnit, locale) : "—"
+              }
             />
-            <SummaryRow label="Выставлено UNT" value={listing.unitsListed} />
-            <SummaryRow label="Исполнено" value={listing.unitsFilled} />
-            <SummaryRow label="К отмене" value={listing.unitsRemaining} />
-            <SummaryRow label="Статус" value={<span className="text-zinc-300">{listing.status}</span>} />
+            <SummaryRow label={t("secondaryMarket.forms.listedUnits")} value={listing.unitsListed} />
+            <SummaryRow label={t("secondaryMarket.forms.filledUnits")} value={listing.unitsFilled} />
+            <SummaryRow label={t("secondaryMarket.forms.toCancel")} value={listing.unitsRemaining} />
+            <SummaryRow
+              label={t("secondaryMarket.forms.status")}
+              value={<span className="text-zinc-300">{statusLabel("listing", listing.status, locale)}</span>}
+            />
           </div>
 
           <div className="mt-5 flex justify-end gap-2">
@@ -157,7 +154,7 @@ export function CancelListingModal({ open, onOpenChange, listing, onConfirm }: C
                 "disabled:pointer-events-none disabled:opacity-40",
               )}
             >
-              Оставить заявку
+              {t("secondaryMarket.forms.keepOrder")}
             </button>
             <button
               type="button"
@@ -172,7 +169,7 @@ export function CancelListingModal({ open, onOpenChange, listing, onConfirm }: C
                 "disabled:pointer-events-none disabled:opacity-50",
               )}
             >
-              {isSubmitting ? "Отмена…" : "Отменить заявку"}
+              {isSubmitting ? t("secondaryMarket.forms.submitting") : t("secondaryMarket.forms.cancelOrder")}
             </button>
           </div>
         </Dialog.Popup>

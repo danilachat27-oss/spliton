@@ -5,13 +5,14 @@ import { useMemo, useState } from "react";
 
 import type { PayoutBalanceScaleMock, PayoutComparisonWindowId } from "@/components/dashboard/assets/payouts-mock-data";
 import { getPayoutBalanceScaleMock, payoutComparisonWindowOptions } from "@/components/dashboard/assets/payouts-mock-data";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 /** Положите свой файл в `public/images/payouts/` и смените путь через проп `illustrationSrc` или замените этот SVG. */
 const DEFAULT_COMPARISON_ILLUSTRATION = "/images/payouts/comparison.svg";
 
 function fmtUsdt(n: number) {
-  return new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
 type PayoutsBalanceScaleProps = {
@@ -27,6 +28,7 @@ export function PayoutsBalanceScale({
   illustrationSrc = DEFAULT_COMPARISON_ILLUSTRATION,
   illustrationAlt = "Сравнение выплат за два периода",
 }: PayoutsBalanceScaleProps) {
+  const { t } = useI18n();
   const seriesLocked = Boolean(staticData);
   const [windowId, setWindowId] = useState<PayoutComparisonWindowId>("30d");
 
@@ -49,7 +51,7 @@ export function PayoutsBalanceScale({
   return (
     <section
       className="space-y-10 rounded-3xl bg-white px-5 py-8 sm:space-y-12 sm:px-8 sm:py-10"
-      aria-label="Сравнение выплат по периодам"
+      aria-label={t("payouts.balanceCompareAria")}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-2">
@@ -60,7 +62,7 @@ export function PayoutsBalanceScale({
           <div
             className="flex rounded-xl bg-neutral-100 p-1"
             role="tablist"
-            aria-label="Длина окна сравнения"
+            aria-label={t("payouts.balanceWindowAria")}
           >
             {payoutComparisonWindowOptions.map((opt) => (
               <button

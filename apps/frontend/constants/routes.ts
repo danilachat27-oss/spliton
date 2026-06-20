@@ -1,6 +1,60 @@
 export const ROUTES = {
   home: "/",
-  dashboard: "/dashboard",
+  trust: "/trust",
+  /** Operator portal entry (staff only). */
+  adminLogin: "/admin/login",
+  /** Операторская панель (staff-роли; см. AdminLayoutClient). */
+  admin: "/admin",
+  adminOperatorTasks: "/admin/operator-tasks",
+  adminUsers: "/admin/users",
+  adminUserDetail: (id: string) => `/admin/users/${encodeURIComponent(id)}`,
+  adminTracks: "/admin/tracks",
+  /** @deprecated use adminTracks — releases are managed as tracks (Release model) */
+  adminReleases: "/admin/releases",
+  adminArtists: "/admin/artists",
+  adminGenres: "/admin/genres",
+  adminLabels: "/admin/labels",
+  adminRounds: "/admin/rounds",
+  adminWallets: "/admin/wallets",
+  adminDeposits: "/admin/deposits",
+  adminWithdrawals: "/admin/withdrawals",
+  adminHoldings: "/admin/holdings",
+  adminRevenue: "/admin/revenue",
+  adminSecondaryMarket: "/admin/secondary-market",
+  adminPlatformRevenue: "/admin/platform-revenue",
+  adminReports: "/admin/reports",
+  adminSupport: "/admin/support",
+  adminDisputes: "/admin/disputes",
+  adminDisputeDetail: (id: string) => `/admin/disputes?dispute=${encodeURIComponent(id)}`,
+  adminNews: "/admin/news",
+  adminHelpCenter: "/admin/help-center",
+  adminSystemStatus: "/admin/system-status",
+  dashboardSupport: "/dashboard/support",
+  dashboardDisputes: "/dashboard/disputes",
+  dashboardDisputeDetail: (id: string) => `/dashboard/disputes/${encodeURIComponent(id)}`,
+  dashboardArtist: "/dashboard/artist",
+  dashboardDocuments: "/dashboard/documents",
+  dashboardStatements: "/dashboard/statements",
+  dashboardSupportTicket: (id: string) => `/dashboard/support/${encodeURIComponent(id)}`,
+  adminCompliance: "/admin/compliance",
+  adminKyc: "/admin/kyc",
+  adminReferrals: "/admin/referrals",
+  adminLegal: "/admin/legal",
+  adminTreasury: "/admin/treasury",
+  adminSettings: "/admin/settings",
+  adminAudit: "/admin/audit-log",
+  /** @deprecated use adminAudit */
+  adminAuditLegacy: "/admin/audit",
+  adminRoles: "/admin/roles",
+  adminAnalytics: "/admin/analytics",
+  adminAnalyticsFinance: "/admin/analytics/finance",
+  adminAnalyticsUsers: "/admin/analytics/users",
+  adminAnalyticsTracks: "/admin/analytics/tracks",
+  adminAnalyticsMarket: "/admin/analytics/market",
+  adminAnalyticsRevenue: "/admin/analytics/revenue",
+  adminAnalyticsRisk: "/admin/analytics/risk",
+  adminAnalyticsOperations: "/admin/analytics/operations",
+  dashboard: "/app",
   dashboardOverview: "/assets/overview",
   dashboardMetrics: "/assets/metrics",
   dashboardPositions: "/assets/positions",
@@ -11,6 +65,8 @@ export const ROUTES = {
   dashboardStatement: "/dashboard/statement",
   /** Кабинет: профиль, верификация, безопасность (макет в стиле exchange account). */
   dashboardProfile: "/dashboard/profile",
+  dashboardNotifications: "/dashboard/notifications",
+  adminNotifications: "/admin/notifications",
   myAssetsOverview: "/assets/overview",
   /** Сегмент продажи UNT из кабинета (динамический `[id]` каталожного релиза). */
   myAssetsSellUnits: "/assets/sell",
@@ -30,6 +86,8 @@ export const ROUTES = {
   guideDealStructure: "/guide/deal-structure",
   /** Центр поддержки и база знаний (отдельная страница из хедера). */
   support: "/support",
+  supportArticle: (slug: string) => `/support/articles/${encodeURIComponent(slug)}`,
+  supportCategory: (slug: string) => `/support/categories/${encodeURIComponent(slug)}`,
   /** Раздел «Сервисы» в хедере: вспомогательные страницы */
   /** Объяснение внутренней единицы UNT (Spliton). */
   assetsUnt: "/assets/unt",
@@ -43,9 +101,16 @@ export const ROUTES = {
   register: "/register",
   verifyEmail: "/verify-email",
   forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
   terms: "/terms",
   privacy: "/privacy",
 } as const;
+
+/** Login with safe post-auth redirect (path only, no open redirect). */
+export function loginPathWithNext(returnTo: string): string {
+  const path = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : ROUTES.dashboard;
+  return `${ROUTES.login}?next=${encodeURIComponent(path)}`;
+}
 
 /** Маршруты вкладки «Сервисы» — для подсветки активного пункта в хедере. */
 export const DASHBOARD_MISC_PATHS: readonly string[] = [
@@ -56,6 +121,10 @@ export const DASHBOARD_MISC_PATHS: readonly string[] = [
   ROUTES.news,
   ROUTES.referralProgram,
   ROUTES.partnerProgram,
+  ROUTES.dashboardArtist,
+  ROUTES.dashboardDisputes,
+  ROUTES.dashboardStatements,
+  ROUTES.trust,
 ];
 
 /** Карточка релиза в разделе аналитики (mock, динамический id). */
@@ -84,9 +153,14 @@ export function catalogMarketOverviewReleaseTablePath(id: string): string {
   return `${ROUTES.catalogMarketOverview}?release=${encodeURIComponent(id)}`;
 }
 
-/** Покупка UNT по релизу (макет оформления; id — каталожный id mock-строки). */
-export function catalogBuyUnitsPath(id: string): string {
-  return `${ROUTES.dashboardCatalog}/buy/${encodeURIComponent(id)}`;
+/** Покупка UNT по релизу (id или slug релиза). */
+export function catalogBuyUnitsPath(idOrSlug: string): string {
+  const key = idOrSlug.trim();
+  return `${ROUTES.dashboardCatalog}/buy/${encodeURIComponent(key)}`;
+}
+
+export function catalogBuyUnitsPathForRelease(release: { id: string; slug?: string | null }): string {
+  return catalogBuyUnitsPath(release.slug?.trim() || release.id);
 }
 
 /** Продажа UNT из кабинета (лимитная цена; id — каталожный id mock-строки). */

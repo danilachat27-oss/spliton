@@ -2,10 +2,13 @@
 
 import * as React from "react";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { MOCK_YIELD_SERIES } from "@/constants/analytics/releases";
 import { buildDetailedSeries } from "@/lib/analytics/detailed-series";
-import { buildLinePath } from "@/lib/analytics/chart-path";
+import { buildLinePath, paddedChartDomain } from "@/lib/analytics/chart-path";
+import { buildYieldChartSeries, yieldChartDomain } from "@/lib/analytics/yield-chart-series";
 import { releaseAnalyticsPeriodLabel } from "@/lib/analytics/period-label";
+import type { ReleaseAnalyticsYieldDynamicsPoint } from "@/services/release-analytics.service";
 import { cn } from "@/lib/utils";
 import type { ReleaseAnalyticsPeriod } from "@/types/analytics/releases";
 
@@ -45,24 +48,46 @@ function fmtSignedPp(n: number, fractionDigits = 2) {
   return s;
 }
 
-export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod }) {
+export function YieldDynamicsChart({
+  period,
+  yieldDynamics,
+  mockMode = false,
+}: {
+  period: ReleaseAnalyticsPeriod;
+  yieldDynamics?: ReleaseAnalyticsYieldDynamicsPoint[] | null;
+  mockMode?: boolean;
+}) {
+  const { t } = useI18n();
   const uid = React.useId().replace(/:/g, "");
   const glowId = `yield-line-glow-${uid}`;
   const glowNeonId = `yield-line-glow-neon-${uid}`;
   const clipId = `yield-chart-clip-${uid}`;
 
+  const rawValues = React.useMemo(
+    () =>
+      (yieldDynamics ?? [])
+        .map((p) => Number(p.averageYieldPct))
+        .filter((v) => Number.isFinite(v)),
+    [yieldDynamics],
+  );
+
   const activeSeries = React.useMemo(() => {
-    const source =
-      period === "7d"
-        ? MOCK_YIELD_SERIES.slice(-8)
-        : period === "30d"
-          ? MOCK_YIELD_SERIES.slice(-18)
-          : period === "90d"
-            ? MOCK_YIELD_SERIES.slice(-30)
-            : MOCK_YIELD_SERIES;
-    const detailStep = period === "7d" ? 7 : period === "30d" ? 6 : period === "90d" ? 5 : 4;
-    return buildDetailedSeries(source, detailStep);
-  }, [period]);
+    if (mockMode) {
+      const source =
+        period === "7d"
+          ? MOCK_YIELD_SERIES.slice(-8)
+          : period === "30d"
+            ? MOCK_YIELD_SERIES.slice(-18)
+            : period === "90d"
+              ? MOCK_YIELD_SERIES.slice(-30)
+              : MOCK_YIELD_SERIES;
+      const detailStep = period === "7d" ? 7 : period === "30d" ? 6 : period === "90d" ? 5 : 4;
+      return buildDetailedSeries(source, detailStep);
+    }
+    return buildYieldChartSeries(rawValues, period);
+  }, [mockMode, period, rawValues]);
+
+  const statsSeries = mockMode || rawValues.length === 0 ? activeSeries : rawValues;
 
   const [containerWidth, setContainerWidth] = React.useState(0);
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
@@ -90,20 +115,18 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
   const chartBottom = chartY + chartH;
   const axisLabelY = chartBottom + 22;
 
-  const max = Math.max(...activeSeries);
-  const min = Math.min(...activeSeries);
-  const baseSpan = Math.max(max - min, 1);
-  const center = (max + min) / 2;
-  const zoomHalfSpan = baseSpan / 2 / zoom;
+  const baseDomain = mockMode ? paddedChartDomain(activeSeries) : yieldChartDomain(statsSeries);
+  const center = (baseDomain.max + baseDomain.min) / 2;
+  const zoomHalfSpan = (baseDomain.max - baseDomain.min) / 2 / zoom;
   const domainMin = center - zoomHalfSpan;
   const domainMax = center + zoomHalfSpan;
   const domain = { min: domainMin, max: domainMax };
-  const last = activeSeries[activeSeries.length - 1] ?? 0;
-  const prev = activeSeries[activeSeries.length - 2] ?? last;
+  const last = statsSeries[statsSeries.length - 1] ?? 0;
+  const prev = statsSeries[statsSeries.length - 2] ?? last;
   const delta = last - prev;
-  const avg = activeSeries.reduce((acc, n) => acc + n, 0) / Math.max(activeSeries.length, 1);
-  const hi = Math.max(...activeSeries);
-  const lo = Math.min(...activeSeries);
+  const avg = statsSeries.reduce((acc, n) => acc + n, 0) / Math.max(statsSeries.length, 1);
+  const hi = Math.max(...statsSeries);
+  const lo = Math.min(...statsSeries);
   const range = hi - lo;
 
   const activeLine = buildLinePath(activeSeries, chartW, chartH, 0, 0, domain)
@@ -122,7 +145,9 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
     return { x, y, value: v, i };
   });
 
-  const yTicks = [domainMax, domainMin + (domainMax - domainMin) * 0.66, domainMin + (domainMax - domainMin) * 0.33, domainMin];
+  const ySpan = domainMax - domainMin || 1;
+  const yTickFormat = ySpan < 2 ? (v: number) => v.toFixed(1) : (v: number) => v.toFixed(0);
+  const yTicks = [domainMax, domainMin + ySpan * 0.66, domainMin + ySpan * 0.33, domainMin];
   const xTicks = React.useMemo(
     () => xAxisTicks(activeSeries.length, period, chartX, chartW),
     [activeSeries.length, period, chartX, chartW],
@@ -154,15 +179,15 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
         (1 - (Math.max(domainMin, Math.min(domainMax, activeSeries[hoverIdx])) - domainMin) / spanY) * chartH
       : null;
   const hoverDelta =
-    hoverIdx !== null && hoverIdx > 0 ? activeSeries[hoverIdx] - activeSeries[hoverIdx - 1] : delta;
+    hoverIdx !== null && hoverIdx > 0 ? activeSeries[hoverIdx]! - activeSeries[hoverIdx - 1]! : delta;
 
   const startPt = pointCoords[0];
   const endPt = pointCoords[pointCoords.length - 1];
   const activePoint =
     hoverIdx !== null ? pointCoords[hoverIdx] : pointCoords.length ? pointCoords[pointCoords.length - 1] : null;
   const activeIndex = hoverIdx ?? Math.max(activeSeries.length - 1, 0);
-  const baselineValue = activeSeries[0] ?? 0;
-  const headValue = activePoint?.value ?? last;
+  const baselineValue = statsSeries[0] ?? 0;
+  const headValue = hoverIdx !== null ? (activePoint?.value ?? last) : last;
   const windowDelta = headValue - baselineValue;
   const windowPctDen = Math.max(Math.abs(baselineValue), 1e-6);
   const windowPct = (windowDelta / windowPctDen) * 100;
@@ -173,6 +198,22 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
     const step = e.deltaY < 0 ? 0.12 : -0.12;
     setZoom((z) => Math.max(0.7, Math.min(3, Number((z + step).toFixed(2)))));
   };
+
+  if (!mockMode && activeSeries.length === 0) {
+    return (
+      <div className="w-full min-w-0 rounded-2xl bg-[#0d0d0d] p-8 text-center shadow-[0_14px_34px_rgba(0,0,0,0.35)] md:p-10">
+        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+          Динамика доходности
+        </div>
+        <p className="mt-3 font-sans text-sm text-zinc-400">
+          Недостаточно данных для графика за выбранный период.
+        </p>
+        <p className="mt-1 font-mono text-[11px] text-zinc-600">
+          {releaseAnalyticsPeriodLabel(period)} · данные появятся после накопления метрик
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -219,7 +260,7 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
           preserveAspectRatio="xMidYMid meet"
           className="block h-[46vh] min-h-[280px] w-full max-h-[520px] touch-none select-none sm:min-h-[300px]"
           role="img"
-          aria-label="Динамика доходности"
+          aria-label={t("analytics.yieldChart.aria")}
           onPointerMove={handleSvgPointer}
           onPointerDown={handleSvgPointer}
           onPointerLeave={handleSvgPointer}
@@ -278,9 +319,19 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
           {yTicks.map((tick, i) => {
             const y = chartY + (i / Math.max(yTicks.length - 1, 1)) * chartH;
             return (
-              <text key={`${tick}-${i}`} x={10} y={y + 4} fill="rgba(161,161,170,0.88)" fontSize="11" className="tabular-nums">
-                {tick.toFixed(0)}
-              </text>
+              <g key={`${tick}-${i}`}>
+                <line
+                  x1={chartX}
+                  y1={y}
+                  x2={chartX + chartW}
+                  y2={y}
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth="1"
+                />
+                <text x={10} y={y + 4} fill="rgba(161,161,170,0.88)" fontSize="11" className="tabular-nums">
+                  {yTickFormat(tick)}
+                </text>
+              </g>
             );
           })}
 
@@ -409,16 +460,16 @@ export function YieldDynamicsChart({ period }: { period: ReleaseAnalyticsPeriod 
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Stat label="Последнее" value={last.toFixed(1)} />
+        <Stat label={t("analytics.yieldChart.stat.last")} value={last.toFixed(1)} />
         <Stat
-          label="Δ за 1 шаг"
+          label={t("analytics.yieldChart.stat.deltaStep")}
           value={`${delta >= 0 ? "+" : ""}${delta.toFixed(2)}`}
           valueClass={delta >= 0 ? "text-[#B7F500]" : "text-fuchsia-400"}
         />
-        <Stat label="Среднее" value={avg.toFixed(1)} />
-        <Stat label="Макс" value={hi.toFixed(1)} />
-        <Stat label="Мин" value={lo.toFixed(1)} />
-        <Stat label="Размах" value={range.toFixed(1)} />
+        <Stat label={t("analytics.yieldChart.stat.avg")} value={avg.toFixed(1)} />
+        <Stat label={t("analytics.yieldChart.stat.max")} value={hi.toFixed(1)} />
+        <Stat label={t("analytics.yieldChart.stat.min")} value={lo.toFixed(1)} />
+        <Stat label={t("analytics.yieldChart.stat.range")} value={range.toFixed(1)} />
       </div>
     </div>
   );

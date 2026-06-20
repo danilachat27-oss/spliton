@@ -6,6 +6,7 @@
   "maxWorkers": 1,
   "testTimeout": 120000,
   "setupFiles": ["<rootDir>/jest-e2e.setup.ts"],
+  "globalTeardown": "<rootDir>/jest-e2e.global-teardown.ts",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },

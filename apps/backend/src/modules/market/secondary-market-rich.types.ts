@@ -1,0 +1,100 @@
+export type SecondaryMarketLiquidityTag = 'high' | 'med' | 'low';
+
+export type RichMarketListingDto = {
+  id: string;
+  releaseId: string;
+  releaseSlug: string;
+  symbol: string;
+  title: string;
+  artist: string;
+  coverUrl: string | null;
+  genre: string;
+  unitsAvailable: string;
+  unitsTotal: string;
+  pricePerUnit: string;
+  listingValueUsdt: string;
+  seller: {
+    id: string;
+    email: string;
+  };
+  spread: string;
+  spreadPct: string;
+  liquidity: SecondaryMarketLiquidityTag;
+  liquidityLabel: string;
+  volume24hUsdt: string;
+  change7dPct: string;
+  payoutSparkline: string[];
+  range7dLow: string;
+  range7dHigh: string;
+  bestBid: string | null;
+  bestAsk: string | null;
+  deals7d: number;
+  status: string;
+  statusLabel: string;
+  canBuy: boolean;
+  canCancel: boolean;
+  analyticsCatalogId: string;
+  listingNote: string;
+  featured: boolean;
+  createdAt: string;
+};
+
+export type RichMarketTradeDto = {
+  id: string;
+  releaseId: string;
+  releaseSlug: string;
+  title: string;
+  artist: string;
+  ticker: string;
+  genre: string;
+  coverUrl: string | null;
+  side: 'buy' | 'sell';
+  units: string;
+  price: string;
+  grossAmount: string;
+  feeAmount: string;
+  netAmount: string;
+  settlementStatus: 'settled' | 'processing' | 'failed';
+  settlementLabel: string;
+  linkedOrderId: string | null;
+  linkedListingId: string | null;
+  executedAt: string;
+};
+
+export type RichUserMarketOrderDto = {
+  id: string;
+  listingId: string;
+  releaseId: string;
+  releaseSlug: string;
+  symbol: string;
+  title: string;
+  artist: string;
+  side: 'buy' | 'sell';
+  mode: 'limit' | 'market';
+  pricePerUnit: string | null;
+  unitsTotal: string;
+  unitsFilled: string;
+  orderValueUsdt: string;
+  status: string;
+  statusLabel: string;
+  canCancel: boolean;
+  failureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ReleaseMarketContext = {
+  volume24hUsdt: string;
+  volume24hUnits: string;
+  change7dPct: string;
+  change24hPct: string;
+  payoutSparkline: string[];
+  range7dLow: string;
+  range7dHigh: string;
+  range24hLow: string;
+  range24hHigh: string;
+  bestBid: string | null;
+  bestAsk: string | null;
+  deals7d: number;
+  liquidity: SecondaryMarketLiquidityTag;
+};

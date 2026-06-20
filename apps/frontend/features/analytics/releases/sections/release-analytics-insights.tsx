@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@/lib/lucide";
 
-import { ExchangeNeonSparkline } from "@/components/shared/charts/exchange-neon-sparkline";
+import { ExchangeNeonSparkline, type ExchangeNeonTrend } from "@/components/shared/charts/exchange-neon-sparkline";
 import { analyticsReleaseDetailPath } from "@/constants/routes";
 import { directionFromChangePct, parseSignedPercentChange } from "@/lib/analytics/change-pct";
 import { releaseAnalyticsPeriodLabel } from "@/lib/analytics/period-label";
@@ -15,14 +15,89 @@ const shell = "rounded-2xl bg-[#101010] p-4 shadow-[0_18px_46px_rgba(0,0,0,0.42)
 const card = cn("group relative flex h-full min-h-[168px] flex-col overflow-hidden", shell, "transition-colors hover:bg-[#121212]");
 
 function parseYield(y: string) {
-  return Number(y.replace("%", "").replace(",", ".")) || 0;
+  return Number(y.replace("%", "").replace(",", ".").replace("−", "-")) || 0;
 }
 
 function sparkVolatility(values: number[]) {
   if (values.length < 2) return 0;
   let sum = 0;
-  for (let i = 1; i < values.length; i++) sum += Math.abs(values[i] - values[i - 1]);
+  for (let i = 1; i < values.length; i++) sum += Math.abs(values[i]! - values[i - 1]!);
   return sum / (values.length - 1);
+}
+
+/** Динамика доходности вокруг headline-значения (%). */
+function buildYieldSparkline(values: number[], yieldPct: string): number[] {
+  if (values.length < 2) return values;
+  const target = parseYield(yieldPct);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const swing = Math.max(target * 0.07, 0.35);
+  return values.map((v) => target + ((v - min) / span - 0.5) * swing * 2);
+}
+
+/** Сглаженная почти плоская линия — соответствует низкой волатильности. */
+function buildStabilitySparkline(values: number[]): number[] {
+  if (!values.length) return values;
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+  const smoothed = values.map((_, index) => {
+    const window = values.slice(Math.max(0, index - 2), index + 1);
+    return window.reduce((sum, v) => sum + v, 0) / window.length;
+  });
+  return smoothed.map((v) => mean + (v - mean) * 0.1);
+}
+
+/** Кумулятивное Δ от первой точки — форма роста/падения по changePct. */
+function buildGrowthSparkline(values: number[], changePct: string): number[] {
+  if (values.length < 2) return values;
+  const change = parseSignedPercentChange(changePct);
+  if (Math.abs(change) < 1e-6) {
+    return values.map(() => 0);
+  }
+  const base = values[0] ?? 1;
+  return values.map((v) => ((v - base) / Math.max(Math.abs(base), 1e-6)) * 100);
+}
+
+type InsightPicks = {
+  yield: ReleaseAnalyticsRow;
+  stable: ReleaseAnalyticsRow;
+  growth: ReleaseAnalyticsRow;
+};
+
+function pickInsightRows(rows: ReleaseAnalyticsRow[]): InsightPicks | null {
+  if (!rows.length) return null;
+
+  const used = new Set<string>();
+  const pickOne = (sorted: ReleaseAnalyticsRow[]): ReleaseAnalyticsRow => {
+    const fresh = sorted.find((row) => !used.has(row.id));
+    const pick = fresh ?? sorted[0]!;
+    used.add(pick.id);
+    return pick;
+  };
+
+  const byYield = [...rows].sort((a, b) => parseYield(b.yieldPct) - parseYield(a.yieldPct));
+  const yieldRow = pickOne(byYield);
+
+  const flatCandidates = rows
+    .filter((row) => Math.abs(parseSignedPercentChange(row.changePct)) < 1e-6)
+    .sort((a, b) => sparkVolatility(a.sparkline) - sparkVolatility(b.sparkline));
+  const byStability = [...rows].sort((a, b) => sparkVolatility(a.sparkline) - sparkVolatility(b.sparkline));
+  const stableRow = pickOne(flatCandidates.length ? flatCandidates : byStability);
+
+  const upCandidates = rows
+    .filter((row) => parseSignedPercentChange(row.changePct) > 0)
+    .sort((a, b) => parseSignedPercentChange(b.changePct) - parseSignedPercentChange(a.changePct));
+  const byGrowth = [...rows].sort(
+    (a, b) => parseSignedPercentChange(b.changePct) - parseSignedPercentChange(a.changePct),
+  );
+  const growthRow = pickOne(upCandidates.length ? upCandidates : byGrowth);
+
+  return { yield: yieldRow, stable: stableRow, growth: growthRow };
+}
+
+function rowTrend(row: ReleaseAnalyticsRow): ExchangeNeonTrend {
+  if (row.trend === "up" || row.trend === "down" || row.trend === "flat") return row.trend;
+  return directionFromChangePct(row.changePct);
 }
 
 function genreRu(g: ReleaseAnalyticsRow["genre"]) {
@@ -44,6 +119,8 @@ function InsightCard({
   heroValue,
   heroHint,
   showChangeChip = true,
+  sparkValues,
+  sparkTrend,
 }: {
   eyebrow: string;
   row: ReleaseAnalyticsRow;
@@ -51,9 +128,10 @@ function InsightCard({
   heroValue: string;
   heroHint: string;
   showChangeChip?: boolean;
+  sparkValues: number[];
+  sparkTrend: ExchangeNeonTrend;
 }) {
   const d = parseSignedPercentChange(row.changePct);
-  const sparkTrend = directionFromChangePct(row.changePct);
 
   return (
     <Link href={analyticsReleaseDetailPath(row.id)} className={card} title="Открыть карточку релиза">
@@ -89,7 +167,7 @@ function InsightCard({
 
         <div className="relative shrink-0 rounded-2xl bg-black/30 px-3 py-2">
           <ExchangeNeonSparkline
-            values={row.sparkline}
+            values={sparkValues}
             trend={sparkTrend}
             width={132}
             height={44}
@@ -112,30 +190,10 @@ export function ReleaseAnalyticsInsights({
 }) {
   const periodLabel = releaseAnalyticsPeriodLabel(period);
 
-  const topYield = React.useMemo(() => {
-    if (!rows.length) return null;
-    return rows.reduce((best, r) => (parseYield(r.yieldPct) > parseYield(best.yieldPct) ? r : best), rows[0]);
-  }, [rows]);
-
-  const stablePick = React.useMemo(() => {
-    if (!rows.length) return null;
-    const flats = rows.filter((r) => Math.abs(parseSignedPercentChange(r.changePct)) < 1e-6);
-    const pool = flats.length ? flats : rows;
-    return pool.reduce((best, r) => (sparkVolatility(r.sparkline) < sparkVolatility(best.sparkline) ? r : best), pool[0]);
-  }, [rows]);
-
-  const growthPick = React.useMemo(() => {
-    if (!rows.length) return null;
-    const ups = rows.filter((r) => parseSignedPercentChange(r.changePct) > 0);
-    const pool = ups.length ? ups : rows;
-    return pool.reduce(
-      (best, r) => (parseSignedPercentChange(r.changePct) > parseSignedPercentChange(best.changePct) ? r : best),
-      pool[0],
-    );
-  }, [rows]);
+  const picks = React.useMemo(() => pickInsightRows(rows), [rows]);
 
   const empty = !rows.length;
-  const canRenderCards = !empty && topYield && stablePick && growthPick;
+  const canRenderCards = Boolean(picks);
 
   return (
     <div className="mt-6">
@@ -157,29 +215,35 @@ export function ReleaseAnalyticsInsights({
               <p className="mt-2 font-sans text-sm text-zinc-400">Ослабьте фильтры — и инсайты появятся снова.</p>
             </div>
           </div>
-        ) : canRenderCards ? (
+        ) : canRenderCards && picks ? (
           <>
             <InsightCard
               eyebrow="Лидер доходности"
-              row={topYield}
+              row={picks.yield}
               heroLabel="Доходность"
-              heroValue={topYield.yieldPct}
+              heroValue={picks.yield.yieldPct}
               heroHint={`Среднее по сводке: ${stats.avgYield}`}
+              sparkValues={buildYieldSparkline(picks.yield.sparkline, picks.yield.yieldPct)}
+              sparkTrend={rowTrend(picks.yield)}
             />
             <InsightCard
               eyebrow="Стабильность"
-              row={stablePick}
+              row={picks.stable}
               heroLabel="Волатильность линии"
-              heroValue={sparkVolatility(stablePick.sparkline).toFixed(2)}
+              heroValue={sparkVolatility(picks.stable.sparkline).toFixed(2)}
               heroHint={`Лаг выплат: ${stats.payoutLag}`}
+              sparkValues={buildStabilitySparkline(picks.stable.sparkline)}
+              sparkTrend="flat"
             />
             <InsightCard
               eyebrow="Рост Δ"
-              row={growthPick}
-              heroLabel="Δ (мок)"
-              heroValue={growthPick.changePct}
-              heroHint={`Доходность ${growthPick.yieldPct}`}
+              row={picks.growth}
+              heroLabel="Изменение Δ"
+              heroValue={picks.growth.changePct}
+              heroHint={`Доходность ${picks.growth.yieldPct}`}
               showChangeChip={false}
+              sparkValues={buildGrowthSparkline(picks.growth.sparkline, picks.growth.changePct)}
+              sparkTrend={directionFromChangePct(picks.growth.changePct)}
             />
           </>
         ) : (

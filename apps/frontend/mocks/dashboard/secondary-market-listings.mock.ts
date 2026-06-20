@@ -28,6 +28,11 @@ export type SecondaryMarketListingMock = {
   featured?: boolean;
   /** Короткий текст «от продавца» для экрана Инфо. */
   listingNote: string;
+  /** Public API listing status (live). Demo defaults to active when omitted. */
+  status?: string;
+  statusLabel?: string;
+  canBuy?: boolean;
+  canCancel?: boolean;
 };
 
 export const SECONDARY_MARKET_LISTINGS_MOCK: SecondaryMarketListingMock[] = [
@@ -50,7 +55,7 @@ export const SECONDARY_MARKET_LISTINGS_MOCK: SecondaryMarketListingMock[] = [
     liquidity: "high",
     featured: true,
     listingNote:
-      "Лимитный лот на вторичке: цена за unit, объём и срок размещения задаются в рамках предложения. Данные и стакан — демо RevShare.",
+      "Лимитный лот на вторичке: цена за unit, объём и срок размещения задаются в рамках предложения. Данные и стакан — демо Spliton.",
   },
   {
     id: "lst-gls",
@@ -133,6 +138,27 @@ export const SECONDARY_MARKET_LISTINGS_MOCK: SecondaryMarketListingMock[] = [
     liquidity: "low",
     listingNote:
       "Узкий стакан в макете: заявки и глубина носят иллюстративный характер. Условия предложения задаются в рамках этого лота.",
+  },
+  {
+    id: "lst-cld",
+    releaseId: "closed-echo",
+    analyticsCatalogId: "2",
+    symbol: "CLD",
+    track: "Closed Echo",
+    artist: "Demo Archive",
+    genre: "rock",
+    pricePerUnit: 12.5,
+    change7dPct: 0,
+    payoutSparkline: [0.5, 0.5, 0.5, 0.5, 0.5],
+    range7dLow: 12.5,
+    range7dHigh: 12.5,
+    listingValueUsdt: 625,
+    unitsAvailable: 0,
+    deals7d: 0,
+    liquidity: "low",
+    listingNote: "Демо-лот: продан полностью, недоступен к покупке.",
+    status: "sold_out",
+    canBuy: false,
   },
 ];
 

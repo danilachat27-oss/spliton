@@ -10,6 +10,22 @@ export type FundingCard = {
   pct: number;
   availablePct: string;
   forecastYield: string;
+  /** Цена 1 UNT в USDT (формат ru-RU). */
+  unitPriceUsdt: string;
+  coverUrl?: string | null;
+  shortDescription?: string | null;
+  riskLabel?: string;
+  statusLabel?: string;
+  roundStatus?: string;
+  purchaseState?: "available" | "sold_out" | "paused" | "unavailable";
+  availableUnits?: number;
+  payoutFreq?: "monthly" | "biweekly";
+  nextPayoutDate?: string | null;
+  secondaryMarketEnabled?: boolean;
+  activeListingsCount?: number;
+  hasSparkline?: boolean;
+  hasAudioPreview?: boolean;
+  slug?: string;
 };
 
 export type MarketCard = {
@@ -21,6 +37,18 @@ export type MarketCard = {
   sharePrice: string;
   sharePriceChange: string;
   lastMonthPayout: string;
+  coverUrl?: string | null;
+  shortDescription?: string | null;
+  statusLabel?: string;
+  riskLabel?: string;
+  activeListingsCount?: number;
+  volume24hUsdt?: string;
+  volume7dUsdt?: string;
+  liquidityLabel?: string;
+  secondaryMarketEnabled?: boolean;
+  hasSparkline?: boolean;
+  hasAudioPreview?: boolean;
+  slug?: string;
 };
 
 export type CatalogItem = FundingCard | MarketCard;
@@ -29,15 +57,20 @@ export const catalogItems: CatalogItem[] = [
   {
     kind: "funding",
     id: "1",
-    title: "Midnight Drive",
-    artist: "Luna Pulse",
-    genre: "Electronic",
+    slug: "midnight-code",
+    title: "Midnight Code",
+    artist: "Vera Kline",
+    genre: "Pop",
     status: "open",
-    raised: "28 450",
-    goal: "50 000",
-    pct: 57,
-    availablePct: "12%",
-    forecastYield: "8,7%",
+    purchaseState: "available",
+    availableUnits: 1200,
+    raised: "143 000",
+    goal: "220 000",
+    pct: 65,
+    availablePct: "Высокая",
+    forecastYield: "10,1%",
+    unitPriceUsdt: "22,00",
+    coverUrl: "/images/hero-journey/1.webp",
   },
   {
     kind: "funding",
@@ -46,11 +79,16 @@ export const catalogItems: CatalogItem[] = [
     artist: "North Tide",
     genre: "Indie",
     status: "payouts",
+    purchaseState: "sold_out",
+    availableUnits: 0,
+    roundStatus: "completed",
     raised: "41 200",
     goal: "60 000",
     pct: 69,
     availablePct: "9,2%",
     forecastYield: "8,1%",
+    unitPriceUsdt: "45,00",
+    coverUrl: "/images/hero-journey/2.webp",
   },
   {
     kind: "market",
@@ -61,6 +99,7 @@ export const catalogItems: CatalogItem[] = [
     sharePrice: "245,50",
     sharePriceChange: "+2,18%",
     lastMonthPayout: "12,46",
+    coverUrl: "/images/catalog/3.png",
   },
   {
     kind: "market",
@@ -71,6 +110,7 @@ export const catalogItems: CatalogItem[] = [
     sharePrice: "189,20",
     sharePriceChange: "−0,42%",
     lastMonthPayout: "9,88",
+    coverUrl: "/images/catalog/4.png",
   },
   {
     kind: "market",
@@ -81,6 +121,7 @@ export const catalogItems: CatalogItem[] = [
     sharePrice: "312,00",
     sharePriceChange: "+1,05%",
     lastMonthPayout: "15,02",
+    coverUrl: "/images/catalog/5.png",
   },
   {
     kind: "funding",
@@ -89,11 +130,15 @@ export const catalogItems: CatalogItem[] = [
     artist: "Velvet Wire",
     genre: "Pop",
     status: "open",
+    purchaseState: "available",
+    availableUnits: 800,
     raised: "12 100",
     goal: "40 000",
     pct: 30,
     availablePct: "18%",
     forecastYield: "10,2%",
+    unitPriceUsdt: "40,00",
+    coverUrl: "/images/catalog/6.png",
   },
   {
     kind: "funding",
@@ -102,11 +147,15 @@ export const catalogItems: CatalogItem[] = [
     artist: "Cold Atlas",
     genre: "Rock",
     status: "open",
+    purchaseState: "available",
+    availableUnits: 420,
     raised: "33 900",
     goal: "55 000",
     pct: 62,
     availablePct: "7%",
     forecastYield: "9,4%",
+    unitPriceUsdt: "55,00",
+    coverUrl: "/images/catalog/7.png",
   },
   {
     kind: "funding",
@@ -115,10 +164,15 @@ export const catalogItems: CatalogItem[] = [
     artist: "June & Co",
     genre: "Indie",
     status: "payouts",
+    purchaseState: "sold_out",
+    availableUnits: 0,
+    roundStatus: "completed",
     raised: "52 000",
     goal: "52 000",
     pct: 100,
     availablePct: "0%",
     forecastYield: "6,8%",
+    unitPriceUsdt: "52,00",
+    coverUrl: "/images/catalog/8.png",
   },
 ];

@@ -1,0 +1,92 @@
+/* Profile megamenu — zoomed preview scenes */
+
+.service-preview-scene--profile-overview,
+.service-preview-scene--profile-verification,
+.service-preview-scene--profile-security,
+.service-preview-scene--profile-settings {
+  padding: 0.25rem;
+}
+
+.service-preview-cursor-local--prof-overview-deposit,
+.service-preview-local-tip--prof-overview-deposit {
+  animation-name: sp-prof-show-deposit;
+}
+
+.service-preview-local-ring--prof-overview-deposit {
+  animation-name: sp-prof-ring-deposit;
+}
+
+@keyframes sp-prof-show-deposit {
+  0%, 4% { opacity: 0; }
+  6%, 40% { opacity: 1; }
+  44%, 100% { opacity: 0; }
+}
+
+@keyframes sp-prof-ring-deposit {
+  0%, 18% { opacity: 0; transform: scale(0.5); }
+  20%, 24% { opacity: 1; transform: scale(1.45); }
+  28%, 100% { opacity: 0; }
+}
+
+.service-preview-cursor-local--prof-verify-step,
+.service-preview-local-tip--prof-verify-step {
+  animation-name: sp-prof-show-verify;
+}
+
+.service-preview-local-ring--prof-verify-step {
+  animation-name: sp-prof-ring-verify;
+}
+
+@keyframes sp-prof-show-verify {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-prof-ring-verify {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-cursor-local--prof-security-twofa,
+.service-preview-local-tip--prof-security-twofa {
+  animation-name: sp-prof-show-security;
+}
+
+.service-preview-local-ring--prof-security-twofa {
+  animation-name: sp-prof-ring-security;
+}
+
+@keyframes sp-prof-show-security {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-prof-ring-security {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}
+
+.service-preview-cursor-local--prof-settings-row,
+.service-preview-local-tip--prof-settings-row {
+  animation-name: sp-prof-show-settings;
+}
+
+.service-preview-local-ring--prof-settings-row {
+  animation-name: sp-prof-ring-settings;
+}
+
+@keyframes sp-prof-show-settings {
+  0%, 6% { opacity: 0; }
+  8%, 78% { opacity: 1; }
+  84%, 100% { opacity: 0; }
+}
+
+@keyframes sp-prof-ring-settings {
+  0%, 30% { opacity: 0; transform: scale(0.5); }
+  32%, 36% { opacity: 1; transform: scale(1.45); }
+  40%, 100% { opacity: 0; }
+}

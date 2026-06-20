@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AUTH_FIELD_BORDER, authFieldClassName } from "@/components/auth/auth-field-classes";
 import { GoogleMark } from "@/components/auth/google-mark";
@@ -14,17 +14,33 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ROUTES } from "@/constants/routes";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { formatApiError } from "@/lib/i18n/format-api-error";
 import { ApiError, signInWithGoogle } from "@/services/auth.service";
 import { cn } from "@/lib/utils";
 
-const tabInactive =
-  "cursor-default border-b-2 border-transparent pb-3 text-[15px] text-neutral-400";
-const tabActive =
-  "cursor-default border-b-2 border-neutral-900 pb-3 text-[15px] font-semibold text-neutral-900";
+function resolveSafeNextPath(raw: string | null): string {
+  if (!raw) return ROUTES.dashboard;
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (decoded.startsWith("/") && !decoded.startsWith("//")) return decoded;
+  } catch {
+    /* ignore malformed */
+  }
+  return ROUTES.dashboard;
+}
 
 export function LoginForm({ className }: { className?: string }) {
   const router = useRouter();
-  const { login, verify2fa, pendingTwoFactorChallenge, resendEmail } = useAuth();
+  const searchParams = useSearchParams();
+  const nextPath = resolveSafeNextPath(searchParams.get("next"));
+  const { locale, t } = useI18n();
+  const { login, verify2fa, pendingTwoFactorChallenge, resendEmail, isAuthenticated, isLoading } = useAuth();
+
+  React.useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    router.replace(nextPath);
+  }, [isAuthenticated, isLoading, nextPath, router]);
   const [remember, setRemember] = React.useState(true);
   const [showPassword, setShowPassword] = React.useState(false);
   const [passwordValue, setPasswordValue] = React.useState("");
@@ -33,6 +49,7 @@ export function LoginForm({ className }: { className?: string }) {
   const [emailValue, setEmailValue] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isResendingVerification, setIsResendingVerification] = React.useState(false);
+  const [showResendVerification, setShowResendVerification] = React.useState(false);
 
   const trackPlaying = !showPassword && passwordValue.length > 0;
 
@@ -44,18 +61,20 @@ export function LoginForm({ className }: { className?: string }) {
     setEmailValue(email);
 
     setErrorMessage(null);
+    setShowResendVerification(false);
     setIsSubmitting(true);
     try {
-      const status = await login({ email, password, remember });
+      const result = await login({ email, password, remember });
       setEmailValue(email);
-      if (status === "authenticated") {
-        router.push(ROUTES.dashboard);
+      if (result === "authenticated") {
+        router.push(nextPath);
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
-        setErrorMessage("Подтвердите email перед входом. Мы можем отправить письмо повторно.");
+        setShowResendVerification(true);
+        setErrorMessage(formatApiError({ code: "EMAIL_NOT_VERIFIED" }, locale));
       } else {
-        setErrorMessage("Неверный email или пароль.");
+        setErrorMessage(formatApiError(error, locale));
       }
     } finally {
       setIsSubmitting(false);
@@ -76,9 +95,9 @@ export function LoginForm({ className }: { className?: string }) {
         method: "totp",
       });
       setTwoFactorCode("");
-      router.push(ROUTES.dashboard);
-    } catch {
-      setErrorMessage("Неверный 2FA-код. Попробуйте ещё раз.");
+      router.push(nextPath);
+    } catch (error) {
+      setErrorMessage(formatApiError(error, locale));
     } finally {
       setIsSubmitting(false);
     }
@@ -89,30 +108,14 @@ export function LoginForm({ className }: { className?: string }) {
   return (
     <div className={cn("w-full text-neutral-900", className)}>
       <h2 className="text-[2.25rem] font-semibold leading-none tracking-tight sm:text-[2.5rem]">
-        Войти
+        {t("auth.login.title")}
       </h2>
-
-      <div
-        className="mt-8 flex gap-8 border-b border-neutral-200"
-        role="tablist"
-        aria-label="Способ входа"
-      >
-        <span className={tabInactive} role="tab" aria-disabled="true">
-          Телефон
-        </span>
-        <span className={tabActive} role="tab" aria-selected="true">
-          Эл. почта
-        </span>
-        <span className={tabInactive} role="tab" aria-disabled="true">
-          QR-код
-        </span>
-      </div>
 
       {!pendingTwoFactorChallenge ? (
       <form className="mt-8 space-y-5" onSubmit={onSubmit}>
         <div className="space-y-2">
           <Label htmlFor="email" className="sr-only">
-            Электронная почта
+            {t("auth.login.emailLabel")}
           </Label>
           <Input
             id="email"
@@ -120,7 +123,7 @@ export function LoginForm({ className }: { className?: string }) {
             type="email"
             autoComplete="email"
             inputMode="email"
-            placeholder="Эл. почта"
+            placeholder={t("auth.login.email")}
             className={authFieldClassName}
             style={fieldStyle}
             required
@@ -129,7 +132,7 @@ export function LoginForm({ className }: { className?: string }) {
 
         <div className="space-y-2">
           <Label htmlFor="password" className="sr-only">
-            Пароль
+            {t("auth.login.passwordLabel")}
           </Label>
           <div className="relative">
             <Input
@@ -137,7 +140,7 @@ export function LoginForm({ className }: { className?: string }) {
               name="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              placeholder="Пароль"
+              placeholder={t("auth.login.password")}
               value={passwordValue}
               onChange={(e) => setPasswordValue(e.target.value)}
               className={cn(authFieldClassName, "pr-[52px]")}
@@ -160,14 +163,14 @@ export function LoginForm({ className }: { className?: string }) {
               id="remember"
             />
             <Label htmlFor="remember" className="text-sm font-normal text-neutral-600">
-              Запомнить меня
+              {t("auth.login.remember")}
             </Label>
           </div>
           <Link
             href={ROUTES.forgotPassword}
             className="text-sm font-medium text-neutral-900 underline decoration-neutral-300 underline-offset-4 hover:decoration-neutral-900"
           >
-            Забыли пароль?
+            {t("auth.login.forgot")}
           </Link>
         </div>
 
@@ -176,24 +179,24 @@ export function LoginForm({ className }: { className?: string }) {
           className="mt-2 h-[52px] w-full rounded-xl border border-neutral-900 bg-neutral-900 text-[15px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px disabled:opacity-50"
           disabled={isSubmitting}
         >
-          Войти
+          {t("auth.login.submit")}
         </Button>
       </form>
       ) : (
         <form className="mt-8 space-y-5" onSubmit={onVerifyTwoFactor}>
           <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-700">
-            Подтвердите вход: введите код из приложения-аутентификатора.
+            {t("auth.2fa.hint")}
           </div>
           <div className="space-y-2">
             <Label htmlFor="twoFactorCode" className="sr-only">
-              2FA код
+              {t("auth.login.twoFactor")}
             </Label>
             <Input
               id="twoFactorCode"
               name="twoFactorCode"
               type="text"
               inputMode="numeric"
-              placeholder="6-значный код"
+              placeholder={t("auth.2fa.codePlaceholder")}
               value={twoFactorCode}
               onChange={(e) => setTwoFactorCode(e.target.value)}
               className={authFieldClassName}
@@ -206,7 +209,7 @@ export function LoginForm({ className }: { className?: string }) {
             className="mt-2 h-[52px] w-full rounded-xl border border-neutral-900 bg-neutral-900 text-[15px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px disabled:opacity-50"
             disabled={isSubmitting}
           >
-            Подтвердить вход
+            {t("auth.2fa.submit")}
           </Button>
         </form>
       )}
@@ -214,7 +217,7 @@ export function LoginForm({ className }: { className?: string }) {
       {errorMessage ? (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {errorMessage}
-          {errorMessage.includes("Подтвердите email") && emailValue ? (
+          {showResendVerification && emailValue ? (
             <button
               type="button"
               className="ml-2 underline underline-offset-2"
@@ -226,28 +229,26 @@ export function LoginForm({ className }: { className?: string }) {
                   next.set("email", emailValue);
                   router.push(`${ROUTES.verifyEmail}?${next.toString()}`);
                 } catch {
-                  setErrorMessage("Не удалось отправить письмо подтверждения. Попробуйте ещё раз.");
+                  setErrorMessage(t("auth.login.resendFailed"));
                 } finally {
                   setIsResendingVerification(false);
                 }
               }}
               disabled={isResendingVerification}
             >
-              {isResendingVerification
-                ? "Отправляем..."
-                : "Отправить письмо ещё раз"}
+              {isResendingVerification ? t("auth.login.resendSending") : t("auth.login.resendAgain")}
             </button>
           ) : null}
         </div>
       ) : null}
 
       <p className="mt-8 text-center text-[15px] text-neutral-600">
-        Нет аккаунта?{" "}
+        {t("auth.login.noAccount")}{" "}
         <Link
           href={ROUTES.register}
           className="font-semibold text-neutral-900 underline decoration-neutral-900 underline-offset-4"
         >
-          Зарегистрироваться
+          {t("auth.login.register")}
         </Link>
       </p>
 
@@ -255,7 +256,7 @@ export function LoginForm({ className }: { className?: string }) {
         <Separator className="bg-neutral-200" />
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <span className="bg-white px-3 text-xs font-medium text-neutral-500">
-            Альтернативный способ
+            {t("auth.login.altMethod")}
           </span>
         </div>
       </div>
@@ -268,23 +269,23 @@ export function LoginForm({ className }: { className?: string }) {
             try {
               await signInWithGoogle();
             } catch {
-              // Replace with toast when OAuth is wired.
+              /* Replace with toast when OAuth is wired. */
             }
           }}
         >
           <GoogleMark className="size-[18px] shrink-0" />
-          Google
+          {t("auth.login.google")}
         </button>
       </div>
 
       <p className="mt-10 text-center text-[11px] leading-relaxed text-neutral-400">
-        Продолжая, вы принимаете{" "}
+        {t("auth.login.legalPrefix")}{" "}
         <Link href={ROUTES.terms} className="text-neutral-600 underline underline-offset-2">
-          условия
+          {t("auth.login.termsLink")}
         </Link>{" "}
-        и{" "}
+        {t("auth.login.legalAnd")}{" "}
         <Link href={ROUTES.privacy} className="text-neutral-600 underline underline-offset-2">
-          конфиденциальность
+          {t("auth.login.privacyLink")}
         </Link>
         .
       </p>

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { ROUTES, catalogBuyUnitsPath } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 import type {
@@ -46,6 +49,7 @@ export function ReleaseAnalyticsLiquiditySection({
   liquidity: ReleaseMarketAnalyticsLiquidity;
   releaseId: string;
 }) {
+  const { t } = useI18n();
   const L = liquidity.listings;
   const lt = L.vsTone ?? "neutral";
   const d = liquidity.depth;
@@ -92,19 +96,19 @@ export function ReleaseAnalyticsLiquiditySection({
                 Secondary market
               </Link>
               <Link href={catalogBuyUnitsPath(releaseId)} className={BTN_BUY}>
-                Купить UNT
+                {t("catalog.releaseAnalytics.liquidity.buyUnt")}
               </Link>
             </div>
           </div>
           <div className="mt-5 flex flex-col gap-2.5">
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Средняя цена UNT" card={liquidity.avgUnitPrice} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.avgPrice")} card={liquidity.avgUnitPrice} />
             </div>
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Спред" card={liquidity.spread} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.spread")} card={liquidity.spread} />
             </div>
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Диапазон цен" card={liquidity.priceRange} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.priceRange")} card={liquidity.priceRange} />
             </div>
           </div>
         </div>
@@ -112,19 +116,21 @@ export function ReleaseAnalyticsLiquiditySection({
         <div className="h-px w-full bg-white/6" aria-hidden />
 
         <div className="py-6">
-          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Оборот и сделки</p>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
+            {t("catalog.releaseAnalytics.liquidity.turnoverSection")}
+          </p>
           <div className="mt-5 flex flex-col gap-2.5">
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Объём за 24 часа" card={liquidity.volume24h} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.volume24h")} card={liquidity.volume24h} />
             </div>
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Объём за 7 дней" card={liquidity.volume7d} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.volume7d")} card={liquidity.volume7d} />
             </div>
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Сделок за 24 часа" card={liquidity.trades24h} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.trades24h")} card={liquidity.trades24h} />
             </div>
             <div className="rounded-xl bg-[#111111] px-4 py-4">
-              <Metric label="Сделок за 7 дней" card={liquidity.trades7d} />
+              <Metric label={t("catalog.releaseAnalytics.liquidity.trades7d")} card={liquidity.trades7d} />
             </div>
           </div>
         </div>

@@ -37,4 +37,19 @@ describe('EmailModule provider selection', () => {
       }).compile(),
     ).rejects.toThrow(ServiceUnavailableException);
   });
+
+  it('throws for resend provider without required env', async () => {
+    await expect(
+      Test.createTestingModule({
+        imports: [
+          ConfigModule.forRoot({
+            isGlobal: true,
+            ignoreEnvFile: true,
+            load: [() => ({ EMAIL_PROVIDER: 'resend' })],
+          }),
+          EmailModule,
+        ],
+      }).compile(),
+    ).rejects.toThrow(ServiceUnavailableException);
+  });
 });

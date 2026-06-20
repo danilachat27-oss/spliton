@@ -1,0 +1,378 @@
+/* Hero journey — масштаб без искажений, canvas 1280×720 */
+
+.hero-journey-preview {
+  --dhj-duration: 28s;
+  --dhj-catalog-scroll-y: -160px;
+}
+
+.hero-journey-stage *,
+.hero-journey-stage *::before,
+.hero-journey-stage *::after {
+  animation-duration: var(--dhj-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* ——— Сцены (3% пауза между переходами) ——— */
+.hero-journey-scene {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.hero-journey-scene--catalog { animation-name: dhj-scene-catalog; }
+.hero-journey-scene--buy { animation-name: dhj-scene-buy; }
+.hero-journey-scene--sell { animation-name: dhj-scene-sell; }
+.hero-journey-scene--book { animation-name: dhj-scene-book; }
+
+@keyframes dhj-scene-catalog {
+  0%, 3% { opacity: 0; visibility: hidden; transform: translateY(10px); }
+  5%, 24% { opacity: 1; visibility: visible; transform: translateY(0); }
+  27%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes dhj-scene-buy {
+  0%, 24% { opacity: 0; visibility: hidden; transform: translateY(10px); }
+  27%, 48% { opacity: 1; visibility: visible; transform: translateY(0); }
+  51%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes dhj-scene-sell {
+  0%, 48% { opacity: 0; visibility: hidden; transform: translateY(10px); }
+  51%, 72% { opacity: 1; visibility: visible; transform: translateY(0); }
+  75%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes dhj-scene-book {
+  0%, 72% { opacity: 0; visibility: hidden; transform: translateY(10px); }
+  75%, 96% { opacity: 1; visibility: visible; transform: translateY(0); }
+  100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+/* ——— Курсор внутри сцены: px-координаты от реальных кнопок ——— */
+.hero-journey-scene-cursor {
+  position: absolute;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  will-change: left, top, transform, opacity;
+}
+
+.hero-journey-scene-cursor-ring {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid rgb(183 245 0 / 0.92);
+  opacity: 0;
+}
+
+.hero-journey-scene-cursor-tip {
+  position: absolute;
+  left: 18px;
+  top: 14px;
+  width: 118px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgb(24 24 27 / 0.96);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.45);
+  opacity: 0;
+}
+
+.hero-journey-scene-cursor-tip-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: white;
+  opacity: 0;
+}
+
+.hero-journey-scene-cursor--catalog {
+  left: var(--dhj-x-catalog, 120px);
+  top: var(--dhj-y-catalog, 420px);
+  animation-name: dhj-cursor-catalog;
+}
+
+.hero-journey-scene-cursor--catalog .hero-journey-scene-cursor-ring { animation-name: dhj-ring-catalog; }
+.hero-journey-scene-cursor--catalog .hero-journey-scene-cursor-tip { animation-name: dhj-tip-catalog; }
+.hero-journey-scene-cursor-tip-text--catalog-1 { animation-name: dhj-tip-text-catalog; }
+
+.hero-journey-scene-cursor--buy { animation-name: dhj-cursor-buy; }
+.hero-journey-scene-cursor--buy .hero-journey-scene-cursor-ring { animation-name: dhj-ring-buy; }
+.hero-journey-scene-cursor--buy .hero-journey-scene-cursor-tip { animation-name: dhj-tip-buy; }
+.hero-journey-scene-cursor-tip-text--buy-1 { animation-name: dhj-tip-text-buy-1; }
+.hero-journey-scene-cursor-tip-text--buy-2 { animation-name: dhj-tip-text-buy-2; }
+
+.hero-journey-scene-cursor--sell {
+  left: var(--dhj-x-sell, 900px);
+  top: var(--dhj-y-sell, 560px);
+  animation-name: dhj-cursor-sell;
+}
+
+.hero-journey-scene-cursor--sell .hero-journey-scene-cursor-ring { animation-name: dhj-ring-sell; }
+.hero-journey-scene-cursor--sell .hero-journey-scene-cursor-tip { animation-name: dhj-tip-sell; }
+.hero-journey-scene-cursor-tip-text--sell-1 { animation-name: dhj-tip-text-sell; }
+
+.hero-journey-scene-cursor--book {
+  left: var(--dhj-x-book, 220px);
+  top: var(--dhj-y-book, 520px);
+  animation-name: dhj-cursor-book;
+}
+
+.hero-journey-scene-cursor--book .hero-journey-scene-cursor-ring { animation-name: dhj-ring-book; }
+.hero-journey-scene-cursor--book .hero-journey-scene-cursor-tip { animation-name: dhj-tip-book; }
+.hero-journey-scene-cursor-tip-text--book-1 { animation-name: dhj-tip-text-book; }
+
+@keyframes dhj-cursor-catalog {
+  0%, 12% { opacity: 0; transform: translate(14px, -10px); }
+  13%, 14% { opacity: 1; transform: translate(14px, -10px); }
+  15%, 17% { opacity: 1; transform: translate(5px, -3px); }
+  18%, 21% { opacity: 1; transform: translate(0, 0); }
+  22%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes dhj-cursor-buy {
+  0%, 28% { opacity: 0; left: var(--dhj-x-buy-units, 900px); top: var(--dhj-y-buy-units, 420px); transform: translate(14px, -10px); }
+  29%, 30% { opacity: 1; left: var(--dhj-x-buy-units, 900px); top: var(--dhj-y-buy-units, 420px); transform: translate(14px, -10px); }
+  32%, 35% { opacity: 1; left: var(--dhj-x-buy-units, 900px); top: var(--dhj-y-buy-units, 420px); transform: translate(0, 0); }
+  36%, 37% { opacity: 0; left: var(--dhj-x-buy-units, 900px); top: var(--dhj-y-buy-units, 420px); transform: translate(0, 0); }
+  37%, 38% { opacity: 0; left: var(--dhj-x-buy, 900px); top: var(--dhj-y-buy, 560px); transform: translate(14px, -10px); }
+  39%, 40% { opacity: 1; left: var(--dhj-x-buy, 900px); top: var(--dhj-y-buy, 560px); transform: translate(14px, -10px); }
+  42%, 45% { opacity: 1; left: var(--dhj-x-buy, 900px); top: var(--dhj-y-buy, 560px); transform: translate(0, 0); }
+  46%, 100% { opacity: 0; left: var(--dhj-x-buy, 900px); top: var(--dhj-y-buy, 560px); transform: translate(0, 0); }
+}
+
+@keyframes dhj-cursor-sell {
+  0%, 52% { opacity: 0; transform: translate(14px, -10px); }
+  53%, 54% { opacity: 1; transform: translate(14px, -10px); }
+  56%, 59% { opacity: 1; transform: translate(0, 0); }
+  60%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes dhj-cursor-book {
+  0%, 76% { opacity: 0; transform: translate(14px, -10px); }
+  77%, 78% { opacity: 1; transform: translate(14px, -10px); }
+  80%, 83% { opacity: 1; transform: translate(0, 0); }
+  84%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes dhj-ring-catalog { 0%, 18% { opacity: 0; transform: scale(0.5); } 19%, 21% { opacity: 1; transform: scale(1.55); } 22%, 100% { opacity: 0; transform: scale(0.5); } }
+@keyframes dhj-ring-buy { 0%, 41% { opacity: 0; transform: scale(0.5); } 42%, 44% { opacity: 1; transform: scale(1.55); } 45%, 100% { opacity: 0; transform: scale(0.5); } }
+@keyframes dhj-ring-sell { 0%, 57% { opacity: 0; transform: scale(0.5); } 58%, 60% { opacity: 1; transform: scale(1.55); } 61%, 100% { opacity: 0; transform: scale(0.5); } }
+@keyframes dhj-ring-book { 0%, 81% { opacity: 0; transform: scale(0.5); } 82%, 84% { opacity: 1; transform: scale(1.55); } 85%, 100% { opacity: 0; transform: scale(0.5); } }
+
+@keyframes dhj-tip-catalog { 0%, 12% { opacity: 0; } 13%, 22% { opacity: 1; } 23%, 100% { opacity: 0; } }
+@keyframes dhj-tip-buy { 0%, 28% { opacity: 0; } 29%, 46% { opacity: 1; } 47%, 100% { opacity: 0; } }
+@keyframes dhj-tip-sell { 0%, 52% { opacity: 0; } 53%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
+@keyframes dhj-tip-book { 0%, 76% { opacity: 0; } 77%, 84% { opacity: 1; } 85%, 100% { opacity: 0; } }
+
+@keyframes dhj-tip-text-catalog { 0%, 12% { opacity: 0; } 13%, 22% { opacity: 1; } 23%, 100% { opacity: 0; } }
+@keyframes dhj-tip-text-buy-1 { 0%, 28% { opacity: 0; } 29%, 37% { opacity: 1; } 38%, 100% { opacity: 0; } }
+@keyframes dhj-tip-text-buy-2 { 0%, 37% { opacity: 0; } 38%, 46% { opacity: 1; } 47%, 100% { opacity: 0; } }
+@keyframes dhj-tip-text-sell { 0%, 52% { opacity: 0; } 53%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
+@keyframes dhj-tip-text-book { 0%, 76% { opacity: 0; } 77%, 84% { opacity: 1; } 85%, 100% { opacity: 0; } }
+
+/* ——— Каталог: скролл как у пользователя ——— */
+.hero-journey-catalog-viewport {
+  overflow: hidden;
+}
+
+.hero-journey-catalog-scroll {
+  animation: dhj-catalog-scroll var(--dhj-duration) ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes dhj-catalog-scroll {
+  0%, 4% { transform: translateY(0); }
+  5%, 12% { transform: translateY(var(--dhj-catalog-scroll-y, -160px)); }
+  13%, 24% { transform: translateY(var(--dhj-catalog-scroll-y, -160px)); }
+  25%, 100% { transform: translateY(var(--dhj-catalog-scroll-y, -160px)); }
+}
+
+.hero-journey-catalog-buy-btn {
+  animation: dhj-catalog-buy-btn-press var(--dhj-duration) ease-in-out infinite;
+}
+
+@keyframes dhj-catalog-buy-btn-press {
+  0%, 18% { transform: scale(1); background-color: rgb(255 255 255); }
+  19%, 21% { transform: scale(0.96); background-color: rgb(228 228 231); }
+  22%, 100% { transform: scale(1); background-color: rgb(255 255 255); }
+}
+
+.hero-journey-buy-panel { animation: dhj-buy-panel-in var(--dhj-duration) ease-in-out infinite; }
+.hero-journey-buy-btn { animation: dhj-buy-btn-pulse var(--dhj-duration) ease-in-out infinite; }
+
+.hero-journey-toast {
+  position: absolute;
+  right: 2rem;
+  top: 3.25rem;
+  z-index: 30;
+  pointer-events: none;
+  max-width: min(20rem, calc(100% - 2rem));
+  border-radius: 0.75rem;
+  background: #b7f500;
+  padding: 0.625rem 1rem;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #000;
+  box-shadow: 0 10px 28px -10px rgb(183 245 0 / 0.55);
+}
+
+.hero-journey-toast--buy { animation: dhj-buy-success var(--dhj-duration) ease-in-out infinite; }
+.hero-journey-toast--sell { animation: dhj-sell-listed var(--dhj-duration) ease-in-out infinite; }
+
+.hero-journey-buy-pay-step {
+  opacity: 0;
+}
+
+.hero-journey-buy-pay-step--1 { animation: dhj-buy-pay-1 var(--dhj-duration) step-end infinite; }
+.hero-journey-buy-pay-step--2 { animation: dhj-buy-pay-2 var(--dhj-duration) step-end infinite; }
+.hero-journey-buy-pay-step--3 { animation: dhj-buy-pay-3 var(--dhj-duration) step-end infinite; }
+
+.hero-journey-buy-units-field { animation: dhj-buy-units-focus var(--dhj-duration) ease-in-out infinite; }
+
+.hero-journey-buy-qty-typed,
+.hero-journey-buy-pay-step,
+.hero-journey-buy-caret {
+  animation-timing-function: step-end !important;
+}
+
+.hero-journey-buy-qty-typed {
+  display: inline-block;
+  vertical-align: bottom;
+  animation: dhj-buy-qty-type var(--dhj-duration) step-end infinite;
+}
+
+.hero-journey-buy-caret {
+  height: 0.85em;
+  animation:
+    dhj-buy-caret-show var(--dhj-duration) step-end infinite,
+    dhj-buy-caret-blink calc(var(--dhj-duration) / 14) step-end infinite;
+}
+
+@keyframes dhj-buy-qty-type {
+  0%, 29% { width: 0; }
+  30%, 31.5% { width: 1ch; }
+  31.6%, 33% { width: 2ch; }
+  33.1%, 38% { width: 3ch; }
+  39%, 100% { width: 3ch; }
+}
+
+@keyframes dhj-buy-pay-1 {
+  0%, 29% { opacity: 0; }
+  30%, 31.5% { opacity: 1; }
+  31.6%, 100% { opacity: 0; }
+}
+
+@keyframes dhj-buy-pay-2 {
+  0%, 31.5% { opacity: 0; }
+  31.6%, 33% { opacity: 1; }
+  33.1%, 100% { opacity: 0; }
+}
+
+@keyframes dhj-buy-pay-3 {
+  0%, 33% { opacity: 0; }
+  33.1%, 48% { opacity: 1; }
+  49%, 100% { opacity: 0; }
+}
+
+@keyframes dhj-buy-units-focus {
+  0%, 29% { background-color: #f5f5f6; box-shadow: none; }
+  30%, 36% {
+    background-color: #fff;
+    box-shadow: 0 6px 28px -12px rgb(0 0 0 / 0.08), 0 0 0 2px rgb(183 245 0 / 0.45);
+  }
+  37%, 100% { background-color: #f5f5f6; box-shadow: none; }
+}
+
+@keyframes dhj-buy-caret-show {
+  0%, 29% { opacity: 0; }
+  30%, 36% { opacity: 1; }
+  36.5%, 100% { opacity: 0; }
+}
+
+@keyframes dhj-buy-caret-blink {
+  0%, 49% { visibility: visible; }
+  50%, 100% { visibility: hidden; }
+}
+
+@keyframes dhj-buy-panel-in {
+  0%, 26% { opacity: 0; transform: translateX(12px); }
+  29%, 48% { opacity: 1; transform: translateX(0); }
+  51%, 100% { opacity: 0; transform: translateX(12px); }
+}
+
+@keyframes dhj-buy-btn-pulse {
+  0%, 41% { box-shadow: none; transform: scale(1); }
+  42%, 45% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.55); transform: scale(0.98); }
+  46%, 100% { box-shadow: none; transform: scale(1); }
+}
+
+@keyframes dhj-buy-success {
+  0%, 41% { opacity: 0; transform: translateX(16px); }
+  43%, 48% { opacity: 1; transform: translateX(0); }
+  51%, 100% { opacity: 0; transform: translateX(16px); }
+}
+
+.hero-journey-sell-btn { animation: dhj-sell-btn-pulse var(--dhj-duration) ease-in-out infinite; }
+
+@keyframes dhj-sell-btn-pulse {
+  0%, 57% { box-shadow: none; transform: scale(1); }
+  58%, 61% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.55); transform: scale(0.98); }
+  62%, 100% { box-shadow: none; transform: scale(1); }
+}
+
+@keyframes dhj-sell-listed {
+  0%, 59% { opacity: 0; transform: translateX(16px); visibility: hidden; }
+  61%, 72% { opacity: 1; transform: translateX(0); visibility: visible; }
+  75%, 100% { opacity: 0; transform: translateX(16px); visibility: hidden; }
+}
+
+.hero-journey-book-btn { animation: dhj-book-btn-pulse var(--dhj-duration) ease-in-out infinite; }
+.hero-journey-book-trade { animation: dhj-book-trade var(--dhj-duration) ease-in-out infinite; }
+
+@keyframes dhj-book-btn-pulse {
+  0%, 81% { box-shadow: none; transform: scale(1); }
+  82%, 85% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.55); transform: scale(0.98); }
+  86%, 100% { box-shadow: none; transform: scale(1); }
+}
+
+@keyframes dhj-book-trade {
+  0%, 84% { opacity: 0; transform: translateY(8px); }
+  86%, 94% { opacity: 1; transform: translateY(0); }
+  96%, 100% { opacity: 0; transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-journey-stage *,
+  .hero-journey-stage *::before,
+  .hero-journey-stage *::after {
+    animation: none !important;
+  }
+
+  .hero-journey-scene--catalog,
+  .hero-journey-scene--buy,
+  .hero-journey-scene--sell {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .hero-journey-scene--book {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .hero-journey-scene-cursor {
+    display: none;
+  }
+}

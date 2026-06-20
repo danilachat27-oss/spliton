@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import type { DialogRoot } from "@base-ui/react/dialog";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 export type OrderFeedbackTone = "success" | "warn" | "info";
@@ -25,6 +26,7 @@ export function SecondaryMarketOrderFeedbackModal({
   onOpenChange,
   feedback,
 }: SecondaryMarketOrderFeedbackModalProps) {
+  const { t } = useI18n();
   const closeRef = React.useRef<HTMLButtonElement>(null);
 
   if (!feedback) return null;
@@ -42,6 +44,13 @@ export function SecondaryMarketOrderFeedbackModal({
       : feedback.tone === "warn"
         ? "text-amber-100"
         : "text-zinc-100";
+
+  const badgeLabel =
+    feedback.tone === "success"
+      ? t("secondaryMarket.forms.feedbackSuccessBadge")
+      : feedback.tone === "warn"
+        ? t("secondaryMarket.forms.feedbackWarnBadge")
+        : t("secondaryMarket.forms.feedbackInfoBadge");
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal>
@@ -71,11 +80,7 @@ export function SecondaryMarketOrderFeedbackModal({
               feedback.tone === "info" && "text-zinc-500",
             )}
           >
-            {feedback.tone === "success"
-              ? "Исполнение"
-              : feedback.tone === "warn"
-                ? "Внимание"
-                : "Статус заявки"}
+            {badgeLabel}
           </p>
           <Dialog.Title
             className={cn(
@@ -105,7 +110,7 @@ export function SecondaryMarketOrderFeedbackModal({
                   "bg-white text-black hover:bg-zinc-100 active:scale-[0.99]",
               )}
             >
-              Понятно
+              {t("secondaryMarket.forms.feedbackOk")}
             </button>
           </div>
         </Dialog.Popup>

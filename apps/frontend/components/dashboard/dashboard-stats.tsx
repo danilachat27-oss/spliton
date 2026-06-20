@@ -1,118 +1,127 @@
-import Link from "next/link";
-import { PieChart, TrendingUp, Wallet } from "lucide-react";
+"use client";
 
+import Link from "next/link";
+import { ArrowDown, ArrowUp, ArrowUpRight } from "@/lib/lucide";
+
+import { useI18n } from "@/components/providers/i18n-provider";
+import { ReadOnlySectionError } from "@/components/shared/data-states/read-only-section-error";
 import { ROUTES } from "@/constants/routes";
+import { useDashboardLandingStats } from "@/hooks/use-dashboard-landing-stats";
 import { cn } from "@/lib/utils";
 
-type StatItem = {
-  label: string;
-  value: string;
-  unit: string;
-  icon: typeof Wallet;
-  footer?: "none" | "delta" | "withdraw";
-  deltaText?: string;
-};
+/** Shared landing stat blocks (referral + liquidity summary). */
+export const landingStatTile =
+  "flex h-full min-h-[104px] flex-col rounded-2xl bg-white px-4 py-4 sm:min-h-[120px] sm:px-6 sm:py-6";
 
-const stats: StatItem[] = [
-  { label: "Средний чек сделки", value: "1 240,58", unit: "USDT", icon: Wallet, footer: "none" },
-  {
-    label: "Доход инвесторов за месяц",
-    value: "156,42",
-    unit: "USDT",
-    icon: TrendingUp,
-    footer: "delta",
-    deltaText: "+12,4%",
-  },
-  { label: "Активные релизы", value: "7", unit: "треков", icon: PieChart, footer: "none" },
-  {
-    label: "Доступно к выплате",
-    value: "73,19",
-    unit: "USDT",
-    icon: Wallet,
-    footer: "withdraw",
-  },
-];
+export const landingSectionTitle =
+  "text-xl font-semibold tracking-tight text-neutral-900 sm:text-[1.75rem]";
 
-const logoCloud = [
-  "cohere",
-  "duolingo",
-  "Hugging Face",
-  "Mistral AI",
-  "Microsoft",
-  "NVIDIA",
-  "Cribl",
-  "instacart",
-  "MERCURY",
-  "mercari",
-  "netlify",
-  "gofundme",
-  "Revolut",
-] as const;
+export const landingSectionStack = "space-y-4 sm:space-y-6";
 
-const tile = "rounded-2xl bg-white px-6 py-6 shadow-[0_10px_30px_-28px_rgba(0,0,0,0.45)] sm:px-7 sm:py-7";
+export const landingStatGrid =
+  "grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-6";
+
+function StatTrendBadge({
+  trend,
+  change,
+  t,
+}: {
+  trend: "up" | "down";
+  change: string;
+  t: (key: string) => string;
+}) {
+  const up = trend === "up";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums",
+        up ? "text-emerald-700" : "text-rose-700",
+      )}
+      aria-label={up ? t("dashboard.stats.trend.up") : t("dashboard.stats.trend.down")}
+    >
+      {up ? (
+        <ArrowUp className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+      ) : (
+        <ArrowDown className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+      )}
+      {change}
+    </span>
+  );
+}
+
+function StatsSkeleton() {
+  return (
+    <div className={landingStatGrid}>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className={cn(landingStatTile, "min-h-[120px] animate-pulse sm:min-h-[156px]")}>
+          <div className="h-2.5 w-24 rounded bg-neutral-100" />
+          <div className="mt-4 h-7 w-32 rounded bg-neutral-100" />
+          <div className="mt-auto h-8 w-full rounded bg-neutral-50" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function DashboardStats({ className }: { className?: string }) {
+  const { t } = useI18n();
+  const { stats, loading, live, fetchError, reload } = useDashboardLandingStats(
+    ROUTES.dashboardPayoutsHistory,
+    t("dashboard.stats.withdrawLink"),
+  );
+
   return (
-    <section
-      id="holdings"
-      className={cn(
-        "scroll-mt-24 relative left-1/2 right-1/2 -mx-[50vw] w-screen bg-[#f4f4f5] py-14 md:py-18",
-        className,
-      )}
-    >
-      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto mb-10 max-w-[760px] text-center md:mb-12">
-          <p className="text-5xl font-medium tracking-tight text-zinc-500 sm:text-6xl">20,000 businesses</p>
-          <h2 className="mt-2 text-5xl font-semibold tracking-tight text-zinc-900 sm:text-6xl">choose Tailscale</h2>
-          <p className="mt-4 text-sm text-zinc-600">О платформе в цифрах</p>
-        </div>
+    <section id="holdings" className={cn("relative z-10 scroll-mt-24", landingSectionStack, className)}>
+      <header>
+        <h2 className={landingSectionTitle}>{t("dashboard.stats.title")}</h2>
+      </header>
 
-        <div className="mx-auto grid max-w-[1180px] gap-4 md:grid-cols-3 md:gap-5">
-          {stats.slice(0, 3).map((s) => (
-            <div key={s.label} className={cn(tile, "flex min-h-[230px] flex-col justify-between")}>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">{s.label}</p>
-                <p className="mt-5 text-[52px] font-semibold leading-none tracking-tight text-zinc-900">
+      {!live ? (
+        <p className="text-xs text-neutral-500" role="status">
+          {t("dashboard.stats.demoNotice")}
+        </p>
+      ) : null}
+
+      {fetchError ? (
+        <ReadOnlySectionError
+          sectionId="dashboard-landing-stats"
+          error={fetchError}
+          onRetry={reload}
+          retryLabel={t("dashboard.stats.retry")}
+        />
+      ) : null}
+
+      {loading ? (
+        <StatsSkeleton />
+      ) : fetchError ? null : stats.length === 0 ? (
+        <p className="text-sm text-neutral-500">{t("dashboard.stats.empty")}</p>
+      ) : (
+        <div className={landingStatGrid} aria-label={t("dashboard.stats.ariaLabel")}>
+          {stats.map((s) => (
+            <article key={s.label} className={cn(landingStatTile, "min-h-[120px] sm:min-h-[156px]")}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400 sm:tracking-[0.14em]">
+                {s.label}
+              </p>
+              <div className="mt-2 flex flex-col gap-1 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-2 sm:gap-y-1">
+                <p className="font-mono text-base font-semibold tabular-nums tracking-tight text-neutral-900 sm:text-xl">
                   {s.value}
-                  <span className="ml-1.5 text-xl font-medium text-zinc-600">{s.unit}</span>
                 </p>
+                <StatTrendBadge trend={s.trend} change={s.change} t={t} />
               </div>
-              <div>
-                {s.footer === "delta" && s.deltaText ? <p className="text-sm font-semibold text-emerald-600">{s.deltaText}</p> : null}
-                <p className="mt-2 text-[30px] leading-tight text-zinc-700">
-                  {s.label === "Средний чек сделки" ? "hours saved with fewer connectivity issues." : null}
-                  {s.label === "Доход инвесторов за месяц" ? "headcount growth without dedicated IT resources." : null}
-                  {s.label === "Активные релизы" ? "reduction in internal support requests." : null}
-                </p>
-                <p className="mt-6 text-sm font-medium text-zinc-900 underline decoration-zinc-500/60 underline-offset-4">Read case study</p>
-              </div>
-            </div>
+              <p className="mt-auto pt-3 text-xs leading-relaxed text-neutral-500">{s.hint}</p>
+              {s.href && s.hrefLabel ? (
+                <Link
+                  href={s.href}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-neutral-900 underline-offset-4 hover:underline"
+                >
+                  {s.hrefLabel}
+                  <ArrowUpRight className="size-3.5" strokeWidth={2} aria-hidden />
+                </Link>
+              ) : null}
+            </article>
           ))}
         </div>
-
-        <div className="mx-auto mt-5 grid max-w-[1180px] grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
-          {logoCloud.map((logo) => (
-            <div
-              key={logo}
-              className={cn(
-                "flex h-12 items-center justify-center rounded-xl bg-[#ececee] px-3 text-center text-[14px] font-semibold text-zinc-500",
-                logo === "Revolut" && "md:col-span-2 md:col-start-3",
-              )}
-            >
-              {logo}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 text-center">
-          <Link
-            href={ROUTES.dashboardPayoutsHistory}
-            className="text-sm font-medium text-zinc-600 underline decoration-zinc-400/70 underline-offset-4 transition hover:text-zinc-900"
-          >
-            История и вывод
-          </Link>
-        </div>
-      </div>
+      )}
     </section>
   );
 }

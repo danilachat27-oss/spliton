@@ -1,27 +1,38 @@
-import Image from "next/image";
+﻿import NextImage from "next/image";
 import Link from "next/link";
 
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
-export function RevShareLogo({ className }: { className?: string }) {
+/** Бренд Spliton в шапке кабинета и админки. */
+export function SplitonLogo({
+  className,
+  href = ROUTES.dashboard,
+}: {
+  className?: string;
+  /** Например, {@link ROUTES.admin} для консоли оператора. */
+  href?: string;
+}) {
   return (
     <Link
-      href={ROUTES.dashboard}
+      href={href}
       className={cn(
         "inline-flex items-center overflow-visible",
         className,
       )}
-      aria-label="RevShare"
+      aria-label="Spliton"
     >
-      <Image
-        src="/images/LOGO/black-logo-nofon.png"
-        alt="RevShare"
-        width={430}
-        height={90}
-        className="h-10 w-auto object-contain sm:h-12 lg:h-14"
+      <NextImage
+        src="/images/LOGO/mini-logo.png"
+        alt="Spliton"
+        width={28}
+        height={28}
+        className="size-7 object-contain"
         priority
       />
     </Link>
   );
 }
+
+/** @deprecated Используйте {@link SplitonLogo}. */
+export const RevShareLogo = SplitonLogo;

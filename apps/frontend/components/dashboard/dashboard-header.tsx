@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -8,34 +8,47 @@ import {
   Bell,
   ChevronDown,
   CircleHelp,
-  Globe,
   Menu,
-  MessageCircle,
-  Search,
   User,
   X,
-} from "lucide-react";
+} from "@/lib/lucide";
 
+import { DashboardMobileMenu } from "@/components/dashboard/dashboard-mobile-menu";
+import { useMobileTabBarShell } from "@/components/layout/mobile-tab-bar-shell";
+import { useDashboardHeaderOverlay } from "@/components/layout/dashboard-header-overlay-context";
 import {
   DASHBOARD_MEGAMENU_PANEL_ID,
   DASHBOARD_PROFILE_MEGAMENU_ID,
+  DASHBOARD_SUPPORT_MEGAMENU_ID,
   DashboardMegamenuPanel,
-  DashboardProfileMegamenuPanel,
+  SplitMegamenuFlyout,
+  ProfileMegamenuFlyout,
+  SupportMegamenuFlyout,
+  isSplitMegamenuId,
 } from "@/components/dashboard/dashboard-megamenu";
-import { DashboardHeaderSearchLayer } from "@/components/dashboard/dashboard-header-search";
-import { DashboardProfileMobileLinks } from "@/components/dashboard/dashboard-profile-subheader";
 import {
-  dashboardNavItems,
+  DashboardHeaderSearchInline,
+} from "@/components/dashboard/dashboard-header-search";
+import {
   type DashboardNavItem,
 } from "@/components/dashboard/dashboard-nav";
-import { RevShareLogo } from "@/components/dashboard/revshare-logo";
+import { SplitonLogo } from "@/components/dashboard/revshare-logo";
+import { LanguageSelector } from "@/components/i18n/language-selector";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { DASHBOARD_MISC_PATHS, ROUTES } from "@/constants/routes";
+import { useHeaderWalletBalance } from "@/hooks/use-header-wallet-balance";
+import { useLocalizedNavItems } from "@/hooks/use-localized-nav";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { tf } from "@/lib/i18n/financial-messages";
 import { cn } from "@/lib/utils";
+
+const DEPOSIT_HREF = `${ROUTES.dashboardPayouts}/deposit`;
+const PAYOUTS_HISTORY_HREF = ROUTES.dashboardPayoutsHistory;
 
 function HeaderDivider({ className }: { className?: string }) {
   return (
     <span
-      className={cn("hidden h-5 w-px shrink-0 bg-white/12 sm:block", className)}
+      className={cn("hidden h-5 w-px shrink-0 bg-white/12 lg:block", className)}
       aria-hidden
     />
   );
@@ -43,20 +56,6 @@ function HeaderDivider({ className }: { className?: string }) {
 
 const headerIconShellClass =
   "flex size-9 shrink-0 items-center justify-center rounded-md text-white/80 transition-colors hover:bg-white/8 hover:text-white";
-
-function IconToolButton({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button type="button" className={headerIconShellClass} aria-label={label}>
-      {children}
-    </button>
-  );
-}
 
 function navItemActive(item: DashboardNavItem, pathname: string, hash: string) {
   if (item.href === ROUTES.dashboard) {
@@ -110,6 +109,7 @@ function NavTrigger({
   onNavigate,
   isDesktop,
   size = "desktop",
+  menuAriaLabel,
 }: {
   item: DashboardNavItem;
   pathname: string;
@@ -121,13 +121,14 @@ function NavTrigger({
   onNavigate: () => void;
   isDesktop: boolean;
   size?: "desktop" | "mobile";
+  menuAriaLabel: string;
 }) {
   const isOpen = expandedKey === item.id;
   const isActive = navItemActive(item, pathname, hash) || isOpen;
   const hasMenu = Boolean(item.children?.length);
 
   const shellDesktop =
-    "flex shrink-0 items-center rounded-md text-[11px] font-semibold uppercase tracking-[0.1em] leading-none transition-colors lg:px-0";
+    "flex shrink-0 items-center rounded-md text-[11px] font-semibold uppercase tracking-[0.1em] leading-[1.15] transition-colors lg:px-0";
   const shellMobile = "flex w-full min-w-0 items-center rounded-md text-[11px] font-medium";
   const shell = size === "desktop" ? shellDesktop : shellMobile;
   const activeShell = isActive
@@ -146,7 +147,7 @@ function NavTrigger({
         href={item.href}
         className={cn(
           size === "desktop"
-            ? "flex shrink-0 items-center gap-1 rounded-md px-2.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] leading-none text-white/80 transition-colors lg:px-3"
+            ? "flex shrink-0 items-center gap-1 rounded-md px-2.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] leading-[1.15] text-white/80 transition-colors lg:px-3"
             : "flex min-w-0 w-full items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium text-white/80",
           isActive ? "bg-white/12 text-white" : "hover:bg-white/8 hover:text-white",
         )}
@@ -158,36 +159,49 @@ function NavTrigger({
 
   return (
     <div
-      className={cn(shell, activeShell)}
+      className="relative shrink-0"
       onMouseEnter={() => {
         if (isDesktop) onHoverOpen(item.id);
       }}
     >
-      <Link href={item.href} onClick={onNavigate} className={cn(linkPad, "min-w-0 hover:text-zinc-100")}>
-        <span className="truncate">{item.label}</span>
-      </Link>
-      <button
-        type="button"
-        id={`nav-trigger-${item.id}`}
-        aria-expanded={isOpen}
-        aria-controls={DASHBOARD_MEGAMENU_PANEL_ID}
-        aria-label={`Меню: ${item.label}`}
-        onClick={(e) => {
-          e.preventDefault();
-          onToggle(item.id);
-        }}
-        className={cn(btnPad, "text-inherit hover:text-zinc-100")}
-      >
-        <ChevronDown
+      <div className={cn(shell, activeShell)}>
+        <Link href={item.href} onClick={onNavigate} className={cn(linkPad, "min-w-0 hover:text-zinc-100")}>
+          <span className="truncate">{item.label}</span>
+        </Link>
+        <button
+          type="button"
+          id={`nav-trigger-${item.id}`}
+          aria-expanded={isOpen}
+          aria-controls={DASHBOARD_MEGAMENU_PANEL_ID}
+          aria-label={menuAriaLabel}
+          onClick={(e) => {
+            e.preventDefault();
+            onToggle(item.id);
+          }}
+          className={cn(btnPad, "text-inherit hover:text-zinc-100")}
+        >
+          <ChevronDown
+            className={cn(
+              size === "desktop" ? "size-3.5" : "size-3",
+              "opacity-70 transition-transform duration-200",
+              isOpen && "-rotate-180",
+            )}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
+      </div>
+
+      {isSplitMegamenuId(item.id) && isOpen && isDesktop ? (
+        <SplitMegamenuFlyout
+          openItem={item}
+          onNavigate={onNavigate}
           className={cn(
-            size === "desktop" ? "size-3.5" : "size-3",
-            "opacity-70 transition-transform duration-200",
-            isOpen && "-rotate-180"
+            "absolute top-full z-[120] hidden pt-2 lg:block",
+            item.id === "misc" ? "right-0" : "left-0",
           )}
-          strokeWidth={2}
-          aria-hidden
         />
-      </button>
+      ) : null}
     </div>
   );
 }
@@ -204,34 +218,71 @@ type DashboardHeaderProps = {
    * @default true
    */
   elevatedOnScroll?: boolean;
+  /** Убирает нижний border у шапки — линия задаётся снаружи (каталог и т.п.). */
+  flushBottom?: boolean;
 };
 
-function HeaderHelpLink({ className }: { className?: string }) {
+function HeaderHelpLink({
+  className,
+  label,
+  active,
+  expanded,
+  controlsId,
+  onMouseEnter,
+  onFocus,
+  onClick,
+}: {
+  className?: string;
+  label: string;
+  active?: boolean;
+  expanded?: boolean;
+  controlsId?: string;
+  onMouseEnter?: () => void;
+  onFocus?: () => void;
+  onClick?: () => void;
+}) {
   return (
     <Link
       href={ROUTES.support}
-      className={cn(headerIconShellClass, className)}
-      aria-label="Поддержка и база знаний"
+      className={cn(headerIconShellClass, active && "text-white bg-white/12", className)}
+      aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controlsId}
+      aria-haspopup="true"
+      onMouseEnter={onMouseEnter}
+      onFocus={onFocus}
+      onClick={(e) => {
+        onClick?.();
+        if (expanded) e.preventDefault();
+      }}
     >
       <CircleHelp className="size-[18px]" strokeWidth={1.75} aria-hidden />
     </Link>
   );
 }
 
-export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: DashboardHeaderProps = {}) {
+export function DashboardHeader({
+  sticky = true,
+  elevatedOnScroll = false,
+  flushBottom = false,
+}: DashboardHeaderProps = {}) {
+  const { t } = useI18n();
+  const wallet = useHeaderWalletBalance();
+  const navItems = useLocalizedNavItems();
   const pathname = usePathname();
   const [hash, setHash] = React.useState("");
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
   const [profileOpen, setProfileOpen] = React.useState(false);
-  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [supportOpen, setSupportOpen] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const [mobileHeaderVisible, setMobileHeaderVisible] = React.useState(true);
   const [headerElevated, setHeaderElevated] = React.useState(false);
+  const { profileOpen: mobileProfileDrawerOpen, openProfileDrawer, closeProfileDrawer, setTabBarHidden } =
+    useMobileTabBarShell();
+  const { setOverlayOpen } = useDashboardHeaderOverlay();
   const [isDesktop, setIsDesktop] = React.useState(false);
   const [portalReady, setPortalReady] = React.useState(false);
   const headerRef = React.useRef<HTMLElement>(null);
   const closeMenuTimerRef = React.useRef<number | null>(null);
-  const lastScrollYRef = React.useRef(0);
 
   React.useEffect(() => {
     const t = window.requestAnimationFrame(() => setPortalReady(true));
@@ -239,7 +290,7 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
   }, []);
 
   React.useEffect(() => {
-    const mq = window.matchMedia("(min-width: 640px)");
+    const mq = window.matchMedia("(min-width: 1024px)");
     const sync = () => setIsDesktop(mq.matches);
     sync();
     mq.addEventListener("change", sync);
@@ -258,6 +309,7 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
     closeMenuTimerRef.current = window.setTimeout(() => {
       setExpandedKey(null);
       setProfileOpen(false);
+      setSupportOpen(false);
       closeMenuTimerRef.current = null;
     }, 200);
   }, [cancelCloseMenuTimer]);
@@ -273,22 +325,25 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
       }
       setExpandedKey(null);
       setProfileOpen(false);
-      setSearchOpen(false);
+      setSupportOpen(false);
       setMobileMenuOpen(false);
+      closeProfileDrawer();
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+  }, [closeProfileDrawer]);
 
   const onHoverOpen = React.useCallback((id: string) => {
     cancelCloseMenuTimer();
     setProfileOpen(false);
+    setSupportOpen(false);
     setExpandedKey(id);
   }, [cancelCloseMenuTimer]);
 
   const onToggle = React.useCallback((id: string) => {
     cancelCloseMenuTimer();
     setProfileOpen(false);
+    setSupportOpen(false);
     setExpandedKey((k) => (k === id ? null : id));
   }, [cancelCloseMenuTimer]);
 
@@ -296,27 +351,22 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
     cancelCloseMenuTimer();
     setExpandedKey(null);
     setProfileOpen(false);
-    setSearchOpen(false);
+    setSupportOpen(false);
     setMobileMenuOpen(false);
-  }, [cancelCloseMenuTimer]);
-
-  const closeSearch = React.useCallback(() => setSearchOpen(false), []);
+    closeProfileDrawer();
+  }, [cancelCloseMenuTimer, closeProfileDrawer]);
 
   const closeMobileMenu = React.useCallback(() => setMobileMenuOpen(false), []);
 
-  const openSearch = React.useCallback(() => {
-    cancelCloseMenuTimer();
-    setExpandedKey(null);
-    setProfileOpen(false);
-    setSearchOpen(true);
-  }, [cancelCloseMenuTimer]);
+  const headerOverlayOpen = expandedKey != null || profileOpen || supportOpen || mobileMenuOpen;
 
-  const toggleSearch = React.useCallback(() => {
-    cancelCloseMenuTimer();
-    setExpandedKey(null);
-    setProfileOpen(false);
-    setSearchOpen((s) => !s);
-  }, [cancelCloseMenuTimer]);
+  React.useLayoutEffect(() => {
+    setOverlayOpen(headerOverlayOpen);
+  }, [headerOverlayOpen, setOverlayOpen]);
+
+  React.useEffect(() => {
+    return () => setOverlayOpen(false);
+  }, [setOverlayOpen]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -324,7 +374,7 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
         cancelCloseMenuTimer();
         setExpandedKey(null);
         setProfileOpen(false);
-        setSearchOpen(false);
+        setSupportOpen(false);
         setMobileMenuOpen(false);
       }
     };
@@ -333,31 +383,20 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
   }, [cancelCloseMenuTimer]);
 
   React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "k") return;
-      const el = e.target as HTMLElement | null;
-      if (el?.closest?.("input, textarea, [contenteditable=true]") && !searchOpen) return;
-      e.preventDefault();
-      openSearch();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [openSearch, searchOpen]);
-
-  React.useEffect(() => {
     const onPointerDown = (e: MouseEvent | PointerEvent) => {
       const el = headerRef.current;
-      if (!el || (!expandedKey && !profileOpen)) return;
+      if (!el || (!expandedKey && !profileOpen && !supportOpen)) return;
       const target = e.target as Node;
       if (!el.contains(target)) {
         cancelCloseMenuTimer();
         setExpandedKey(null);
         setProfileOpen(false);
+        setSupportOpen(false);
       }
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [expandedKey, profileOpen, cancelCloseMenuTimer]);
+  }, [expandedKey, profileOpen, supportOpen, cancelCloseMenuTimer]);
 
   React.useEffect(() => {
     return () => {
@@ -372,6 +411,14 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
   }, [pathname]);
 
   React.useEffect(() => {
+    closeProfileDrawer();
+  }, [pathname, closeProfileDrawer]);
+
+  React.useEffect(() => {
+    setTabBarHidden(mobileMenuOpen);
+  }, [mobileMenuOpen, setTabBarHidden]);
+
+  React.useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -382,43 +429,42 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
 
   React.useEffect(() => {
     const onScroll = () => {
-      const y = window.scrollY;
-      setHeaderElevated(y > 8);
-
-      // Mobile only: hide on down scroll, show on up scroll.
-      if (window.innerWidth >= 640) {
-        setMobileHeaderVisible(true);
-        lastScrollYRef.current = y;
-        return;
-      }
-
-      if (mobileMenuOpen || searchOpen || profileOpen) {
-        setMobileHeaderVisible(true);
-        lastScrollYRef.current = y;
-        return;
-      }
-
-      const delta = y - lastScrollYRef.current;
-      if (y < 16) {
-        setMobileHeaderVisible(true);
-      } else if (delta > 8) {
-        setMobileHeaderVisible(false);
-      } else if (delta < -8) {
-        setMobileHeaderVisible(true);
-      }
-      lastScrollYRef.current = y;
+      setHeaderElevated(window.scrollY > 8);
     };
 
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [mobileMenuOpen, profileOpen, searchOpen]);
+  }, []);
 
-  const openItem = dashboardNavItems.find((i) => i.id === expandedKey);
+  const openItem = navItems.find((i) => i.id === expandedKey);
 
-  /** Портальный фон: как под mega-menu разделов (blur 40px + darken). */
-  const headerFlyoutBackdrop =
-    portalReady && (expandedKey || profileOpen) && !searchOpen ? (
+  /** Портальный фон: только для полноширинных mega-menu (не split-flyout и не профиль). */
+  const showFlyoutBackdrop =
+    portalReady && expandedKey != null && !isSplitMegamenuId(expandedKey);
+
+  const mobileMenuLayer =
+    portalReady
+      ? createPortal(
+          <DashboardMobileMenu
+            open={mobileMenuOpen}
+            navItems={navItems}
+            pathname={pathname}
+            hash={hash}
+            onClose={closeMobileMenu}
+            navItemActive={navItemActive}
+            t={t}
+            isAuthenticated={wallet.isAuthenticated}
+            balanceShort={wallet.balanceShort}
+            balanceError={wallet.error}
+            depositHref={DEPOSIT_HREF}
+            loginHref={ROUTES.login}
+          />,
+          document.body,
+        )
+      : null;
+
+  const headerFlyoutBackdrop = showFlyoutBackdrop ? (
       <div
         role="presentation"
         aria-hidden
@@ -434,14 +480,14 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
   return (
     <>
       {headerFlyoutBackdrop ? createPortal(headerFlyoutBackdrop, document.body) : null}
-      <DashboardHeaderSearchLayer open={searchOpen} onClose={closeSearch} />
+      {mobileMenuLayer}
       <header
         ref={headerRef}
         className={cn(
-          "border-b border-transparent !bg-black transition-transform duration-300 ease-out will-change-transform",
+          flushBottom ? "border-b-0" : "border-b border-transparent",
+          "!bg-black transition-shadow duration-300 ease-out",
           sticky ? "sticky top-0 z-[110]" : "relative z-[110] shrink-0",
-          elevatedOnScroll && headerElevated && "shadow-[0_8px_30px_rgba(0,0,0,0.38)] backdrop-blur-[2px]",
-          mobileHeaderVisible ? "translate-y-0" : "-translate-y-full sm:translate-y-0",
+          elevatedOnScroll && headerElevated && "shadow-[0_8px_30px_rgba(0,0,0,0.38)]",
         )}
         onMouseEnter={cancelCloseMenuTimer}
         onMouseLeave={scheduleCloseMenu}
@@ -451,16 +497,16 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
         {/* Brand + nav */}
         <div className="flex min-w-0 flex-1 items-center gap-0 sm:gap-1">
           <div className="flex shrink-0 items-center pr-0">
-            <RevShareLogo />
+            <SplitonLogo />
           </div>
 
-          <HeaderDivider className="mx-1 hidden sm:block" />
+          <HeaderDivider className="mx-1 hidden lg:block" />
 
           <nav
-            className="hidden min-w-0 items-center gap-0.5 overflow-x-auto sm:flex lg:gap-1"
-            aria-label="Основная навигация"
+            className="hidden min-w-0 items-center gap-0.5 overflow-x-auto overflow-y-visible lg:flex lg:overflow-visible lg:gap-1"
+            aria-label={t("navigation.header.mainNav")}
           >
-            {dashboardNavItems.map((item) => (
+            {navItems.map((item) => (
               <NavTrigger
                 key={item.id}
                 item={item}
@@ -472,238 +518,215 @@ export function DashboardHeader({ sticky = true, elevatedOnScroll = false }: Das
                 onNavigate={closeSubnav}
                 isDesktop={isDesktop}
                 size="desktop"
+                menuAriaLabel={tf(t("navigation.header.navMenu"), { label: item.label })}
               />
             ))}
           </nav>
         </div>
 
+        <DashboardHeaderSearchInline />
+
         {/* Actions + utilities */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <button
-            type="button"
-            className={cn(
-              headerIconShellClass,
-              searchOpen && "bg-white/12 text-white",
-            )}
-            aria-label="Поиск по платформе"
-            aria-expanded={searchOpen}
-            aria-haspopup="dialog"
-            onClick={toggleSearch}
-          >
-            <Search className="size-[18px]" strokeWidth={1.75} aria-hidden />
-          </button>
+          {wallet.isAuthenticated ? (
+            <Link
+              href={DEPOSIT_HREF}
+              className="hidden h-9 shrink-0 items-center rounded-full bg-white/10 px-4 text-[12px] font-medium text-white transition hover:bg-white/16 active:scale-[0.98] lg:inline-flex"
+            >
+              {t("navigation.header.depositUsdt")}
+            </Link>
+          ) : (
+            <Link
+              href={ROUTES.login}
+              className="hidden h-9 shrink-0 items-center rounded-lg bg-white/10 px-3.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-white/16 lg:inline-flex"
+            >
+              {t("navigation.header.login")}
+            </Link>
+          )}
 
-          <Link
-            href={`${ROUTES.dashboard}#deposit`}
-            className="hidden h-9 shrink-0 items-center rounded-lg bg-white/10 px-3.5 text-[11px] font-semibold uppercase tracking-wide text-white transition hover:bg-white/16 active:scale-[0.98] sm:inline-flex"
-          >
-            Пополнить USDT
-          </Link>
-
-          <details className="relative hidden sm:block">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-white/85 transition-colors marker:hidden hover:bg-white/8 [&::-webkit-details-marker]:hidden">
-              <span className="hidden tabular-nums lg:inline">1&nbsp;240,58</span>
-              <span className="tabular-nums lg:hidden">1&nbsp;240</span>
-              <span className="text-white/65">USDT</span>
-              <ChevronDown className="size-3.5 text-white/65" strokeWidth={2} aria-hidden />
-            </summary>
-            <div className="absolute right-0 z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0a] py-1 shadow-2xl ring-1 ring-black/60">
-              <div className="border-b border-white/[0.06] px-3 py-2.5">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
-                  Баланс
-                </p>
-                <p className="mt-0.5 tabular-nums text-base font-semibold text-white">
-                  1&nbsp;240,58 <span className="text-sm font-medium text-neutral-500">USDT</span>
-                </p>
+          {wallet.isAuthenticated ? (
+            <details className="relative hidden lg:block">
+              <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium text-white/85 transition-colors marker:hidden hover:bg-white/8 [&::-webkit-details-marker]:hidden">
+                <span className="hidden max-w-[8rem] truncate tabular-nums lg:inline">
+                  {wallet.balanceShort ?? (wallet.error ? "—" : "…")}
+                </span>
+                <span className="max-w-[5rem] truncate tabular-nums lg:hidden">
+                  {wallet.balanceShort ?? "…"}
+                </span>
+                <span className="text-white/65">USDT</span>
+                <ChevronDown className="size-3.5 text-white/65" strokeWidth={2} aria-hidden />
+              </summary>
+              <div className="absolute right-0 z-50 mt-1.5 w-56 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0a] py-1 shadow-2xl ring-1 ring-black/60">
+                <div className="border-b border-white/[0.06] px-3 py-2.5">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+                    {t("nav.balance")}
+                  </p>
+                  <p className="mt-0.5 tabular-nums text-base font-semibold text-white">
+                    {wallet.balanceLabel ?? "—"}
+                  </p>
+                  {wallet.error ? (
+                    <p className="mt-1 text-[11px] text-red-300">{wallet.error}</p>
+                  ) : null}
+                </div>
+                <Link
+                  href={DEPOSIT_HREF}
+                  className="block px-3 py-2 text-sm text-neutral-300 hover:bg-white/[0.05]"
+                >
+                  {t("navigation.header.depositShort")}
+                </Link>
+                <Link
+                  href={PAYOUTS_HISTORY_HREF}
+                  className="block px-3 py-2 text-sm text-neutral-300 hover:bg-white/[0.05]"
+                >
+                  {t("navigation.header.payoutHistory")}
+                </Link>
               </div>
-              <Link
-                href={`${ROUTES.dashboard}#deposit`}
-                className="block px-3 py-2 text-sm text-neutral-300 hover:bg-white/[0.05]"
-              >
-                Пополнить
-              </Link>
-              <Link
-                href={`${ROUTES.dashboard}#payouts`}
-                className="block px-3 py-2 text-sm text-neutral-300 hover:bg-white/[0.05]"
-              >
-                История выплат
-              </Link>
-            </div>
-          </details>
+            </details>
+          ) : null}
 
-          <details className="relative sm:hidden">
-            <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-zinc-500 transition-colors marker:hidden hover:bg-white/5 hover:text-zinc-100 [&::-webkit-details-marker]:hidden">
+          {wallet.isAuthenticated ? (
+            <button
+              type="button"
+              className={cn(
+                headerIconShellClass,
+                "lg:hidden",
+                mobileProfileDrawerOpen && "bg-white/12 text-white",
+              )}
+              aria-label={t("navigation.header.profile")}
+              aria-expanded={mobileProfileDrawerOpen}
+              onClick={() => {
+                setExpandedKey(null);
+                setProfileOpen(false);
+                setMobileMenuOpen(false);
+                openProfileDrawer();
+              }}
+            >
               <User className="size-[18px]" strokeWidth={1.75} aria-hidden />
-            </summary>
-            <div className="absolute right-0 z-50 mt-1.5 w-[min(calc(100vw-1.5rem),18rem)] overflow-hidden rounded-xl border border-white/[0.1] bg-[#0a0a0a] py-1 shadow-2xl ring-1 ring-black/60">
-              <div className="border-b border-white/[0.06] px-3 py-2.5">
-                <p className="text-sm font-medium text-white">Аккаунт</p>
-                <p className="text-xs text-neutral-500">danila@…</p>
-              </div>
-              <DashboardProfileMobileLinks onNavigate={closeSubnav} />
-            </div>
-          </details>
+            </button>
+          ) : (
+            <Link
+              href={ROUTES.login}
+              className={cn(headerIconShellClass, "lg:hidden")}
+              aria-label={t("navigation.header.login")}
+            >
+              <User className="size-[18px]" strokeWidth={1.75} aria-hidden />
+            </Link>
+          )}
 
-          <div className="h-4 w-px bg-white/10 sm:hidden" aria-hidden />
+          <div className="h-4 w-px bg-white/10 lg:hidden" aria-hidden />
 
           <button
             type="button"
             className={cn(
               headerIconShellClass,
-              "sm:hidden",
+              "lg:hidden",
               mobileMenuOpen && "bg-white/12 text-white",
             )}
-            aria-label={mobileMenuOpen ? "Закрыть мобильное меню" : "Открыть мобильное меню"}
+            aria-label={
+              mobileMenuOpen
+                ? t("navigation.header.mobileMenuClose")
+                : t("navigation.header.mobileMenuOpen")
+            }
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-dashboard-menu"
             onClick={() => {
               setExpandedKey(null);
               setProfileOpen(false);
-              setSearchOpen(false);
               setMobileMenuOpen((prev) => !prev);
             }}
           >
             {mobileMenuOpen ? <X className="size-[18px]" strokeWidth={1.75} aria-hidden /> : <Menu className="size-[18px]" strokeWidth={1.75} aria-hidden />}
           </button>
 
-          <button
-            type="button"
-            className={cn(
-              "relative z-[1] hidden size-9 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-100 sm:flex",
-              "text-white/80 hover:bg-white/8 hover:text-white",
-              profileOpen && "bg-white/12 text-white",
-            )}
-            aria-label="Профиль и настройки аккаунта"
-            aria-expanded={profileOpen}
-            aria-controls={DASHBOARD_PROFILE_MEGAMENU_ID}
-            aria-haspopup="true"
+          <div
+            className="relative hidden shrink-0 lg:block"
             onMouseEnter={() => {
               cancelCloseMenuTimer();
               setExpandedKey(null);
+              setSupportOpen(false);
               setProfileOpen(true);
-            }}
-            onFocus={() => {
-              cancelCloseMenuTimer();
-              setExpandedKey(null);
-              setProfileOpen(true);
-            }}
-            onClick={() => {
-              cancelCloseMenuTimer();
-              setExpandedKey(null);
-              setProfileOpen((p) => !p);
             }}
           >
-            <User className="size-[18px]" strokeWidth={1.75} aria-hidden />
-          </button>
-
-          <HeaderDivider className="mx-0.5 hidden sm:block" />
-
-          <div className="hidden items-center sm:flex">
-            <IconToolButton label="Сообщения">
-              <MessageCircle className="size-[18px]" strokeWidth={1.75} />
-            </IconToolButton>
-            <IconToolButton label="Уведомления">
-              <Bell className="size-[18px]" strokeWidth={1.75} />
-            </IconToolButton>
-            <HeaderHelpLink
-              className={pathname === ROUTES.support ? "text-white bg-white/12" : undefined}
-            />
-            <IconToolButton label="Язык и регион">
-              <Globe className="size-[18px]" strokeWidth={1.75} />
-            </IconToolButton>
-          </div>
-        </div>
-      </div>
-      {profileOpen ? <DashboardProfileMegamenuPanel onNavigate={closeSubnav} /> : null}
-      </div>
-
-      {/* Mobile: compact actions row */}
-      <div className="sm:hidden">
-        <div className="flex items-center justify-between gap-2 px-3 py-2">
-          <span className="tabular-nums text-xs font-medium text-white/75">1&nbsp;240,58 USDT</span>
-          <div className="flex items-center gap-1">
-            <IconToolButton label="Уведомления">
-              <Bell className="size-[17px]" strokeWidth={1.75} />
-            </IconToolButton>
-            <HeaderHelpLink
-              className={pathname === ROUTES.support ? "text-white bg-white/12" : undefined}
-            />
-            <Link
-              href={`${ROUTES.dashboard}#deposit`}
-              className="flex h-8 items-center rounded-lg bg-white/10 px-3 text-[10px] font-semibold uppercase tracking-wide text-white"
-            >
-              Пополнить
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className={cn(
-          "fixed inset-0 z-[130] bg-[#070707] transition duration-300 sm:hidden",
-          mobileMenuOpen
-            ? "pointer-events-auto translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-2 opacity-0",
-        )}
-      >
-        <div
-          className={cn(
-            "flex h-full flex-col overflow-y-auto px-5 pb-6 pt-4 transition-transform duration-300",
-            mobileMenuOpen ? "translate-y-0" : "-translate-y-1",
-          )}
-          id="mobile-dashboard-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Мобильное меню"
-        >
-          <div className="flex items-center justify-between">
-            <RevShareLogo className="max-w-none" />
             <button
               type="button"
-              className={cn(headerIconShellClass, "text-zinc-300")}
-              onClick={closeMobileMenu}
-              aria-label="Закрыть мобильное меню"
+              className={cn(
+                "relative z-[1] flex size-9 shrink-0 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white/5 hover:text-zinc-100",
+                "text-white/80 hover:bg-white/8 hover:text-white",
+                profileOpen && "bg-white/12 text-white",
+              )}
+              aria-label={t("navigation.header.profile")}
+              aria-expanded={profileOpen}
+              aria-controls={DASHBOARD_PROFILE_MEGAMENU_ID}
+              aria-haspopup="true"
+              onFocus={() => {
+                cancelCloseMenuTimer();
+                setExpandedKey(null);
+                setProfileOpen(true);
+              }}
+              onClick={() => {
+                cancelCloseMenuTimer();
+                setExpandedKey(null);
+                setProfileOpen((p) => !p);
+              }}
             >
-              <X className="size-[18px]" strokeWidth={1.75} aria-hidden />
+              <User className="size-[18px]" strokeWidth={1.75} aria-hidden />
             </button>
+
+            {profileOpen && isDesktop ? (
+              <ProfileMegamenuFlyout
+                onNavigate={closeSubnav}
+                className="absolute right-0 top-full z-[120] hidden pt-2 lg:block"
+              />
+            ) : null}
           </div>
 
-          <nav className="mt-6 flex flex-col gap-1.5" aria-label="Мобильная навигация">
-            {dashboardNavItems.map((item) => {
-              const isActive = navItemActive(item, pathname, hash);
-              return (
-                <Link
-                  key={`mobile-menu-${item.id}`}
-                  href={item.href}
-                  onClick={closeMobileMenu}
-                  className={cn(
-                    "rounded-xl px-3 py-3 text-base font-semibold text-zinc-300 transition-colors",
-                    isActive ? "bg-white/8 text-white" : "hover:bg-white/5 hover:text-white",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <HeaderDivider className="mx-0.5 hidden lg:block" />
 
-          <div className="mt-auto space-y-2 border-t border-white/10 pt-4">
-            <Link
-              href={ROUTES.dashboardProfile}
-              onClick={closeMobileMenu}
-              className="flex h-11 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white"
+          <div className="hidden items-center lg:flex">
+            <NotificationBell
+              apiBasePath="/api/v1/notifications"
+              allHref={ROUTES.dashboardNotifications}
+              className={headerIconShellClass}
+              iconClassName="size-[18px]"
+            />
+            <div
+              className="relative"
+              onMouseEnter={() => {
+                cancelCloseMenuTimer();
+                setExpandedKey(null);
+                setProfileOpen(false);
+                setSupportOpen(true);
+              }}
             >
-              Профиль
-            </Link>
-            <Link
-              href={`${ROUTES.dashboard}#deposit`}
-              onClick={closeMobileMenu}
-              className="flex h-11 items-center justify-center rounded-full bg-white px-4 text-sm font-semibold text-black"
-            >
-              Внести криптовалюту
-            </Link>
+              <HeaderHelpLink
+                label={t("navigation.header.help")}
+                active={supportOpen || pathname === ROUTES.support}
+                expanded={supportOpen}
+                controlsId={DASHBOARD_SUPPORT_MEGAMENU_ID}
+                onFocus={() => {
+                  cancelCloseMenuTimer();
+                  setExpandedKey(null);
+                  setProfileOpen(false);
+                  setSupportOpen(true);
+                }}
+                onClick={() => {
+                  cancelCloseMenuTimer();
+                  setExpandedKey(null);
+                  setProfileOpen(false);
+                  setSupportOpen((open) => !open);
+                }}
+              />
+              {supportOpen && isDesktop ? (
+                <SupportMegamenuFlyout
+                  onNavigate={closeSubnav}
+                  className="absolute right-0 top-full z-[120] hidden pt-2 lg:block"
+                />
+              ) : null}
+            </div>
+            <LanguageSelector variant="dark" buttonClassName="border-0 bg-transparent hover:bg-white/8" />
           </div>
         </div>
+      </div>
       </div>
 
       <DashboardMegamenuPanel openItem={openItem} onNavigate={closeSubnav} />

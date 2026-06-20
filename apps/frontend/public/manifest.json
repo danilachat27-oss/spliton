@@ -1,0 +1,17 @@
+{
+  "name": "Spliton",
+  "short_name": "Spliton",
+  "description": "Биржа долей музыкальных активов",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

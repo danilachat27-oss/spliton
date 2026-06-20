@@ -11,6 +11,8 @@ import type {
   VerifyEmailResponse,
 } from "@/types/auth";
 
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+
 type ApiErrorBody = {
   code?: string;
   message?: string | { code?: string; message?: string };
@@ -30,13 +32,10 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-  process.env.VITE_API_BASE_URL?.trim() ||
-  "http://localhost:3001";
+import { resolveApiUrl } from "@/lib/public-env";
 
 function resolveUrl(path: string): string {
-  return `${API_BASE_URL.replace(/\/+$/, "")}${path}`;
+  return resolveApiUrl(path);
 }
 
 function parseApiErrorBody(body: unknown): { message: string; code?: string } {
@@ -44,11 +43,19 @@ function parseApiErrorBody(body: unknown): { message: string; code?: string } {
   if (!body || typeof body !== "object") {
     return fallback;
   }
-  const typed = body as ApiErrorBody;
+  const typed = body as ApiErrorBody & {
+    error?: { code?: string; message?: string };
+  };
+  if (typed.error?.code || typed.error?.message) {
+    return {
+      message: typed.error.message || fallback.message,
+      code: typed.error.code ?? typed.code,
+    };
+  }
   if (typeof typed.message === "object" && typed.message) {
     return {
       message: typed.message.message || fallback.message,
-      code: typed.message.code,
+      code: typed.message.code ?? typed.code,
     };
   }
   return {
@@ -58,7 +65,7 @@ function parseApiErrorBody(body: unknown): { message: string; code?: string } {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(resolveUrl(path), {
+  const response = await fetchWithTimeout(resolveUrl(path), {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
@@ -104,6 +111,11 @@ export async function signUpWithEmail(payload: EmailSignUpPayload): Promise<Regi
     body: JSON.stringify({
       email: payload.email,
       password: payload.password,
+      acceptedTerms: payload.acceptedTerms,
+      acceptedPrivacy: payload.acceptedPrivacy,
+      ...(payload.referralCode ? { referralCode: payload.referralCode } : {}),
+      ...(payload.utmSource ? { utmSource: payload.utmSource } : {}),
+      ...(payload.utmCampaign ? { utmCampaign: payload.utmCampaign } : {}),
     }),
   });
 }
@@ -131,10 +143,13 @@ export async function verifyTwoFactor(
   });
 }
 
-export async function refreshSessionRequest(): Promise<LoginSuccessResponse> {
+export async function refreshSessionRequest(
+  refreshToken?: string | null,
+): Promise<LoginSuccessResponse> {
+  const trimmed = refreshToken?.trim();
   return request<LoginSuccessResponse>("/auth/refresh", {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify(trimmed ? { refreshToken: trimmed } : {}),
   });
 }
 
@@ -152,6 +167,23 @@ export async function logoutAllRequest(accessToken: string): Promise<LogoutRespo
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({}),
+  });
+}
+
+export async function forgotPasswordRequest(email: string): Promise<{ success: true }> {
+  return request<{ success: true }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPasswordRequest(
+  token: string,
+  password: string,
+): Promise<{ success: true }> {
+  return request<{ success: true }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
   });
 }
 

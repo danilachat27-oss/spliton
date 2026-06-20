@@ -1,13 +1,15 @@
-import type { Metadata } from "next";
+﻿import { Suspense } from "react";
 
 import { ReleaseAnalyticsPage } from "@/components/dashboard/release-analytics-page";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { criticalPageMetaAsync } from "@/lib/i18n/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Аналитика релизов",
-  description:
-    "Сравнение доходности релизов RevShare: динамика, выплаты, units и ключевые метрики по активам.",
-};
+export async function generateMetadata() {
+  return criticalPageMetaAsync(
+    "meta.analytics.releases.title",
+    "meta.analytics.releases.description",
+  );
+}
 
 export default function AnalyticsReleasesRoutePage() {
   return (
@@ -16,7 +18,9 @@ export default function AnalyticsReleasesRoutePage() {
         <DashboardHeader />
       </div>
       <div className="flex h-0 min-h-0 flex-1 flex-col overflow-hidden">
-        <ReleaseAnalyticsPage />
+        <Suspense fallback={<div className="h-full min-h-[320px] bg-black" aria-hidden />}>
+          <ReleaseAnalyticsPage />
+        </Suspense>
       </div>
     </div>
   );

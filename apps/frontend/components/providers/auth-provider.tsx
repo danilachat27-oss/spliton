@@ -10,6 +10,12 @@ import type {
   TwoFactorVerifyPayload,
 } from "@/types/auth";
 import {
+  clearAdminAccessVerified,
+  rekeyAdminAccessVerified,
+} from "@/features/admin/lib/admin-access-cache";
+import { invalidateAdminDataCache } from "@/features/admin/lib/admin-data-cache";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import {
   ApiError,
   logoutAllRequest,
   logoutRequest,
@@ -43,13 +49,17 @@ type AuthContextValue = {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
-const API_BASE_URL =
-  process.env.VITE_API_BASE_URL?.trim() ||
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-  "http://localhost:3001";
+import { clearSessionHintCookie, setSessionHintCookie } from "@/lib/auth/session-cookie";
+import {
+  broadcastLogout,
+  broadcastSession,
+  coordinatedRefresh,
+  subscribeAuthTabSync,
+} from "@/lib/auth/auth-tab-sync";
+import { resolveApiUrl } from "@/lib/public-env";
 
 function resolveUrl(path: string): string {
-  return `${API_BASE_URL.replace(/\/+$/, "")}${path}`;
+  return resolveApiUrl(path);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -60,8 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     React.useState(false);
   const [pendingTwoFactorChallenge, setPendingTwoFactorChallenge] =
     React.useState<PendingTwoFactorChallenge | null>(null);
+  const accessTokenRef = React.useRef<string | null>(null);
+  accessTokenRef.current = accessToken;
 
   const clearAuth = React.useCallback(() => {
+    clearAdminAccessVerified();
+    invalidateAdminDataCache();
+    clearSessionHintCookie();
     setUser(null);
     setAccessToken(null);
     setPendingTwoFactorChallenge(null);
@@ -85,15 +100,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [accessToken, clearAuth]);
 
   const refreshSession = React.useCallback(async (): Promise<string | null> => {
-    try {
-      const refreshed = await refreshSessionRequest();
-      setAccessToken(refreshed.tokens.accessToken);
-      setUser(refreshed.user);
-      return refreshed.tokens.accessToken;
-    } catch {
+    const refreshed = await coordinatedRefresh(async () => {
+      try {
+        const previousToken = accessTokenRef.current;
+        const response = await refreshSessionRequest();
+        const nextToken = response.tokens.accessToken;
+        rekeyAdminAccessVerified(previousToken, nextToken);
+        setSessionHintCookie();
+        return {
+          user: response.user,
+          accessToken: nextToken,
+          ts: Date.now(),
+        };
+      } catch {
+        return null;
+      }
+    });
+
+    if (!refreshed) {
       clearAuth();
       return null;
     }
+
+    setAccessToken(refreshed.accessToken);
+    setUser(refreshed.user);
+    return refreshed.accessToken;
   }, [clearAuth]);
 
   const register = React.useCallback(
@@ -110,6 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(nextUser);
     setPendingTwoFactorChallenge(null);
     setRequiresEmailVerification(false);
+    setSessionHintCookie();
+    broadcastSession({ user: nextUser, accessToken: token, ts: Date.now() });
   }, []);
 
   const login = React.useCallback(
@@ -153,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await logoutRequest();
     } finally {
       clearAuth();
+      broadcastLogout();
     }
   }, [clearAuth]);
 
@@ -165,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       clearAuth();
+      broadcastLogout();
     }
   }, [accessToken, clearAuth]);
 
@@ -172,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (input: string, init?: RequestInit): Promise<Response> => {
       const target = input.startsWith("http") ? input : resolveUrl(input);
       const doRequest = (token: string | null) =>
-        fetch(target, {
+        fetchWithTimeout(target, {
           credentials: "include",
           ...init,
           headers: {
@@ -201,13 +236,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   React.useEffect(() => {
+    return subscribeAuthTabSync({
+      onSession: (payload) => {
+        setAccessToken(payload.accessToken);
+        setUser(payload.user);
+        setPendingTwoFactorChallenge(null);
+        setRequiresEmailVerification(false);
+        setSessionHintCookie();
+        setIsLoading(false);
+      },
+      onLogout: () => {
+        clearAuth();
+        setIsLoading(false);
+      },
+    });
+  }, [clearAuth]);
+
+  React.useEffect(() => {
     let active = true;
     (async () => {
       const refreshed = await refreshSession();
       if (!active) return;
-      if (refreshed) {
-        await loadMe();
-      }
       if (active) {
         setIsLoading(false);
       }
@@ -215,7 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [refreshSession, loadMe]);
+  }, [refreshSession]);
 
   const value = React.useMemo<AuthContextValue>(
     () => ({

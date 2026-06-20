@@ -1,5 +1,8 @@
-import { Play } from "lucide-react";
+"use client";
 
+import { Play } from "@/lib/lucide";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 type VideoStubMode = "full" | "chrome";
@@ -16,6 +19,7 @@ export function ReleaseParametersCardVideoStub({
   className?: string;
   mode?: VideoStubMode;
 }) {
+  const { t } = useI18n();
   const bg =
     "bg-[radial-gradient(90%_70%_at_50%_18%,rgba(56,189,248,0.16),transparent_52%),linear-gradient(180deg,#151515_0%,#060606_100%)]";
 
@@ -44,7 +48,9 @@ export function ReleaseParametersCardVideoStub({
       )}
     >
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,transparent_42%,rgba(255,255,255,0.04)_50%,transparent_58%)] opacity-60" />
-      <p className="relative px-3 pt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Видео</p>
+      <p className="relative px-3 pt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+        {t("catalog.releaseParameters.video.label")}
+      </p>
       <div className="relative flex flex-1 items-center justify-center py-3">
         <div
           className="flex size-[52px] items-center justify-center rounded-full bg-white/[0.08] text-white backdrop-blur-[1px]"
@@ -54,7 +60,7 @@ export function ReleaseParametersCardVideoStub({
         </div>
       </div>
       <p className="relative bg-black/50 px-3 py-2 text-[10px] leading-snug text-zinc-600">
-        Заглушка: позже MP4 / HLS
+        {t("catalog.releaseParameters.video.stub")}
       </p>
     </div>
   );

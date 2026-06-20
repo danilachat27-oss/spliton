@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
-
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+﻿import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ReleaseParametersScreen } from "@/components/release-parameters/release-parameters-screen";
+import { criticalPageMetaAsync } from "@/lib/i18n/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Параметры релиза",
-  description:
-    "Как читать карточку релиза в каталоге RevShare: units, investor share, raise target, payout model, статус и вторичный рынок.",
-};
+export async function generateMetadata() {
+  return criticalPageMetaAsync(
+    "meta.catalog.releaseParameters.title",
+    "meta.catalog.releaseParameters.description",
+  );
+}
 
 export default function CatalogReleaseParametersPage() {
   return (

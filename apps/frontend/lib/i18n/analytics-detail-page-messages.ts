@@ -1,0 +1,379 @@
+/** Release detail page (`/analytics/releases/[id]`) copy — ru/en/es/pt */
+import type { AppLocale } from "./types";
+
+const RU = {
+  "analytics.detail.lifecycle.activePrimary": "Раунд открыт",
+  "analytics.detail.lifecycle.soldOut": "Распродан",
+  "analytics.detail.lifecycle.paused": "Пауза",
+  "analytics.detail.lifecycle.comingSoon": "Скоро",
+  "analytics.detail.lifecycle.draft": "Черновик",
+  "analytics.detail.lifecycle.closed": "Раунд закрыт",
+  "analytics.detail.lifecycle.primaryComplete": "Первичный раунд завершён",
+
+  "analytics.detail.cta.buyUnits": "Купить units",
+  "analytics.detail.cta.openSecondary": "Открыть вторичный рынок",
+  "analytics.detail.cta.topUpWallet": "Пополнить кошелёк",
+  "analytics.detail.cta.loginToBuy": "Войти, чтобы купить",
+  "analytics.detail.cta.myPosition": "Моя позиция",
+  "analytics.detail.cta.payoutHistory": "История выплат",
+  "analytics.detail.cta.roundPaused": "Раунд на паузе",
+  "analytics.detail.cta.roundPausedReason": "Покупка временно недоступна",
+  "analytics.detail.cta.comingSoon": "Скоро в каталоге",
+  "analytics.detail.cta.primaryClosed": "Первичный раунд закрыт",
+  "analytics.detail.cta.primaryClosedReason": "Units в первичке больше не продаются",
+
+  "analytics.detail.hint.publicAnalytics": "Публичная аналитика · войдите, чтобы видеть свою позицию",
+  "analytics.detail.hint.noUnits": "У вас пока нет units этого релиза",
+  "analytics.detail.hint.primaryClosed": "Первичный вход закрыт",
+  "analytics.detail.hint.noPayouts30d": "Выплат за последние 30 дней не было",
+  "analytics.detail.hint.noSecondary30d": "Сделок за 30 дней не было",
+  "analytics.detail.hint.modelYield": "Модельная метрика, не гарантия",
+  "analytics.detail.hint.unitsCirculation": "Продано / в обращении",
+  "analytics.detail.hint.availablePrimary": "Остаток в первичке",
+  "analytics.detail.hint.secondaryVolume30d": "Оборот за 30 дней",
+  "analytics.detail.hint.minEntry": "Минимальный порог лота",
+
+  "analytics.detail.pulse.title": "Пульс релиза",
+  "analytics.detail.pulse.empty": "Метрики появятся после первых операций или выплат",
+  "analytics.detail.pulse.grossYield": "Ориентир gross",
+  "analytics.detail.pulse.roundStatus": "Статус раунда",
+  "analytics.detail.pulse.position": "Позиция",
+  "analytics.detail.pulse.payouts30d": "Выплаты (30D)",
+  "analytics.detail.pulse.unitsCirculation": "Units в обращении",
+  "analytics.detail.pulse.availablePrimary": "Доступно в первичке",
+  "analytics.detail.pulse.secondary30d": "Вторичный рынок (30D)",
+  "analytics.detail.pulse.myPosition": "Ваша позиция",
+  "analytics.detail.pulse.personalHistory": "Моя история по релизу",
+  "analytics.detail.pulse.personalHistoryHint": "Заявки, исполнения и выплаты по вашей позиции",
+  "analytics.detail.pulse.loginHistory": "Войти для персональной истории",
+  "analytics.detail.pulse.guestPosition": "Войдите для просмотра",
+  "analytics.detail.pulse.group.snapshot": "Ваша картина",
+  "analytics.detail.pulse.group.market": "Рынок и ликвидность",
+  "analytics.detail.pulse.sparklineCaption": "30 дней",
+  "analytics.detail.pulse.soldPct": "{pct}% продано",
+
+  "analytics.detail.hero.fallbackBlurb":
+    "Релиз с распределением выплат между держателями units. Данные по выплатам, вторичному рынку и истории цены обновляются после появления операций.",
+  "analytics.detail.hero.metaArtist": "Артист",
+  "analytics.detail.hero.metaGenre": "Жанр",
+  "analytics.detail.hero.metaPayoutFreq": "Выплаты",
+  "analytics.detail.hero.metaReleaseDate": "Дата релиза",
+
+  "analytics.detail.genre.electronic": "Электронная",
+  "analytics.detail.genre.hiphop": "Hip-Hop",
+  "analytics.detail.genre.pop": "Поп",
+
+  "analytics.detail.kpi.payouts30d": "Выплаты за 30 дней",
+  "analytics.detail.kpi.payoutsAllTime": "Выплаты за всё время",
+  "analytics.detail.kpi.unitsSold": "Units продано",
+  "analytics.detail.kpi.availablePrimary": "Доступно в первичке",
+  "analytics.detail.kpi.fillProgress": "Прогресс раунда",
+  "analytics.detail.kpi.secondaryVolume24h": "Объём вторички (24ч)",
+  "analytics.detail.kpi.avgUnitPrice": "Средняя цена / unit",
+  "analytics.detail.kpi.sub.payouts30d": "за последние 30 дней",
+  "analytics.detail.kpi.sub.payoutsAllTime": "с момента запуска",
+  "analytics.detail.kpi.sub.unitsSold": "в обращении",
+  "analytics.detail.kpi.sub.availablePrimary": "остаток первички",
+  "analytics.detail.kpi.sub.fillProgress": "от цели сбора",
+  "analytics.detail.kpi.sub.secondaryVolume24h": "оборот за 24 часа",
+  "analytics.detail.kpi.sub.avgUnitPrice": "ориентир по стакану",
+  "analytics.detail.kpi.info.payouts30d":
+    "Сумма выплат держателям units по релизу за последние 30 календарных дней — по данным фактических начислений.",
+  "analytics.detail.kpi.info.payoutsAllTime":
+    "Накопленная сумма выплат по релизу с момента запуска revenue share до текущей даты.",
+  "analytics.detail.kpi.info.unitsSold":
+    "Units, переданные держателям: первичные покупки и вторичные сделки внутри Spliton.",
+  "analytics.detail.kpi.info.availablePrimary":
+    "Остаток units, доступных к покупке в первичном раунде, пока лимит не исчерпан.",
+  "analytics.detail.kpi.info.fillProgress":
+    "Доля выполнения цели сбора: отношение привлечённого объёма к raise target раунда.",
+  "analytics.detail.kpi.info.raiseTarget":
+    "Плановый объём привлечения (raise target) для объявленного первичного раунда.",
+  "analytics.detail.kpi.info.secondaryVolume24h":
+    "Совокупный оборот завершённых сделок на вторичном рынке за последние 24 часа, в USDT.",
+  "analytics.detail.kpi.info.avgUnitPrice":
+    "Ориентир цены unit по стакану или последним исполнениям — не «цена трека» и не гарантия доходности.",
+  "analytics.detail.kpi.flipBack": "Нажмите, чтобы вернуться",
+  "analytics.detail.kpi.flipHint": "Что означает метрика",
+
+  "analytics.detail.chart.title": "Цена релиза",
+  "analytics.detail.chart.emptyTitle": "История цены пока не сформирована",
+  "analytics.detail.chart.emptyBody":
+    "Цена units появится после первых завершённых сделок на вторичном рынке.",
+  "analytics.detail.chart.emptySecondaryOff": "Вторичный рынок пока недоступен",
+  "analytics.detail.chart.sourceNote":
+    "Цена UNT по данным D1 price history · нормализованный индекс отражает относительную динамику.",
+  "analytics.detail.chart.sparseHint":
+    "Пока одна точка — линия появится после следующих сделок на вторичном рынке.",
+  "analytics.detail.chart.sparseWindow": "Последняя цена",
+  "analytics.detail.chart.axisNow": "Сейчас",
+
+  "analytics.detail.about.empty":
+    "Описание релиза пока не опубликовано. Основные параметры доступны ниже.",
+  "analytics.detail.about.eyebrow": "О релизе",
+
+  "analytics.detail.mechanics.eyebrow": "Механика",
+  "analytics.detail.mechanics.title": "Как устроен этот релиз",
+  "analytics.detail.mechanics.empty":
+    "Часть параметров сделки пока не раскрыта. Они появятся после публикации администратором.",
+  "analytics.detail.mechanics.emptyTitle": "Параметры сделки пока не опубликованы",
+  "analytics.detail.mechanics.round": "Раунд и лимиты",
+  "analytics.detail.mechanics.pool": "Пул держателей",
+  "analytics.detail.mechanics.promo": "Продвижение и авансы",
+  "analytics.detail.mechanics.payouts": "Периодичность выплат",
+  "analytics.detail.mechanics.description":
+    "Ключевые параметры сделки: лимиты раунда, доли распределения и правила выплат держателям units.",
+  "analytics.detail.mechanics.label.frequency": "Периодичность",
+  "analytics.detail.mechanics.label.currency": "Валюта выплат",
+  "analytics.detail.mechanics.label.network": "Сеть",
+  "analytics.detail.mechanics.label.investorShare": "Доля держателей",
+  "analytics.detail.mechanics.label.raised": "Привлечено",
+  "analytics.detail.payoutFreq.monthly": "Ежемесячно",
+  "analytics.detail.payoutFreq.quarterly": "Ежеквартально",
+  "analytics.detail.payoutFreq.weekly": "Еженедельно",
+  "analytics.detail.payoutFreq.semiAnnual": "Раз в полгода",
+  "analytics.detail.payoutFreq.annual": "Ежегодно",
+
+  "analytics.detail.terms.eyebrow": "Параметры сделки",
+  "analytics.detail.terms.title": "Параметры сделки и релиза",
+  "analytics.detail.terms.artistShare": "Доля артиста",
+  "analytics.detail.terms.investorShare": "Доля держателей units",
+  "analytics.detail.terms.platformShare": "Доля платформы",
+  "analytics.detail.terms.raiseTarget": "Цель сбора",
+  "analytics.detail.terms.hardCap": "Лимит раунда",
+  "analytics.detail.terms.totalUnits": "Всего units",
+  "analytics.detail.terms.roundStatus": "Статус раунда",
+
+  "analytics.detail.payouts.eyebrow": "Выплаты",
+  "analytics.detail.payouts.emptyTitle": "Выплат по этому релизу пока не было",
+  "analytics.detail.payouts.emptyBody":
+    "История появится после первого закрытого периода выплат. Начисления рассчитываются по владельцам units на дату окончания периода.",
+
+  "analytics.detail.secondary.eyebrow": "Вторичный рынок",
+  "analytics.detail.secondary.description":
+    "Внутренний рынок передачи units между пользователями. Метрики отражают активность заявок и сделок внутри Spliton.",
+  "analytics.detail.secondary.emptyStatus": "На вторичном рынке пока нет активных заявок",
+  "analytics.detail.secondary.emptyHint": "После первой сделки здесь появится история цены и объём",
+  "analytics.detail.secondary.openMarket": "Открыть вторичный рынок",
+  "analytics.detail.secondary.activeListings": "Активные лоты",
+  "analytics.detail.secondary.trades7d": "Сделок за 7D",
+  "analytics.detail.secondary.bestAsk": "Лучший ask",
+  "analytics.detail.secondary.bestBid": "Лучший bid",
+  "analytics.detail.secondary.lastPrice": "Последняя цена",
+  "analytics.detail.secondary.spread": "Спред",
+  "analytics.detail.secondary.volume24h": "Оборот 24ч",
+  "analytics.detail.secondary.liquidity": "Ликвидность",
+  "analytics.detail.secondary.unavailable": "Вторичный рынок пока недоступен",
+
+  "analytics.detail.dataRoom.eyebrow": "Документы",
+  "analytics.detail.dataRoom.title": "Документы и раскрытия",
+  "analytics.detail.dataRoom.emptyTitle": "Документы пока не опубликованы",
+  "analytics.detail.dataRoom.emptyBody":
+    "Раскрытия, условия релиза и дополнительные материалы появятся после проверки и публикации.",
+  "analytics.detail.dataRoom.subtitle": "Юридические и финансовые материалы по релизу",
+  "analytics.detail.dataRoom.holdersOnly": "Только для держателей",
+  "analytics.detail.dataRoom.download": "Скачать",
+  "analytics.detail.dataRoom.loading": "Загрузка документов…",
+
+  "analytics.detail.cover.videoNone": "Видео пока не опубликовано",
+  "analytics.detail.cover.videoNoneHint": "Материал появится после проверки и публикации.",
+  "analytics.detail.cover.processing": "Видео обрабатывается",
+  "analytics.detail.cover.processingHint": "Превью будет доступно после завершения обработки.",
+  "analytics.detail.cover.failed": "Не удалось загрузить видео",
+  "analytics.detail.cover.failedHint": "Попробуйте обновить страницу позже.",
+
+  "analytics.detail.breadcrumb.catalog": "Каталог",
+  "analytics.detail.breadcrumb.analytics": "Аналитика релизов",
+} as const;
+
+const EN: Record<string, string> = {
+  "analytics.detail.lifecycle.activePrimary": "Round open",
+  "analytics.detail.lifecycle.soldOut": "Sold out",
+  "analytics.detail.lifecycle.paused": "Paused",
+  "analytics.detail.lifecycle.comingSoon": "Coming soon",
+  "analytics.detail.lifecycle.draft": "Draft",
+  "analytics.detail.lifecycle.closed": "Round closed",
+  "analytics.detail.lifecycle.primaryComplete": "Primary round complete",
+  "analytics.detail.cta.buyUnits": "Buy units",
+  "analytics.detail.cta.openSecondary": "Open secondary market",
+  "analytics.detail.cta.topUpWallet": "Top up wallet",
+  "analytics.detail.cta.loginToBuy": "Sign in to buy",
+  "analytics.detail.cta.myPosition": "My position",
+  "analytics.detail.cta.payoutHistory": "Payout history",
+  "analytics.detail.cta.roundPaused": "Round paused",
+  "analytics.detail.cta.roundPausedReason": "Purchasing is temporarily unavailable",
+  "analytics.detail.cta.comingSoon": "Coming to catalog",
+  "analytics.detail.cta.primaryClosed": "Primary round closed",
+  "analytics.detail.cta.primaryClosedReason": "Primary units are no longer for sale",
+  "analytics.detail.hint.publicAnalytics": "Public analytics · sign in to see your position",
+  "analytics.detail.hint.noUnits": "You don't hold units of this release yet",
+  "analytics.detail.hint.primaryClosed": "Primary entry is closed",
+  "analytics.detail.hint.noPayouts30d": "No payouts in the last 30 days",
+  "analytics.detail.hint.noSecondary30d": "No trades in the last 30 days",
+  "analytics.detail.hint.modelYield": "Model metric, not a guarantee",
+  "analytics.detail.hint.unitsCirculation": "Sold / in circulation",
+  "analytics.detail.hint.availablePrimary": "Primary remainder",
+  "analytics.detail.hint.secondaryVolume30d": "Volume over 30 days",
+  "analytics.detail.hint.minEntry": "Minimum lot threshold",
+  "analytics.detail.pulse.title": "Release pulse",
+  "analytics.detail.pulse.empty": "Metrics will appear after the first operations or payouts",
+  "analytics.detail.pulse.grossYield": "Gross reference",
+  "analytics.detail.pulse.roundStatus": "Round status",
+  "analytics.detail.pulse.position": "Position",
+  "analytics.detail.pulse.payouts30d": "Payouts (30D)",
+  "analytics.detail.pulse.unitsCirculation": "Units in circulation",
+  "analytics.detail.pulse.availablePrimary": "Available in primary",
+  "analytics.detail.pulse.secondary30d": "Secondary market (30D)",
+  "analytics.detail.pulse.myPosition": "Your position",
+  "analytics.detail.pulse.personalHistory": "My release history",
+  "analytics.detail.pulse.personalHistoryHint": "Orders, fills and payouts for your position",
+  "analytics.detail.pulse.loginHistory": "Sign in for personal history",
+  "analytics.detail.pulse.guestPosition": "Sign in to view",
+  "analytics.detail.pulse.group.snapshot": "Your snapshot",
+  "analytics.detail.pulse.group.market": "Market & liquidity",
+  "analytics.detail.pulse.sparklineCaption": "30 days",
+  "analytics.detail.pulse.soldPct": "{pct}% sold",
+  "analytics.detail.hero.fallbackBlurb":
+    "Release with payout distribution among unit holders. Payout, secondary market and price data update after activity appears.",
+  "analytics.detail.hero.metaArtist": "Artist",
+  "analytics.detail.hero.metaGenre": "Genre",
+  "analytics.detail.hero.metaPayoutFreq": "Payouts",
+  "analytics.detail.hero.metaReleaseDate": "Release date",
+  "analytics.detail.genre.electronic": "Electronic",
+  "analytics.detail.genre.hiphop": "Hip-Hop",
+  "analytics.detail.genre.pop": "Pop",
+  "analytics.detail.kpi.payouts30d": "Payouts (30 days)",
+  "analytics.detail.kpi.payoutsAllTime": "All-time payouts",
+  "analytics.detail.kpi.unitsSold": "Units sold",
+  "analytics.detail.kpi.availablePrimary": "Available in primary",
+  "analytics.detail.kpi.fillProgress": "Round progress",
+  "analytics.detail.kpi.secondaryVolume24h": "Secondary volume (24H)",
+  "analytics.detail.kpi.avgUnitPrice": "Average price / unit",
+  "analytics.detail.kpi.sub.payouts30d": "last 30 days",
+  "analytics.detail.kpi.sub.payoutsAllTime": "since launch",
+  "analytics.detail.kpi.sub.unitsSold": "in circulation",
+  "analytics.detail.kpi.sub.availablePrimary": "primary remainder",
+  "analytics.detail.kpi.sub.fillProgress": "of raise target",
+  "analytics.detail.kpi.sub.secondaryVolume24h": "24-hour turnover",
+  "analytics.detail.kpi.sub.avgUnitPrice": "order book reference",
+  "analytics.detail.kpi.info.payouts30d":
+    "Total payouts to unit holders for this release over the last 30 calendar days, from actual distributions.",
+  "analytics.detail.kpi.info.payoutsAllTime":
+    "Cumulative payouts for this release since the revenue share model went live.",
+  "analytics.detail.kpi.info.unitsSold":
+    "Units held in circulation: primary purchases and secondary transfers within Spliton.",
+  "analytics.detail.kpi.info.availablePrimary":
+    "Units still available in the primary round until the offering limit is reached.",
+  "analytics.detail.kpi.info.fillProgress":
+    "Share of the raise target reached: raised amount relative to the round goal.",
+  "analytics.detail.kpi.info.raiseTarget":
+    "Planned primary raise target for the announced round.",
+  "analytics.detail.kpi.info.secondaryVolume24h":
+    "Total settled secondary-market turnover in the last 24 hours, in USDT.",
+  "analytics.detail.kpi.info.avgUnitPrice":
+    "Reference unit price from the order book or recent fills — not track valuation or yield.",
+  "analytics.detail.kpi.flipBack": "Tap to flip back",
+  "analytics.detail.kpi.flipHint": "What this metric means",
+  "analytics.detail.chart.title": "Release price",
+  "analytics.detail.chart.emptyTitle": "Price history not formed yet",
+  "analytics.detail.chart.emptyBody":
+    "Unit price will appear after the first settled secondary market trades.",
+  "analytics.detail.chart.emptySecondaryOff": "Secondary market is not available yet",
+  "analytics.detail.chart.sourceNote":
+    "UNT price from D1 history · normalized index shows relative dynamics.",
+  "analytics.detail.chart.sparseHint":
+    "Only one data point so far — the line will form after more secondary trades.",
+  "analytics.detail.chart.sparseWindow": "Last price",
+  "analytics.detail.chart.axisNow": "Now",
+  "analytics.detail.about.empty":
+    "Release description is not published yet. Key parameters are available below.",
+  "analytics.detail.about.eyebrow": "About",
+  "analytics.detail.mechanics.eyebrow": "Mechanics",
+  "analytics.detail.mechanics.title": "How this release works",
+  "analytics.detail.mechanics.empty":
+    "Some deal parameters are not disclosed yet. They will appear after admin publication.",
+  "analytics.detail.mechanics.emptyTitle": "Deal mechanics not published yet",
+  "analytics.detail.mechanics.round": "Round and limits",
+  "analytics.detail.mechanics.pool": "Holder pool",
+  "analytics.detail.mechanics.promo": "Promotion and upfront",
+  "analytics.detail.mechanics.payouts": "Payout frequency",
+  "analytics.detail.mechanics.description":
+    "Key deal parameters: round limits, distribution shares, and payout rules for unit holders.",
+  "analytics.detail.mechanics.label.frequency": "Frequency",
+  "analytics.detail.mechanics.label.currency": "Payout currency",
+  "analytics.detail.mechanics.label.network": "Network",
+  "analytics.detail.mechanics.label.investorShare": "Holders share",
+  "analytics.detail.mechanics.label.raised": "Raised",
+  "analytics.detail.payoutFreq.monthly": "Monthly",
+  "analytics.detail.payoutFreq.quarterly": "Quarterly",
+  "analytics.detail.payoutFreq.weekly": "Weekly",
+  "analytics.detail.payoutFreq.semiAnnual": "Semi-annual",
+  "analytics.detail.payoutFreq.annual": "Annual",
+  "analytics.detail.terms.eyebrow": "Deal terms",
+  "analytics.detail.terms.title": "Deal and release parameters",
+  "analytics.detail.terms.artistShare": "Artist share",
+  "analytics.detail.terms.investorShare": "Unit holders share",
+  "analytics.detail.terms.platformShare": "Platform share",
+  "analytics.detail.terms.raiseTarget": "Raise target",
+  "analytics.detail.terms.hardCap": "Round cap",
+  "analytics.detail.terms.totalUnits": "Total units",
+  "analytics.detail.terms.roundStatus": "Round status",
+  "analytics.detail.payouts.eyebrow": "Payouts",
+  "analytics.detail.payouts.emptyTitle": "No payouts for this release yet",
+  "analytics.detail.payouts.emptyBody":
+    "History will appear after the first closed payout period. Accruals use unit holders on period end date.",
+  "analytics.detail.secondary.eyebrow": "Secondary market",
+  "analytics.detail.secondary.description":
+    "Internal market for transferring units between users. Metrics reflect order and trade activity on Spliton.",
+  "analytics.detail.secondary.emptyStatus": "No active orders on the secondary market yet",
+  "analytics.detail.secondary.emptyHint": "After the first trade, price history and volume will appear here",
+  "analytics.detail.secondary.openMarket": "Open secondary market",
+  "analytics.detail.secondary.activeListings": "Active listings",
+  "analytics.detail.secondary.trades7d": "Trades (7D)",
+  "analytics.detail.secondary.bestAsk": "Best ask",
+  "analytics.detail.secondary.bestBid": "Best bid",
+  "analytics.detail.secondary.lastPrice": "Last price",
+  "analytics.detail.secondary.spread": "Spread",
+  "analytics.detail.secondary.volume24h": "Volume 24H",
+  "analytics.detail.secondary.liquidity": "Liquidity",
+  "analytics.detail.secondary.unavailable": "Secondary market is not available",
+  "analytics.detail.dataRoom.eyebrow": "Documents",
+  "analytics.detail.dataRoom.title": "Documents and disclosures",
+  "analytics.detail.dataRoom.emptyTitle": "Documents not published yet",
+  "analytics.detail.dataRoom.emptyBody":
+    "Disclosures, release terms and additional materials will appear after review and publication.",
+  "analytics.detail.dataRoom.subtitle": "Legal and financial materials for this release",
+  "analytics.detail.dataRoom.holdersOnly": "Holders only",
+  "analytics.detail.dataRoom.download": "Download",
+  "analytics.detail.dataRoom.loading": "Loading documents…",
+  "analytics.detail.cover.videoNone": "Video not published yet",
+  "analytics.detail.cover.videoNoneHint": "Material will appear after review and publication.",
+  "analytics.detail.cover.processing": "Video processing",
+  "analytics.detail.cover.processingHint": "Preview will be available when processing completes.",
+  "analytics.detail.cover.failed": "Could not load video",
+  "analytics.detail.cover.failedHint": "Try refreshing the page later.",
+  "analytics.detail.breadcrumb.catalog": "Catalog",
+  "analytics.detail.breadcrumb.analytics": "Release analytics",
+};
+
+const ES: Record<string, string> = {
+  ...EN,
+};
+
+const PT: Record<string, string> = {
+  ...EN,
+};
+
+export const ANALYTICS_DETAIL_PAGE_MESSAGES: Record<AppLocale, Record<string, string>> = {
+  ru: RU,
+  en: EN,
+  es: ES,
+  pt: PT,
+};
+
+export type AnalyticsDetailPageMessageKey = keyof typeof RU;
+
+export function detailPageText(locale: AppLocale, key: AnalyticsDetailPageMessageKey): string {
+  const dict = ANALYTICS_DETAIL_PAGE_MESSAGES[locale] ?? ANALYTICS_DETAIL_PAGE_MESSAGES.ru;
+  return dict[key] ?? ANALYTICS_DETAIL_PAGE_MESSAGES.ru[key] ?? key;
+}

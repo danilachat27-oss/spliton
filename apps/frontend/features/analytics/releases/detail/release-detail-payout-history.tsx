@@ -1,10 +1,17 @@
-import Link from "next/link";
+"use client";
 
+import Link from "next/link";
+import Image from "next/image";
+
+import { useI18n } from "@/components/providers/i18n-provider";
+import { RELEASE_DETAIL_ANALYTICS_ICONS } from "@/constants/analytics/release-detail-analytics-icons";
 import type { ReleaseDetailPageData, ReleaseDetailPayoutRow } from "@/types/analytics/release-detail";
 
+import { detailPageText } from "@/lib/i18n/analytics-detail-page-messages";
 import { cn } from "@/lib/utils";
 
 import { DetailSection } from "./detail-section";
+import { DetailEmptyState } from "./detail-empty-state";
 
 function payoutRow(label: string, value: string, valueClassName?: string) {
   return (
@@ -47,13 +54,33 @@ export function ReleaseDetailPayoutHistory({
   /** Для `variant="teaser"` — класс заголовка секции (например компактный на странице лота). */
   sectionTitleClassName?: string;
 }) {
+  const { t, locale } = useI18n();
+
+  if (variant === "full" && data.payoutHistory.length === 0) {
+    return (
+      <DetailSection
+        className={cn(className)}
+        eyebrow={t("analytics.detail.payouts.eyebrow")}
+        title={t("analytics.detail.payouts.fullTitle")}
+      >
+        <div className="overflow-hidden rounded-xl bg-[#111111] ring-1 ring-white/6">
+          <DetailEmptyState
+            imageSrc={RELEASE_DETAIL_ANALYTICS_ICONS.payoutsEmpty}
+            title={detailPageText(locale, "analytics.detail.payouts.emptyTitle")}
+            body={detailPageText(locale, "analytics.detail.payouts.emptyBody")}
+          />
+        </div>
+      </DetailSection>
+    );
+  }
+
   if (variant === "teaser") {
     const rows = data.payoutHistory.slice(0, 3);
     return (
       <DetailSection
         className={cn(className)}
         eyebrow="Payouts"
-        title="Выплаты по релизу"
+        title={t("analytics.detail.payouts.teaserTitle")}
         titleClassName={sectionTitleClassName}
         titleAside={
           analyticsHref ? (
@@ -65,7 +92,7 @@ export function ReleaseDetailPayoutHistory({
             </Link>
           ) : null
         }
-        description="Закрытый месяц: сначала валовая выручка релиза, затем доля, относимая к пулу инвесторов, удержания по distribution, выплата на один unit и итог к держателям. Не путать с лентой сделок по лоту (Tape выше)."
+        description="Закрытый месяц: сначала валовая выручка релиза, затем доля, относимая к пулу инвесторов, удержания по distribution, выплата на один unit и итог к держателям. Начисления рассчитываются по владельцам долей на дату окончания периода. Не путать с лентой сделок по лоту (Tape выше)."
       >
         <div className="space-y-3">
           {rows.map((r) => (
@@ -79,9 +106,9 @@ export function ReleaseDetailPayoutHistory({
   return (
     <DetailSection
       className={cn(className)}
-      eyebrow="Payout history"
-      title="История выплат и распределений"
-      description="По каждому периоду: выручка релиза (gross), доля пула инвесторов, сумма в distribution, начисление на unit и суммарный перевод держателям units."
+      eyebrow={t("analytics.detail.payouts.eyebrow")}
+      title={t("analytics.detail.payouts.fullTitle")}
+      description={t("analytics.detail.payouts.fullDescription")}
     >
       <div className="space-y-3 lg:hidden">
         {data.payoutHistory.map((r) => (

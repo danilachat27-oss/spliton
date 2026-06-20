@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Dialog } from "@base-ui/react/dialog";
-import { CheckCircle2, X } from "lucide-react";
+import { CheckCircle2, X } from "@/lib/lucide";
 
 import { secondaryMarketHref } from "@/constants/dashboard/secondary-market";
 import {
@@ -12,21 +12,18 @@ import {
   catalogBuyUnitsPath,
   secondaryMarketReleaseAnalyticsPath,
 } from "@/constants/routes";
+import type { ReleaseLedgerEventUi } from "@/lib/analytics/release-analytics-adapter";
 import {
-  getSecondaryMarketListingByAnalyticsCatalogId,
-  getSecondaryMarketStackHrefForAnalyticsCatalogId,
-} from "@/mocks/dashboard/secondary-market-listings.mock";
-import { MARKET_OVERVIEW_ROWS } from "@/mocks/market-overview-rows";
+  analyticsReleaseStatusLabel,
+  analyticsTermLabel,
+} from "@/lib/i18n/analytics-messages";
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { ReleaseDetailPageData } from "@/types/analytics/release-detail";
 import { cn } from "@/lib/utils";
 
 import { DetailSection } from "./detail-section";
 import { ReleaseDetailPerformanceChart } from "./release-detail-performance-chart";
 import { ReleaseDetailHero } from "./release-detail-hero";
-
-function fmt(n: number, digits = 2) {
-  return n.toLocaleString("ru-RU", { minimumFractionDigits: digits, maximumFractionDigits: digits });
-}
 
 function KVPairs({
   rows,
@@ -45,102 +42,144 @@ function KVPairs({
   );
 }
 
-function payoutFrequencyRu(freq: "monthly" | "biweekly"): string {
-  return freq === "monthly" ? "Ежемесячно" : "Раз в две недели";
-}
+type LedgerTone = ReleaseLedgerEventUi["tone"];
 
-function statusRu(status: string): string {
-  if (status === "Active") return "Раунд активен";
-  if (status === "Paused") return "Пауза выплат";
-  if (status === "Closed") return "Раунд закрыт";
-  return status;
-}
-
-/** Человекочитаемая подпись для строк из `terms.rows` мока карточки релиза. */
-function termLabelRu(rawKey: string): string {
-  const k = rawKey.toLowerCase();
-  if (k.includes("investor")) return "Доля инвесторов (pool)";
-  if (k.includes("artist_share")) return "Доля артиста";
-  if (k.includes("distribution")) return "База распределения";
-  if (k.includes("platform_fee")) return "Комиссия платформы";
-  if (k.includes("raise_target")) return "Цель сбора";
-  if (k.includes("hard_cap")) return "Верхний предел (cap)";
-  if (k.includes("total_units")) return "Всего UNT";
-  if (k.includes("текущий статус")) return "Статус раунда";
-  return rawKey.replace(/\s*\(.*?\)\s*/g, "").trim();
-}
-
-const LEDGER_EVENTS: { title: string; date: string; detail: string; tone: "buy" | "order" | "fill" | "cancel" | "payout" }[] = [
-  { title: "Покупка UNT", date: "12.03.2026", detail: "320 UNT", tone: "buy" },
-  { title: "Выставление заявки", date: "21.04.2026", detail: "80 UNT · лимит", tone: "order" },
-  { title: "Частичное исполнение", date: "21.04.2026", detail: "32 UNT", tone: "fill" },
-  { title: "Отмена заявки", date: "—", detail: "Нет записей", tone: "cancel" },
-  { title: "Получение выплат", date: "14.04.2026", detail: "+24,80 USDT", tone: "payout" },
-];
-
-function ledgerToneDot(tone: (typeof LEDGER_EVENTS)[number]["tone"]) {
-  const map = {
+function ledgerToneDot(tone: LedgerTone) {
+  const map: Record<LedgerTone, string> = {
     buy: "bg-[#B7F500]/90",
     order: "bg-sky-400/90",
     fill: "bg-amber-400/90",
     cancel: "bg-zinc-500",
     payout: "bg-emerald-400/90",
-  } as const;
-  return map[tone];
+    sell: "bg-fuchsia-400/90",
+    other: "bg-zinc-600",
+  };
+  return map[tone] ?? map.other;
 }
 
 export function ReleaseDetailSecondaryOrderPage({
   data,
   contextFrom,
+  ledgerEvents,
+  isLive = false,
 }: {
   data: ReleaseDetailPageData;
-  /** Значение query `from` (например `secondary`) — сохраняется при возврате на общую карточку релиза. */
   contextFrom?: string;
+  ledgerEvents?: ReleaseLedgerEventUi[];
+  isLive?: boolean;
 }) {
-  const { row, performance } = data;
+  const { locale, t } = useI18n();
+  const { row, liveContext, myHistory, slug, performance } = data;
   const [cancelOpen, setCancelOpen] = React.useState(false);
-  const stackHref = getSecondaryMarketStackHrefForAnalyticsCatalogId(row.id) ?? secondaryMarketHref("market");
+
+  const stackHref =
+    isLive && slug
+      ? secondaryMarketHref("market", { release: slug })
+      : secondaryMarketHref("market");
+
   const assetQuery = new URLSearchParams();
   if (contextFrom) assetQuery.set("from", contextFrom);
   const assetHref =
     assetQuery.size > 0
       ? `${analyticsReleaseDetailPath(row.id)}?${assetQuery.toString()}`
       : analyticsReleaseDetailPath(row.id);
-  const marketRow = MARKET_OVERVIEW_ROWS.find((r) => r.id === row.id);
-  const smListing = getSecondaryMarketListingByAnalyticsCatalogId(row.id);
-  const tradingAnalyticsHref = smListing
-    ? secondaryMarketReleaseAnalyticsPath(smListing.releaseId)
-    : secondaryMarketHref("analytics");
-  const mockPosition = {
-    totalUnits: 1842,
-    availableUnits: 1794,
-    lockedUnits: 48,
-    avgEntry: 18.12,
-    markPrice: 18.48,
-    payoutsReceived: 126.4,
-  };
-  const mockOrder = {
-    side: "Покупка",
-    mode: "Лимит",
-    price: 18.48,
-    totalUnits: 80,
-    filled: 32,
-    remain: 48,
-    amount: 1478.4,
-    createdAt: "21.04.2026 23:45",
-    status: "Частично",
-  };
 
-  const marketNow = {
-    bestBid: 18.41,
-    bestAsk: 18.55,
-    lastPrice: 18.48,
-    spread: 0.14,
-    volume24h: 184200,
-    deals: 126,
-    liquidity: "Средняя",
-    activeOrders: 48,
-  };
+  const tradingAnalyticsHref = isLive
+    ? secondaryMarketHref("analytics", slug ? { release: slug } : undefined)
+    : secondaryMarketReleaseAnalyticsPath(row.id);
+
+  const user = liveContext?.user;
+  const sm = liveContext?.secondarySummary;
+
+  const positionRows = isLive
+    ? user
+      ? [
+          { label: t("analytics.detail.secondary.position.totalUnits"), value: user.userUnits ?? "—" },
+          { label: t("analytics.detail.secondary.position.availableUnits"), value: user.userAvailableUnits ?? "—" },
+          { label: t("analytics.detail.secondary.position.lockedUnits"), value: user.userLockedUnits ?? "0" },
+          {
+            label: t("analytics.detail.secondary.position.avgEntry"),
+            value: user.userAvgEntryPrice ? `${user.userAvgEntryPrice} USDT` : "—",
+          },
+          {
+            label: t("analytics.detail.secondary.position.currentValue"),
+            value: user.userCurrentValue ? `${user.userCurrentValue} USDT` : "—",
+          },
+          {
+            label: t("analytics.detail.secondary.position.payoutsReceived"),
+            value: user.userPayoutsReceived ? `${user.userPayoutsReceived} USDT` : "—",
+          },
+        ]
+      : [{ label: t("analytics.detail.secondary.position.label"), value: t("analytics.detail.secondary.position.signIn") }]
+    : [
+        { label: t("analytics.detail.secondary.position.totalUnits"), value: "1 842" },
+        { label: t("analytics.detail.secondary.position.availableUnits"), value: "1 794" },
+        { label: t("analytics.detail.secondary.position.lockedUnits"), value: "48" },
+        { label: t("analytics.detail.secondary.position.avgEntry"), value: "18,12 USDT" },
+        { label: t("analytics.detail.secondary.position.guidancePrice"), value: "18,48 USDT" },
+        { label: t("analytics.detail.secondary.position.payoutsReceived"), value: "126,40 USDT" },
+      ];
+
+  const latestOrder = isLive ? myHistory?.orders[0] : null;
+  const orderRows = isLive
+    ? latestOrder
+      ? [
+          { label: t("analytics.detail.secondary.order.type"), value: latestOrder.side },
+          { label: t("analytics.detail.secondary.order.pricePerUnit"), value: latestOrder.price ?? "—" },
+          { label: t("analytics.detail.secondary.order.units"), value: latestOrder.units },
+          {
+            label: t("analytics.detail.secondary.order.createdAt"),
+            value: new Date(latestOrder.createdAt).toLocaleString(locale === "ru" ? "ru-RU" : locale === "pt" ? "pt-PT" : locale === "es" ? "es-ES" : "en-US"),
+          },
+          { label: t("analytics.detail.secondary.order.status"), value: latestOrder.status },
+        ]
+      : [{ label: t("analytics.detail.secondary.order.ordersLabel"), value: t("analytics.detail.secondary.order.none") }]
+    : [
+        { label: t("analytics.detail.secondary.order.type"), value: t("analytics.detail.secondary.order.demoBuy") },
+        { label: t("analytics.detail.secondary.order.executionType"), value: t("analytics.detail.secondary.order.demoLimit") },
+        { label: t("analytics.detail.secondary.order.pricePerUnit"), value: "18,48 USDT" },
+        { label: t("analytics.detail.secondary.order.totalUnits"), value: "80" },
+        { label: t("analytics.detail.secondary.order.filled"), value: "32" },
+        { label: t("analytics.detail.secondary.order.remaining"), value: "48" },
+        { label: t("analytics.detail.secondary.order.amount"), value: "1 478,40 USDT" },
+        { label: t("analytics.detail.secondary.order.createdAt"), value: "21.04.2026 23:45" },
+        { label: t("analytics.detail.secondary.order.status"), value: t("analytics.detail.secondary.order.demoPartial") },
+      ];
+
+  const marketRows = isLive && sm
+    ? [
+        { label: t("analytics.detail.secondary.market.bestBid"), value: sm.bestBid ? `${sm.bestBid} USDT` : "—" },
+        { label: t("analytics.detail.secondary.market.bestAsk"), value: sm.bestAsk ? `${sm.bestAsk} USDT` : "—" },
+        { label: t("analytics.detail.secondary.market.lastPrice"), value: sm.lastTradePrice ? `${sm.lastTradePrice} USDT` : "—" },
+        { label: t("analytics.detail.secondary.market.spread"), value: sm.averageSpread ? `${sm.averageSpread} USDT` : "—" },
+        { label: t("analytics.detail.secondary.market.volume24h"), value: sm.secondaryVolume24h || "—" },
+        { label: t("analytics.detail.secondary.market.trades7d"), value: String(sm.trades7d) },
+        { label: t("analytics.detail.secondary.market.liquidity"), value: sm.liquidityLabel || "—" },
+        { label: t("analytics.detail.secondary.market.activeListings"), value: String(sm.activeListings) },
+      ]
+    : [
+        { label: t("analytics.detail.secondary.market.bestBid"), value: "18,41 USDT" },
+        { label: t("analytics.detail.secondary.market.bestAsk"), value: "18,55 USDT" },
+        { label: t("analytics.detail.secondary.market.lastPrice"), value: "18,48 USDT" },
+        { label: t("analytics.detail.secondary.market.spread"), value: "0,14 USDT" },
+        { label: t("analytics.detail.secondary.market.volume24h"), value: "184 200 USDT" },
+        { label: t("analytics.detail.secondary.market.tradeCount"), value: "126" },
+        { label: t("analytics.detail.secondary.market.liquidity"), value: t("analytics.detail.secondary.market.liquidityMedium") },
+        { label: t("analytics.detail.secondary.market.activeOrders"), value: "48" },
+      ];
+
+  const timeline =
+    isLive && ledgerEvents?.length
+      ? ledgerEvents
+      : isLive
+        ? [{ title: t("analytics.detail.secondary.timeline.emptyTitle"), date: "—", detail: t("analytics.detail.secondary.timeline.emptyDetail"), tone: "other" as const }]
+        : ledgerEvents?.length
+          ? ledgerEvents
+          : [
+              { title: "Покупка UNT", date: "12.03.2026", detail: "320 UNT", tone: "buy" as const },
+              { title: "Выставление заявки", date: "21.04.2026", detail: "80 UNT · лимит", tone: "order" as const },
+              { title: "Получение выплат", date: "14.04.2026", detail: "+24,80 USDT", tone: "payout" as const },
+            ];
 
   return (
     <div className="bg-black text-white">
@@ -151,31 +190,22 @@ export function ReleaseDetailSecondaryOrderPage({
               data={data}
               source={contextFrom === "secondary" ? "secondary" : undefined}
               backHrefOverride={assetHref}
-              backLabelOverride="Карточка релиза"
+              backLabelOverride={t("analytics.detail.hero.back.releaseCard")}
             />
           </div>
           <aside className="rounded-2xl bg-[#111111] px-4 py-4 ring-1 ring-white/8 md:px-5 md:py-5">
-            <h3 className="text-[14px] font-semibold tracking-tight text-white">Моя позиция</h3>
+            <h3 className="text-[14px] font-semibold tracking-tight text-white">{t("analytics.detail.secondary.myPosition")}</h3>
             <div className="mt-3">
-              <KVPairs
-                rows={[
-                  { label: "Всего UNT", value: mockPosition.totalUnits },
-                  { label: "Доступно UNT", value: mockPosition.availableUnits },
-                  { label: "Заблокировано в заявках", value: mockPosition.lockedUnits },
-                  { label: "Средняя цена входа", value: `${fmt(mockPosition.avgEntry)} USDT` },
-                  { label: "Текущая ориентирная цена", value: `${fmt(mockPosition.markPrice)} USDT` },
-                  { label: "Получено выплат", value: `${fmt(mockPosition.payoutsReceived)} USDT` },
-                ]}
-              />
+              <KVPairs rows={positionRows} />
             </div>
           </aside>
         </div>
 
         <DetailSection
           className="mt-10"
-          eyebrow="Chart"
+          eyebrow={t("analytics.detail.secondary.chartEyebrow")}
           title={performance.title}
-          description={`${performance.subtitle} Масштаб колесом с Ctrl, панорама перетаскиванием, сброс окна.`}
+          description={`${performance.subtitle}${t("analytics.detail.secondary.chartHint")}`}
         >
           <ReleaseDetailPerformanceChart
             title={performance.title}
@@ -184,91 +214,86 @@ export function ReleaseDetailSecondaryOrderPage({
             miniStats={performance.miniStats}
             releaseId={row.id}
             buyHref={stackHref}
-            buyLabel="К стакану"
+            buyLabel={t("analytics.detail.screen.buyToBook")}
           />
         </DetailSection>
 
         <DetailSection
-          eyebrow="Order"
-          title="Моя заявка"
-          description="Детали ордера из secondary market и текущий прогресс исполнения по вашему релизу."
+          eyebrow={t("analytics.detail.secondary.orderEyebrow")}
+          title={t("analytics.detail.secondary.orderTitle")}
+          description={t("analytics.detail.secondary.orderDescription")}
         >
-          <KVPairs
-            rows={[
-              { label: "Тип заявки", value: mockOrder.side },
-              { label: "Тип исполнения", value: mockOrder.mode },
-              { label: "Цена за UNT", value: `${fmt(mockOrder.price)} USDT` },
-              { label: "Всего UNT", value: mockOrder.totalUnits },
-              { label: "Исполнено", value: mockOrder.filled },
-              { label: "Остаток", value: mockOrder.remain },
-              { label: "Сумма", value: `${fmt(mockOrder.amount)} USDT` },
-              { label: "Дата создания", value: mockOrder.createdAt },
-              { label: "Статус заявки", value: mockOrder.status },
-            ]}
-          />
+          <KVPairs rows={orderRows} />
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setCancelOpen(true)}
               className="inline-flex h-10 items-center rounded-xl border border-fuchsia-400/35 bg-fuchsia-500/12 px-4 text-[13px] font-semibold text-fuchsia-200 transition hover:bg-fuchsia-500/20"
             >
-              Отменить заявку
+              {t("analytics.detail.secondary.cancelOrder")}
             </button>
             <Link
               href={stackHref}
               className="inline-flex h-10 items-center rounded-xl bg-white px-4 text-[13px] font-semibold text-black transition hover:opacity-90"
             >
-              Перейти в стакан
+              {t("analytics.detail.secondary.goToBook")}
             </Link>
             <Link
               href={catalogBuyUnitsPath(row.id)}
               className="inline-flex h-10 items-center rounded-xl border border-white/15 px-4 text-[13px] font-semibold text-zinc-200 transition hover:border-white/25 hover:text-white"
             >
-              Купить ещё
+              {t("analytics.detail.secondary.buyMore")}
             </Link>
             <Link
               href={assetsSellUnitsPath(row.id)}
               className="inline-flex h-10 items-center rounded-xl border border-white/15 px-4 text-[13px] font-semibold text-zinc-200 transition hover:border-white/25 hover:text-white"
             >
-              Новая заявка на продажу
+              {t("analytics.detail.secondary.newSellOrder")}
             </Link>
             <Link
               href={tradingAnalyticsHref}
               scroll={false}
               className="inline-flex h-10 items-center rounded-xl border border-white/15 px-4 text-[13px] font-semibold text-zinc-200 transition hover:border-white/25 hover:text-white"
             >
-              Торговая аналитика
+              {t("analytics.detail.secondary.tradingAnalytics")}
             </Link>
           </div>
         </DetailSection>
 
         <DetailSection
-          eyebrow="Market"
-          title="Рынок сейчас"
-          description="Актуальные параметры secondary market по этому релизу: цены, спред, ликвидность и активность."
+          eyebrow={t("analytics.detail.secondary.marketEyebrow")}
+          title={t("analytics.detail.secondary.marketTitle")}
+          description={t("analytics.detail.secondary.marketDescription")}
         >
-          <KVPairs
-            rows={[
-              { label: "Best bid", value: `${fmt(marketNow.bestBid)} USDT` },
-              { label: "Best ask", value: `${fmt(marketNow.bestAsk)} USDT` },
-              { label: "Last price", value: `${fmt(marketNow.lastPrice)} USDT` },
-              { label: "Spread", value: `${fmt(marketNow.spread)} USDT` },
-              { label: "Объём 24ч", value: `${Math.round(marketNow.volume24h).toLocaleString("ru-RU")} USDT` },
-              { label: "Количество сделок", value: marketNow.deals },
-              { label: "Ликвидность", value: marketNow.liquidity },
-              { label: "Активные заявки", value: marketNow.activeOrders },
-            ]}
-          />
+          <KVPairs rows={marketRows} />
         </DetailSection>
 
         <DetailSection
-          eyebrow="Order Book"
-          title="Мини-стакан и последние сделки"
-          description="Компактный торговый вид по релизу: лучшие уровни и последние исполнения в стиле secondary terminal."
+          eyebrow={t("analytics.detail.secondary.orderBookEyebrow")}
+          title={t("analytics.detail.secondary.orderBookTitle")}
+          description={
+            isLive
+              ? t("analytics.detail.secondary.orderBookDescriptionLive")
+              : t("analytics.detail.secondary.orderBookDescriptionDemo")
+          }
         >
+          {isLive ? (
+            <div className="rounded-2xl bg-[#111111] p-4 ring-1 ring-white/8">
+              <p className="text-sm text-zinc-400">
+                {t("analytics.detail.secondary.orderBookLiveHint")}
+              </p>
+              <Link
+                href={stackHref}
+                className="mt-3 inline-flex h-9 items-center rounded-lg border border-white/15 px-3 text-[12px] font-semibold text-zinc-200 transition hover:border-white/25 hover:text-white"
+              >
+                {t("analytics.detail.secondary.openFullBook")}
+              </Link>
+            </div>
+          ) : (
+          <>
           <div className="grid gap-3 lg:grid-cols-3">
             <div className="rounded-2xl bg-[#111111] p-3 ring-1 ring-white/8">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Лучшие покупки (bid)</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("analytics.detail.secondary.bestBids")}</p>
               <div className="mt-2 space-y-1.5 font-mono text-[12px]">
                 <div className="flex items-center justify-between text-[#B7F500]">
                   <span>18,41</span>
@@ -285,7 +310,7 @@ export function ReleaseDetailSecondaryOrderPage({
               </div>
             </div>
             <div className="rounded-2xl bg-[#111111] p-3 ring-1 ring-white/8">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Лучшие продажи (ask)</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("analytics.detail.secondary.bestAsks")}</p>
               <div className="mt-2 space-y-1.5 font-mono text-[12px]">
                 <div className="flex items-center justify-between text-fuchsia-300">
                   <span>18,55</span>
@@ -302,7 +327,7 @@ export function ReleaseDetailSecondaryOrderPage({
               </div>
             </div>
             <div className="rounded-2xl bg-[#111111] p-3 ring-1 ring-white/8">
-              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">Последние сделки</p>
+              <p className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">{t("analytics.detail.secondary.recentTrades")}</p>
               <div className="mt-2 space-y-1.5 font-mono text-[12px] text-zinc-200">
                 <div className="flex items-center justify-between">
                   <span>18,48</span>
@@ -324,21 +349,47 @@ export function ReleaseDetailSecondaryOrderPage({
               href={stackHref}
               className="inline-flex h-9 items-center rounded-lg border border-white/15 px-3 text-[12px] font-semibold text-zinc-200 transition hover:border-white/25 hover:text-white"
             >
-              Открыть полный стакан для торговли
+              {t("analytics.detail.secondary.openFullBookTrade")}
             </Link>
           </div>
+          </>
+          )}
         </DetailSection>
 
         <DetailSection
-          eyebrow="Secondary"
-          title="Контекст рынка (mock)"
-          description="Краткие ориентиры по активности secondary — не дублируют график выплат выше."
+          eyebrow={t("analytics.detail.secondary.contextEyebrow")}
+          title={t("analytics.detail.secondary.contextTitle")}
+          description={t("analytics.detail.secondary.contextDescriptionLive")}
         >
+          {isLive && sm ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  label: t("analytics.detail.secondary.context.activity7d"),
+                  value: t("analytics.detail.secondary.context.tradesCount").replace("{count}", String(sm.trades7d)),
+                },
+                {
+                  label: t("analytics.detail.secondary.context.turnover24h"),
+                  value: sm.secondaryVolume24h || "—",
+                },
+                {
+                  label: t("analytics.detail.secondary.market.liquidity"),
+                  value: sm.liquidityLabel || "—",
+                },
+              ].map((c) => (
+                <div key={c.label} className="rounded-xl bg-[#0a0a0a] px-3 py-3 ring-1 ring-white/6 sm:min-h-[88px]">
+                  <p className="text-[11px] leading-snug text-zinc-500">{c.label}</p>
+                  <p className="mt-2 font-mono text-[13px] font-semibold leading-snug text-zinc-100">{c.value}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              { label: "Активность 7d / 30d", value: "126 / 412 сделок" },
-              { label: "Тренд", value: "Умеренно восходящий" },
-              { label: "Спрос / предложение", value: "Спрос +12% к прошлой неделе" },
+              { label: t("analytics.detail.secondary.context.activity7d30d"), value: "126 / 412 сделок" },
+              { label: t("analytics.detail.secondary.context.trend"), value: t("analytics.detail.secondary.context.trendModerateUp") },
+              { label: t("analytics.detail.secondary.context.supplyDemand"), value: t("analytics.detail.secondary.context.demandUp") },
             ].map((c) => (
               <div key={c.label} className="rounded-xl bg-[#0a0a0a] px-3 py-3 ring-1 ring-white/6 sm:min-h-[88px]">
                 <p className="text-[11px] leading-snug text-zinc-500">{c.label}</p>
@@ -349,63 +400,75 @@ export function ReleaseDetailSecondaryOrderPage({
 
           <div className="mt-6 grid gap-5 lg:grid-cols-2">
             <section className="rounded-2xl bg-[#111111] px-4 py-4 ring-1 ring-white/8 md:px-5 md:py-5">
-              <h3 className="text-[15px] font-semibold tracking-tight text-white">Выплаты и доходность</h3>
-              <p className="mt-1 text-[11px] text-zinc-600">По данным карточки релиза и обзора рынка (макет).</p>
+              <h3 className="text-[15px] font-semibold tracking-tight text-white">{t("analytics.detail.secondary.payoutsTitle")}</h3>
+              <p className="mt-1 text-[11px] text-zinc-600">
+                {isLive ? t("analytics.detail.secondary.payoutsHintLive") : t("analytics.detail.secondary.payoutsHintDemo")}
+              </p>
               <div className="mt-3">
                 <KVPairs
                   rows={[
                     {
-                      label: "Выплаты (окно, агрегат)",
-                      value: row.payouts,
+                      label: t("analytics.detail.secondary.payouts.window"),
+                      value: data.quickStats.find((s) => s.label.includes("30D"))?.value ?? row.payouts,
                     },
-                    { label: "Последний payout", value: "14.04.2026 · 24,80 USDT" },
-                    { label: "Начислено всего (макет)", value: "126,40 USDT" },
-                    { label: "Текущая доходность", value: row.yieldPct },
                     {
-                      label: "Частота выплат",
-                      value: marketRow ? payoutFrequencyRu(marketRow.payoutFreq) : "Ежемесячно",
+                      label: t("analytics.detail.secondary.payouts.last"),
+                      value:
+                        data.payoutHistory[0]?.period
+                          ? data.payoutHistory[0].period
+                          : isLive
+                            ? "—"
+                            : "14.04.2026",
                     },
+                    {
+                      label: t("analytics.detail.secondary.payouts.total"),
+                      value: data.quickStats.find((s) => s.label.includes("all-time"))?.value ?? row.payouts,
+                    },
+                    { label: t("analytics.detail.secondary.payouts.yield"), value: row.yieldPct },
                   ]}
                 />
               </div>
             </section>
             <section className="rounded-2xl bg-[#111111] px-4 py-4 ring-1 ring-white/8 md:px-5 md:py-5">
-              <h3 className="text-[15px] font-semibold tracking-tight text-white">Параметры релиза</h3>
-              <p className="mt-1 text-[11px] text-zinc-600">Доли и лимиты из условий сделки (mock).</p>
+              <h3 className="text-[15px] font-semibold tracking-tight text-white">{t("analytics.detail.secondary.termsTitle")}</h3>
+              <p className="mt-1 text-[11px] text-zinc-600">
+                {isLive ? t("analytics.detail.secondary.termsHintLive") : t("analytics.detail.secondary.termsHintDemo")}
+              </p>
               <div className="mt-3">
                 <KVPairs
                   rows={[
-                    ...data.terms.rows.slice(0, 6).map((t) => ({
-                      label: termLabelRu(t.key),
-                      value: t.val,
+                    ...data.terms.rows.slice(0, 6).map((termRow) => ({
+                      label: analyticsTermLabel(termRow.key, locale),
+                      value: termRow.val,
                     })),
                     {
-                      label: "Всего UNT (эмиссия)",
-                      value: data.terms.rows.find((t) => t.key.toLowerCase().includes("total_units"))?.val ?? "—",
+                      label: t("analytics.detail.secondary.terms.totalUnitsEmission"),
+                      value: data.terms.rows.find((termRow) => termRow.key.toLowerCase().includes("total_units"))?.val ?? "—",
                     },
                     {
-                      label: "Доступно UNT (каталог)",
-                      value: marketRow
-                        ? `${Math.round(marketRow.availableUnits).toLocaleString("ru-RU")} u.`
-                        : row.units,
+                      label: t("analytics.detail.secondary.terms.availablePrimary"),
+                      value:
+                        data.quickStats.find((s) => s.label === "Available units")?.value ?? row.units,
                     },
-                    { label: "Статус раунда", value: statusRu(row.status) },
+                    { label: t("analytics.detail.secondary.terms.roundStatus"), value: analyticsReleaseStatusLabel(row.status, locale, "round") },
                   ]}
                 />
               </div>
             </section>
           </div>
+          </>
+          )}
         </DetailSection>
 
         <DetailSection
-          eyebrow="My Ledger"
-          title="Моя история по релизу"
-          description="Лента персональных действий по позиции в UNT: вход, заявка, исполнение, выплаты."
+          eyebrow={t("analytics.detail.secondary.ledgerEyebrow")}
+          title={t("analytics.detail.secondary.ledgerTitle")}
+          description={t("analytics.detail.secondary.ledgerDescription")}
         >
           <ul className="overflow-hidden rounded-2xl border border-white/8 bg-[#111111] ring-1 ring-white/6">
-            {LEDGER_EVENTS.map((ev) => (
+            {timeline.map((ev) => (
               <li
-                key={ev.title}
+                key={"id" in ev && ev.id ? ev.id : ev.title}
                 className="flex gap-4 border-b border-white/6 px-4 py-3.5 last:border-b-0 sm:px-5 sm:py-4"
               >
                 <span
@@ -438,7 +501,7 @@ export function ReleaseDetailSecondaryOrderPage({
             )}
           >
             <Dialog.Close
-              aria-label="Закрыть"
+              aria-label={t("analytics.detail.secondary.closeDialog")}
               className="absolute right-4 top-4 inline-flex size-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/10 hover:text-zinc-200"
             >
               <X className="size-4" />
@@ -446,18 +509,18 @@ export function ReleaseDetailSecondaryOrderPage({
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" />
               <div>
-                <Dialog.Title className="text-base font-semibold tracking-tight text-white">Отменить заявку?</Dialog.Title>
+                <Dialog.Title className="text-base font-semibold tracking-tight text-white">{t("analytics.detail.secondary.cancelDialogTitle")}</Dialog.Title>
                 <Dialog.Description className="mt-1 text-[13px] text-zinc-400">
-                  Неисполненный остаток вернётся в доступные units по релизу.
+                  {t("analytics.detail.secondary.cancelDialogDescription")}
                 </Dialog.Description>
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <Dialog.Close className="inline-flex h-9 items-center rounded-lg bg-white/6 px-3.5 text-[12px] font-medium text-zinc-200 transition hover:bg-white/10">
-                Оставить
+                {t("analytics.detail.secondary.cancelDialogKeep")}
               </Dialog.Close>
               <Dialog.Close className="inline-flex h-9 items-center rounded-lg bg-fuchsia-500/18 px-3.5 text-[12px] font-semibold text-fuchsia-100 transition hover:bg-fuchsia-500/26">
-                Отменить заявку
+                {t("analytics.detail.secondary.cancelDialogConfirm")}
               </Dialog.Close>
             </div>
           </Dialog.Popup>

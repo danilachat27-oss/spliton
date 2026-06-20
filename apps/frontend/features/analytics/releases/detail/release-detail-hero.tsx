@@ -1,23 +1,26 @@
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+﻿"use client";
 
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "@/lib/lucide";
+
+import { useI18n } from "@/components/providers/i18n-provider";
 import { ROUTES } from "@/constants/routes";
-import type { ReleaseAnalyticsRow, ReleaseRowGenre } from "@/types/analytics/releases";
+import { detailPageText } from "@/lib/i18n/analytics-detail-page-messages";
+import {
+  analyticsHeroBackLabel,
+} from "@/lib/i18n/analytics-messages";
+import { cn } from "@/lib/utils";
+import type { ReleaseRowGenre } from "@/types/analytics/releases";
 import type { ReleaseDetailPageData } from "@/types/analytics/release-detail";
 
 import { ReleaseDetailBreadcrumb } from "./release-detail-breadcrumb";
 import { ReleaseDetailCover } from "./release-detail-cover";
+import { ReleaseDetailHeroCta, ReleaseDetailLifecycleBadge } from "./release-detail-hero-cta";
 
-const genreLabel: Record<ReleaseRowGenre, string> = {
-  electronic: "Electronic",
-  hiphop: "Hip-Hop",
-  pop: "Pop",
-};
-
-function statusRu(status: ReleaseAnalyticsRow["status"]): string {
-  if (status === "Active") return "Активен";
-  if (status === "Paused") return "Пауза";
-  return "Закрыт";
+function genreLabelKey(genre: ReleaseRowGenre): Parameters<typeof detailPageText>[1] {
+  if (genre === "hiphop") return "analytics.detail.genre.hiphop";
+  if (genre === "pop") return "analytics.detail.genre.pop";
+  return "analytics.detail.genre.electronic";
 }
 
 export function ReleaseDetailHero({
@@ -28,10 +31,10 @@ export function ReleaseDetailHero({
 }: {
   data: ReleaseDetailPageData;
   source?: string;
-  /** Перебивает вычисленный «назад» (например с экрана ledger → карточка релиза). */
   backHrefOverride?: string;
   backLabelOverride?: string;
 }) {
+  const { locale, t } = useI18n();
   const { row } = data;
   const backHrefDefault =
     source === "catalog"
@@ -39,46 +42,60 @@ export function ReleaseDetailHero({
       : source === "secondary"
         ? ROUTES.dashboardSecondaryMarket
         : ROUTES.analyticsReleases;
-  const backLabelDefault =
-    source === "catalog" ? "Рекомендации" : source === "secondary" ? "Вторичный рынок" : "Аналитика релизов";
   const backHref = backHrefOverride ?? backHrefDefault;
-  const backLabel = backLabelOverride ?? backLabelDefault;
+  const backLabel =
+    backLabelOverride ??
+    analyticsHeroBackLabel(source, locale);
+  const artist = row.artist?.trim();
+
   return (
-    <header className="pb-10">
+    <header className="pb-6 sm:pb-10">
       <Link
         href={backHref}
-        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+        className={cn(
+          "inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2",
+          "text-[11px] font-medium text-zinc-400 transition-colors hover:border-white/15 hover:bg-white/[0.07] hover:text-zinc-200",
+          "sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-[12px]",
+        )}
       >
-        {backLabel}
-        <ChevronRight className="size-3.5" strokeWidth={1.8} aria-hidden />
-        <span className="font-mono text-[13px] font-semibold text-white">{row.symbol}</span>
+        <ChevronLeft className="size-4 shrink-0 sm:hidden" strokeWidth={2} aria-hidden />
+        <span className="truncate">{backLabel}</span>
+        <ChevronRight className="hidden size-3.5 shrink-0 sm:block" strokeWidth={1.8} aria-hidden />
+        <span className="shrink-0 font-mono text-[12px] font-semibold text-white sm:text-[13px]">{row.symbol}</span>
       </Link>
-      <div className="mt-5">
+
+      <div className="mt-3 hidden sm:mt-5 sm:block">
         <ReleaseDetailBreadcrumb data={data} />
       </div>
 
-      <div className="mt-8 min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">RevShare · release details</p>
-        <h1 className="mt-2 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl">{row.release}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
-          <span className="text-zinc-300">{row.artist}</span>
-          <span className="text-zinc-700" aria-hidden>
-            ·
+      <div className="mt-4 min-w-0 sm:mt-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-600 sm:text-[11px] sm:tracking-[0.22em] sm:text-zinc-500">
+          {t("analytics.detail.hero.eyebrow")}
+        </p>
+        <h1 className="mt-2 text-balance text-[1.65rem] font-semibold leading-[1.12] tracking-tight text-white sm:text-3xl sm:leading-tight lg:text-4xl">
+          {row.release}
+        </h1>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:mt-3.5 sm:gap-2">
+          {artist ? (
+            <span className="max-w-full truncate text-[13px] text-zinc-300 sm:text-sm">{artist}</span>
+          ) : null}
+          <span className="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-medium text-zinc-400 ring-1 ring-white/8 sm:text-[11px]">
+            {row.symbol}
           </span>
-          <span className="font-mono text-zinc-400">{row.symbol}</span>
-          <span className="text-zinc-700" aria-hidden>
-            ·
+          <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-zinc-400 ring-1 ring-white/8 sm:text-[11px]">
+            {detailPageText(locale, genreLabelKey(row.genre))}
           </span>
-          <span>{genreLabel[row.genre]}</span>
-          <span className="text-zinc-700" aria-hidden>
-            ·
-          </span>
-          <span className="rounded-lg bg-[#0a0a0a] px-2 py-0.5 text-[11px] font-medium text-zinc-400">
-            {statusRu(row.status)}
-          </span>
+          <ReleaseDetailLifecycleBadge data={data} />
         </div>
-        <p className="mt-5 max-w-[62ch] text-sm leading-relaxed text-zinc-400">{data.heroBlurb}</p>
-        <ReleaseDetailCover cover={data.cover} releaseTitle={row.release} />
+
+        <p className="mt-3 max-w-[62ch] text-[13px] leading-relaxed text-zinc-500 sm:mt-4 sm:text-sm sm:text-zinc-400">
+          {data.heroBlurb}
+        </p>
+
+        <ReleaseDetailHeroCta data={data} />
+
+        <ReleaseDetailCover cover={data.cover} releaseTitle={row.release} compact={!data.cover?.videoSrc && !data.cover?.posterSrc} />
       </div>
     </header>
   );

@@ -1,14 +1,15 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
+﻿import { Suspense } from "react";
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { MarketOverviewScreen } from "@/components/market-overview/market-overview-screen";
+import { marketOverviewPageMetaAsync } from "@/lib/i18n/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Обзор рынка",
-  description:
-    "Срез внутреннего рынка RevShare: ликвидность стакана, размещения, secondary и сегменты. Сравнение доходности по релизам — в аналитике.",
-};
+export async function generateMetadata() {
+  return marketOverviewPageMetaAsync(
+    "meta.marketOverview.title",
+    "meta.marketOverview.description",
+  );
+}
 
 export default function CatalogMarketOverviewPage() {
   return (

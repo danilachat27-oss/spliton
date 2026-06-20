@@ -5,7 +5,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as postmark from 'postmark';
-import { EmailService, VerificationEmailInput } from '../email.service';
+import {
+  EmailService,
+  NotificationEmailInput,
+  PasswordResetEmailInput,
+  VerificationEmailInput,
+} from '../email.service';
+import { buildSplitonEmailHtml } from '../spliton-email-layout';
 
 @Injectable()
 export class PostmarkEmailService extends EmailService {
@@ -35,27 +41,24 @@ export class PostmarkEmailService extends EmailService {
 
   async sendVerificationEmail(input: VerificationEmailInput): Promise<void> {
     const textBody =
-      'Verify your Spliton email by opening this link:\n\n' +
+      'Подтвердите email для входа в Spliton:\n\n' +
       `${input.verifyUrl}\n\n` +
-      'If you did not create this account, you can ignore this email.';
+      'Если вы не регистрировались — проигнорируйте письмо.';
 
-    const htmlBody = `
-      <p>Verify your Spliton email by using the button below.</p>
-      <p>
-        <a href="${input.verifyUrl}" style="display:inline-block;padding:10px 14px;background:#111827;color:#ffffff;text-decoration:none;border-radius:6px;">
-          Verify email
-        </a>
-      </p>
-      <p>If the button does not work, copy this link:</p>
-      <p>${input.verifyUrl}</p>
-      <p>If you did not create this account, you can ignore this email.</p>
-    `;
+    const htmlBody = buildSplitonEmailHtml({
+      title: 'Подтверждение email',
+      bodyHtml:
+        '<p>Нажмите кнопку, чтобы подтвердить адрес и завершить регистрацию.</p>' +
+        `<p style="font-size:13px;color:#71717a;word-break:break-all;">Или скопируйте ссылку: ${input.verifyUrl}</p>`,
+      ctaLabel: 'Подтвердить email',
+      ctaUrl: input.verifyUrl,
+    });
 
     try {
       await this.client.sendEmail({
         From: this.emailFrom,
         To: input.to,
-        Subject: 'Verify your Spliton email',
+        Subject: 'Подтвердите email — Spliton',
         HtmlBody: htmlBody,
         TextBody: textBody,
         ...(this.messageStream ? { MessageStream: this.messageStream } : {}),
@@ -70,6 +73,69 @@ export class PostmarkEmailService extends EmailService {
       throw new ServiceUnavailableException(
         'Unable to send verification email',
       );
+    }
+  }
+
+  async sendPasswordResetEmail(input: PasswordResetEmailInput): Promise<void> {
+    const textBody =
+      'Сброс пароля Spliton:\n\n' +
+      `${input.resetUrl}\n\n` +
+      'Если вы не запрашивали сброс — проигнорируйте письмо.';
+
+    const htmlBody = buildSplitonEmailHtml({
+      title: 'Сброс пароля',
+      bodyHtml:
+        '<p>Ссылка действует ограниченное время. После смены пароля все активные сессии могут быть завершены.</p>' +
+        `<p style="font-size:13px;color:#71717a;word-break:break-all;">Или скопируйте ссылку: ${input.resetUrl}</p>`,
+      ctaLabel: 'Сбросить пароль',
+      ctaUrl: input.resetUrl,
+    });
+
+    try {
+      await this.client.sendEmail({
+        From: this.emailFrom,
+        To: input.to,
+        Subject: 'Сброс пароля — Spliton',
+        HtmlBody: htmlBody,
+        TextBody: textBody,
+        ...(this.messageStream ? { MessageStream: this.messageStream } : {}),
+      });
+      this.logger.log(
+        `password reset email sent via provider=postmark to ${this.maskEmail(input.to)} (userId=${input.userId})`,
+      );
+    } catch {
+      this.logger.warn(
+        `password reset email send failed provider=postmark to ${this.maskEmail(input.to)} (userId=${input.userId})`,
+      );
+      throw new ServiceUnavailableException(
+        'Unable to send password reset email',
+      );
+    }
+  }
+
+  async sendNotificationEmail(input: NotificationEmailInput): Promise<void> {
+    const textBody = `${input.textBody}\n\n— Spliton`;
+    const htmlBody = buildSplitonEmailHtml({
+      title: input.subject,
+      bodyHtml: `<p>${input.textBody.replace(/\n/g, '<br/>')}</p>`,
+    });
+    try {
+      await this.client.sendEmail({
+        From: this.emailFrom,
+        To: input.to,
+        Subject: input.subject,
+        TextBody: textBody,
+        HtmlBody: htmlBody,
+        ...(this.messageStream ? { MessageStream: this.messageStream } : {}),
+      });
+      this.logger.log(
+        `notification email sent via provider=postmark to ${this.maskEmail(input.to)}`,
+      );
+    } catch {
+      this.logger.warn(
+        `notification email send failed provider=postmark to ${this.maskEmail(input.to)}`,
+      );
+      throw new ServiceUnavailableException('Unable to send notification email');
     }
   }
 

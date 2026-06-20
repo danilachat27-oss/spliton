@@ -1,24 +1,27 @@
 "use client";
 
-import Image from "next/image";
-import { ArrowLeftRight } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { useI18n } from "@/components/providers/i18n-provider";
+import { FeesPageTabs } from "@/components/fees/fees-page-tabs";
+import { UntMark, UsdtMark } from "@/components/shared/asset-marks";
+import { ProductDemoBanner } from "@/components/shared/product-demo-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ROUTES } from "@/constants/routes";
 import { CALCULATOR_MOCK } from "@/constants/calculator-mock";
+import { useCalculatorConfig } from "@/hooks/use-calculator-config";
+import { usePublicPlatformFees } from "@/hooks/use-public-platform-fees";
+import { formatDate, formatNumber, formatUsdtAmount } from "@/lib/i18n/formatters";
+import { tf } from "@/lib/i18n/widget-messages";
+import { isLiveServicesEnabled } from "@/lib/public-env";
+import { pctToRate } from "@/services/platform-fees.service";
+import type { CalculatorConfig } from "@/services/calculator.service";
 import { cn } from "@/lib/utils";
 
-const USDT_FMT = new Intl.NumberFormat("ru-RU", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const NUM_FMT = new Intl.NumberFormat("ru-RU", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 6,
-});
+type CalcTab = "buy" | "sell" | "withdraw";
 
 function parsePositiveNumber(raw: string): number | null {
   const cleaned = raw.replace(/\s/g, "").replace(",", ".").trim();
@@ -28,183 +31,78 @@ function parsePositiveNumber(raw: string): number | null {
   return n;
 }
 
-type TabId = "buy" | "sell" | "withdraw" | "payout";
+const inputClass =
+  "h-12 rounded-xl border-0 bg-white text-lg font-mono font-medium tabular-nums text-neutral-900 shadow-none ring-1 ring-neutral-200/80 transition-[box-shadow,ring-color] placeholder:text-neutral-400 placeholder:font-sans placeholder:text-sm focus-visible:ring-2 focus-visible:ring-[#B7F500]/60 focus-visible:outline-none";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "buy", label: "Покупка" },
-  { id: "sell", label: "Продажа" },
-  { id: "withdraw", label: "Вывод" },
-  { id: "payout", label: "Начисление" },
+const CALC_TABS: { id: CalcTab; labelKey: string }[] = [
+  { id: "buy", labelKey: "calculator.tab.buy" },
+  { id: "sell", labelKey: "calculator.tab.sell" },
+  { id: "withdraw", labelKey: "calculator.tab.withdraw" },
 ];
 
-const BENEFIT_CARDS = [
-  {
-    title: "Иллюстративные сценарии",
-    text: "Все суммы — ориентиры до подключения к боевым тарифам и округлениям.",
-  },
-  {
-    title: "Прозрачные строки",
-    text: "Комиссия, gross и net разнесены так же, как в превью операции перед подтверждением.",
-  },
-  {
-    title: "USDT · TRC20",
-    text: "Вывод и пополнение считаются в стейблкоине; сеть указываем там, где это важно.",
-  },
-  {
-    title: "Без обещаний дохода",
-    text: "Блок начислений — только пример распределения по введённым значениям.",
-  },
-] as const;
-
-/** Крупные числа: градиент / акцент как на метриках и портфеле профиля. */
-function CalcDisplay({
-  value,
-  suffix,
-  tone,
-  size = "lg",
-}: {
-  value: string;
-  suffix?: string;
-  tone: "primary" | "units" | "fee" | "neutral";
-  size?: "lg" | "xl";
-}) {
-  const sizeCls = size === "xl" ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl";
-  const toneCls =
-    tone === "primary"
-      ? "bg-gradient-to-br from-blue-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent"
-      : tone === "units"
-        ? "bg-gradient-to-br from-emerald-800 via-teal-700 to-cyan-700 bg-clip-text text-transparent"
-        : tone === "fee"
-          ? "text-neutral-600"
-          : "text-neutral-900";
-
-  return (
-    <span
-      className={cn(
-        "font-mono font-semibold tabular-nums tracking-tight font-features-['tnum','lnum']",
-        sizeCls,
-        toneCls,
-      )}
-    >
-      {value}
-      {suffix ? <span className="text-[0.65em] font-medium text-neutral-500">{suffix}</span> : null}
-    </span>
-  );
-}
-
-function StatTile({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("rounded-2xl bg-neutral-50 px-4 py-4 sm:px-5 sm:py-5", className)}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">{label}</p>
-      <div className="mt-2">{children}</div>
-    </div>
-  );
-}
-
-function FeeLine({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-      <span className={cn("text-sm", muted ? "text-neutral-500" : "text-neutral-600")}>{label}</span>
-      <span className="font-mono text-sm font-medium tabular-nums text-neutral-900">{value}</span>
-    </div>
-  );
-}
-
-function Segment({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: { id: string; label: string }[];
-}) {
-  return (
-    <div className="inline-flex rounded-xl bg-[#f5f5f6] p-1">
-      {options.map((o) => {
-        const on = value === o.id;
-        return (
-          <button
-            key={o.id}
-            type="button"
-            onClick={() => onChange(o.id)}
-            className={cn(
-              "rounded-lg px-3 py-2 text-xs font-semibold transition-all sm:text-[13px]",
-              on ? "bg-white text-neutral-900 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.18)]" : "text-neutral-600 hover:text-neutral-900",
-            )}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-const inputClass =
-  "h-12 rounded-xl border-0 bg-white text-lg font-mono font-medium tabular-nums text-neutral-900 shadow-none ring-1 ring-neutral-200/80 transition-[box-shadow,ring-color] placeholder:text-neutral-400 placeholder:font-sans placeholder:text-sm focus-visible:ring-2 focus-visible:ring-zinc-400/45 focus-visible:outline-none";
-
-function AssetPill({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <span className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#ebebeb] px-2.5 text-[13px] font-semibold tracking-tight text-zinc-900">
-      {icon}
-      {label}
-    </span>
-  );
-}
-
-/** Иконка USDT (Tether) — как на странице покупки UNT в каталоге. */
-function UsdtMark() {
-  return (
-    <svg viewBox="0 0 28 28" className="size-7 shrink-0 overflow-hidden rounded-full" aria-hidden>
-      <circle cx="14" cy="14" r="14" fill="#26A17B" />
-      <path fill="#fff" d="M7.75 10.35h12.5v2.05H7.75v-2.05zm4.9 2.05h2.7v8.35h-2.7v-8.35z" />
-    </svg>
-  );
-}
-
-function UntMark() {
-  return (
-    <span className="relative flex size-7 shrink-0 overflow-hidden rounded-full bg-white">
-      <Image src="/images/urrency/units.png" alt="" fill className="object-contain p-0.5" sizes="28px" />
-    </span>
-  );
-}
-
 export function CalculatorPageContent() {
-  const [tab, setTab] = useState<TabId>("buy");
+  const { t, locale } = useI18n();
+  const fmtUsdt = (n: number) => formatUsdtAmount(n, locale).replace(" USDT", "");
+  const fmtNum = (n: number) => formatNumber(n, locale);
+  const pct = (rate: number) =>
+    `${(rate * 100).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`;
 
+  const servicesLive = isLiveServicesEnabled();
+  const { config, loading: configLoading, error: configError, reload: reloadConfig } = useCalculatorConfig();
+  const { fees, loading: feesLoading, error: feesError, reload: reloadFees } = usePublicPlatformFees();
+
+  const rates = useMemo(() => {
+    const fromConfig = calculatorConfigFees(config);
+    if (fromConfig) return { ...fromConfig, fromLive: true as const };
+    if (servicesLive && fees) {
+      return {
+        buyPlatformFeeRate: pctToRate(fees.primaryPurchaseFeePct),
+        secondaryMarketFeeRate: pctToRate(fees.secondaryMarketFeePct),
+        withdrawFeeMinUsdt: Number(fees.withdrawalFeeFixedUsdt) || CALCULATOR_MOCK.withdrawFeeMinUsdt,
+        withdrawFeeRate: pctToRate(fees.withdrawalFeePct),
+        effectiveFrom: fees.effectiveFrom,
+        fromLive: true as const,
+      };
+    }
+    if (servicesLive) return null;
+    return {
+      buyPlatformFeeRate: CALCULATOR_MOCK.buyPlatformFeeRate,
+      secondaryMarketFeeRate: CALCULATOR_MOCK.secondaryMarketFeeRate,
+      withdrawFeeMinUsdt: CALCULATOR_MOCK.withdrawFeeMinUsdt,
+      withdrawFeeRate: CALCULATOR_MOCK.withdrawFeeRate,
+      effectiveFrom: null as string | null,
+      fromLive: false as const,
+    };
+  }, [config, fees, servicesLive]);
+
+  const [tab, setTab] = useState<CalcTab>("buy");
   const [buyMode, setBuyMode] = useState<"usdt" | "units">("usdt");
   const [buyUsdt, setBuyUsdt] = useState("1000");
   const [buyUnits, setBuyUnits] = useState("80");
   const [buyPrice, setBuyPrice] = useState(String(CALCULATOR_MOCK.defaultPricePerUnitUsdt));
-
   const [sellUnits, setSellUnits] = useState("50");
-  const [sellPrice, setSellPrice] = useState("14");
-
+  const [sellPrice, setSellPrice] = useState(String(CALCULATOR_MOCK.defaultPricePerUnitUsdt));
   const [withdrawAmount, setWithdrawAmount] = useState("500");
 
-  const [payoutUnits, setPayoutUnits] = useState("10000");
-  const [payoutPool, setPayoutPool] = useState("25000");
-  const [payoutTotalUnits, setPayoutTotalUnits] = useState(String(CALCULATOR_MOCK.defaultTotalUnitsOutstanding));
+  const defaultRelease = config?.releases[0];
+  useEffect(() => {
+    if (!servicesLive || !defaultRelease) return;
+    const price = defaultRelease.pricePerUnitUsdt;
+    setBuyPrice(price);
+    setSellPrice(price);
+  }, [defaultRelease, servicesLive]);
 
-  const buyPriceN = parsePositiveNumber(buyPrice) ?? CALCULATOR_MOCK.defaultPricePerUnitUsdt;
-  const feeRate = CALCULATOR_MOCK.buyPlatformFeeRate;
+  const buyPriceN = parsePositiveNumber(buyPrice) ?? (servicesLive ? null : CALCULATOR_MOCK.defaultPricePerUnitUsdt);
+  const sellPriceN = parsePositiveNumber(sellPrice) ?? (servicesLive ? null : CALCULATOR_MOCK.defaultPricePerUnitUsdt);
+  const platformFeeRate = rates?.buyPlatformFeeRate ?? 0;
+  const secondaryFeeRate = rates?.secondaryMarketFeeRate ?? 0;
 
   const buyCalc = useMemo(() => {
-    if (buyPriceN <= 0) return null;
+    if (buyPriceN == null || buyPriceN <= 0) return null;
     if (buyMode === "usdt") {
       const total = parsePositiveNumber(buyUsdt);
       if (total === null || total === 0) return null;
-      const platformFee = total * feeRate;
+      const platformFee = total * platformFeeRate;
       const effective = total - platformFee;
       const units = effective / buyPriceN;
       return { total, platformFee, effective, units, pricePerUnit: buyPriceN };
@@ -212,412 +110,331 @@ export function CalculatorPageContent() {
     const units = parsePositiveNumber(buyUnits);
     if (units === null || units === 0) return null;
     const effective = units * buyPriceN;
-    const total = effective / (1 - feeRate);
+    const total = effective / (1 - platformFeeRate);
     const platformFee = total - effective;
     return { total, platformFee, effective, units, pricePerUnit: buyPriceN };
-  }, [buyMode, buyUsdt, buyUnits, buyPriceN, feeRate]);
+  }, [buyMode, buyUsdt, buyUnits, buyPriceN, platformFeeRate]);
 
   const sellCalc = useMemo(() => {
-    const u = parsePositiveNumber(sellUnits);
-    const p = parsePositiveNumber(sellPrice);
-    if (u === null || p === null || u === 0) return null;
-    const gross = u * p;
-    const secondaryFee = gross * CALCULATOR_MOCK.secondaryMarketFeeRate;
-    const net = gross - secondaryFee;
-    return { gross, secondaryFee, net };
-  }, [sellUnits, sellPrice]);
+    const units = parsePositiveNumber(sellUnits);
+    if (units === null || units === 0 || sellPriceN == null || sellPriceN <= 0) return null;
+    const gross = units * sellPriceN;
+    const fee = gross * secondaryFeeRate;
+    const net = gross - fee;
+    return { units, gross, fee, net, pricePerUnit: sellPriceN };
+  }, [sellUnits, sellPriceN, secondaryFeeRate]);
 
   const withdrawCalc = useMemo(() => {
     const amount = parsePositiveNumber(withdrawAmount);
-    if (amount === null || amount === 0) return null;
-    const pctFee = amount * CALCULATOR_MOCK.withdrawFeeRate;
-    const fee = Math.max(CALCULATOR_MOCK.withdrawFeeMinUsdt, pctFee);
-    const finalAmount = Math.max(0, amount - fee);
-    return { amount, fee, finalAmount };
-  }, [withdrawAmount]);
+    if (amount === null || amount === 0 || !rates) return null;
+    const fee = Math.max(rates.withdrawFeeMinUsdt, amount * rates.withdrawFeeRate);
+    const net = amount - fee;
+    return { amount, fee, net };
+  }, [withdrawAmount, rates]);
 
-  const payoutCalc = useMemo(() => {
-    const u = parsePositiveNumber(payoutUnits);
-    const pool = parsePositiveNumber(payoutPool);
-    const totalU = parsePositiveNumber(payoutTotalUnits);
-    if (u === null || pool === null || totalU === null || totalU === 0) return null;
-    const share = u / totalU;
-    const estimated = pool * share;
-    return { estimated, share };
-  }, [payoutUnits, payoutPool, payoutTotalUnits]);
+  const tabItems = useMemo(() => CALC_TABS.map((item) => ({ id: item.id, label: t(item.labelKey) })), [t]);
 
-  function resetBuy() {
-    setBuyMode("usdt");
-    setBuyUsdt("1000");
-    setBuyUnits("80");
-    setBuyPrice(String(CALCULATOR_MOCK.defaultPricePerUnitUsdt));
+  const unavailable = servicesLive && !configLoading && (!config || Boolean(configError) || !rates);
+
+  if (configLoading && servicesLive) {
+    return (
+      <div className="space-y-4">
+        <div className="h-14 animate-pulse rounded-2xl bg-neutral-100" />
+        <div className="h-72 animate-pulse rounded-2xl bg-neutral-100" />
+      </div>
+    );
   }
 
-  function resetSell() {
-    setSellUnits("50");
-    setSellPrice("14");
-  }
-
-  function resetWithdraw() {
-    setWithdrawAmount("500");
-  }
-
-  function resetPayout() {
-    setPayoutUnits("10000");
-    setPayoutPool("25000");
-    setPayoutTotalUnits(String(CALCULATOR_MOCK.defaultTotalUnitsOutstanding));
+  if (unavailable) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-10 text-center">
+        <p className="text-sm font-medium text-red-900">{t("calculator.unavailable.title")}</p>
+        <p className="mt-2 text-sm text-red-800">{configError ?? feesError ?? t("calculator.unavailable.subtitle")}</p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-4"
+          onClick={() => {
+            void reloadConfig();
+            void reloadFees();
+          }}
+        >
+          {t("calculator.unavailable.retry")}
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8 sm:space-y-10">
-      {/* Tabs — как сегмент на метриках, без нижней границы панели */}
-      <div className="relative z-10 pb-3">
-        <nav
-          aria-label="Разделы калькулятора"
-          className="flex w-full flex-wrap gap-2 rounded-2xl bg-[#f5f5f6] p-1.5"
-        >
-          {TABS.map((t) => {
-            const active = tab === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={cn(
-                  "min-h-9 flex-1 rounded-xl px-3 py-2 text-center text-xs font-semibold transition-all sm:flex-none sm:px-4 sm:text-[13px]",
-                  active ? "bg-white text-neutral-900 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.18)]" : "text-neutral-600 hover:text-neutral-900",
-                )}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+    <div className="space-y-4">
+      {!servicesLive ? <ProductDemoBanner messageKey="calculator.demoBanner" /> : null}
 
-      {tab === "buy" ? (
-        <section className="scroll-mt-28 space-y-6" aria-labelledby="calc-buy-title">
-          <div className="rounded-3xl bg-white px-5 py-7 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] sm:px-8 sm:py-9">
-            <div className="space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Калькулятор · Покупка</p>
-              <h2 id="calc-buy-title" className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
-                Покупка UNT
-              </h2>
-              <p className="max-w-2xl text-sm text-neutral-500">
-                Оцените платёж в USDT (TRC20), комиссию платформы и объём UNT при вашей цене за UNT.
-              </p>
+      <section className="rounded-2xl bg-white px-4 py-5 sm:px-6 sm:py-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FeesPageTabs items={tabItems} active={tab} onChange={setTab} size="sub" className="min-w-0 flex-1" />
+          {rates ? (
+            <p className="shrink-0 rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700">
+              {tab === "buy"
+                ? tf(t("calculator.summary.platformFee"), { rate: pct(platformFeeRate) })
+                : tab === "sell"
+                  ? tf(t("calculator.summary.secondaryFee"), { rate: pct(secondaryFeeRate) })
+                  : tf(t("calculator.summary.withdrawFee"), {
+                      min: String(rates.withdrawFeeMinUsdt),
+                      rate: pct(rates.withdrawFeeRate),
+                    })}
+            </p>
+          ) : null}
+        </div>
+
+        {servicesLive && feesLoading ? (
+          <p className="mt-3 text-xs text-neutral-500">{t("calculator.feesLoading")}</p>
+        ) : null}
+
+        {tab === "buy" ? (
+          <div className="mt-6">
+            <div className="inline-flex rounded-full bg-neutral-100 p-1">
+              {(
+                [
+                  { id: "usdt" as const, label: t("calculator.buy.modeUsdt") },
+                  { id: "units" as const, label: t("calculator.buy.modeUnits") },
+                ] as const
+              ).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setBuyMode(o.id)}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-[13px] font-semibold transition-colors",
+                    buyMode === o.id ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-600 hover:text-neutral-900",
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
             </div>
 
-            <div className="mt-8 space-y-4">
-              <Segment
-                value={buyMode}
-                onChange={(v) => setBuyMode(v as "usdt" | "units")}
-                options={[
-                  { id: "usdt", label: "Сумма USDT" },
-                  { id: "units", label: "Кол-во UNT" },
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Field
+                id="calc-buy-primary"
+                label={buyMode === "usdt" ? t("calculator.buy.payAmount") : t("calculator.buy.unitsToBuy")}
+                value={buyMode === "usdt" ? buyUsdt : buyUnits}
+                onChange={buyMode === "usdt" ? setBuyUsdt : setBuyUnits}
+                suffix={buyMode === "usdt" ? <UsdtMark /> : <UntMark />}
+                suffixLabel={buyMode === "usdt" ? "USDT" : "UNT"}
+              />
+              <Field
+                id="calc-buy-price"
+                label={t("calculator.buy.priceLabel")}
+                value={buyPrice}
+                onChange={setBuyPrice}
+                suffix={<UntMark />}
+                suffixLabel="USDT / UNT"
+              />
+            </div>
+
+            {buyCalc ? (
+              <ResultPanel
+                headline={`≈ ${fmtNum(buyCalc.units)} UNT`}
+                subline={tf(t("calculator.summary.toPay"), { amount: fmtUsdt(buyCalc.total) })}
+                rows={[
+                  { label: t("calculator.buy.feePlatform"), value: `${fmtUsdt(buyCalc.platformFee)} USDT` },
+                  { label: t("calculator.buy.feeTotal"), value: `${fmtUsdt(buyCalc.total)} USDT`, strong: true },
+                  { label: t("calculator.buy.feeEffective"), value: `${fmtUsdt(buyCalc.effective)} USDT` },
                 ]}
               />
-            </div>
-
-            <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-                <Label htmlFor="buy-primary" className="text-xs font-medium text-neutral-500">
-                  {buyMode === "usdt" ? "Сумма к оплате" : "UNT к покупке"}
-                </Label>
-                <Input
-                  id="buy-primary"
-                  inputMode="decimal"
-                  value={buyMode === "usdt" ? buyUsdt : buyUnits}
-                  onChange={(e) => (buyMode === "usdt" ? setBuyUsdt(e.target.value) : setBuyUnits(e.target.value))}
-                  className={cn(inputClass, "mt-3 w-full")}
-                  placeholder={buyMode === "usdt" ? "0,00" : "0"}
-                />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  {buyMode === "usdt" ? (
-                    <p className="text-xs text-neutral-500">USDT · вводите сумму с учётом желаемого объёма покупки</p>
-                  ) : (
-                    <p className="text-xs text-neutral-500">Количество UNT к зачислению после комиссии</p>
-                  )}
-                  {buyMode === "usdt" ? (
-                    <AssetPill icon={<UsdtMark />} label="USDT" />
-                  ) : (
-                    <AssetPill icon={<UntMark />} label="UNT" />
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center py-2 lg:min-h-[120px] lg:py-0">
-                <span className="flex size-11 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
-                  <ArrowLeftRight className="size-5" aria-hidden />
-                </span>
-              </div>
-
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-                <Label htmlFor="buy-price" className="text-xs font-medium text-neutral-500">
-                  Цена за UNT, USDT
-                </Label>
-                <Input
-                  id="buy-price"
-                  inputMode="decimal"
-                  value={buyPrice}
-                  onChange={(e) => setBuyPrice(e.target.value)}
-                  className={cn(inputClass, "mt-3 w-full")}
-                />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-xs text-neutral-500">Справочно для расчёта; в сделке подставится актуальная цена.</p>
-                  <AssetPill icon={<UntMark />} label="UNT" />
-                </div>
-              </div>
-            </div>
-
-            {buyCalc ? (
-              <p className="mt-6 text-center text-sm text-neutral-500">
-                <span className="font-mono text-neutral-700">1 UNT</span> ≈{" "}
-                <CalcDisplay value={USDT_FMT.format(buyCalc.pricePerUnit)} tone="neutral" size="lg" /> USDT
-              </p>
-            ) : null}
-
-            <div className="mt-8 flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={resetBuy} className="border-0 bg-[#f1f1f2] hover:bg-neutral-200/80">
-                Сбросить
-              </Button>
-            </div>
-
-            {buyCalc ? (
-              <>
-                <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                  <StatTile label="Цена за UNT">
-                    <CalcDisplay value={USDT_FMT.format(buyCalc.pricePerUnit)} suffix=" USDT" tone="neutral" />
-                  </StatTile>
-                  <StatTile label="Количество UNT" className="bg-linear-to-br from-neutral-50 to-blue-50/70">
-                    <CalcDisplay value={NUM_FMT.format(buyCalc.units)} tone="units" />
-                  </StatTile>
-                </div>
-                <div className="mt-4 rounded-2xl bg-neutral-50 px-5 py-2 sm:px-6">
-                  <FeeLine label="Комиссия платформы" value={`${USDT_FMT.format(buyCalc.platformFee)} USDT`} muted />
-                  <div className="border-t border-neutral-100/80" />
-                  <FeeLine label="Итого к оплате" value={`${USDT_FMT.format(buyCalc.total)} USDT`} />
-                  <div className="border-t border-neutral-100/80" />
-                  <FeeLine label="Эффективная сумма (к UNT)" value={`${USDT_FMT.format(buyCalc.effective)} USDT`} />
-                </div>
-                <div className="mt-6 rounded-2xl bg-neutral-50 px-5 py-5 sm:px-6">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">К оплате</p>
-                  <CalcDisplay value={USDT_FMT.format(buyCalc.total)} suffix=" USDT" tone="primary" size="xl" />
-                </div>
-              </>
             ) : (
-              <p className="mt-8 rounded-2xl bg-neutral-50 px-5 py-8 text-center text-sm text-neutral-500">
-                Введите положительные значения, чтобы увидеть расчёт.
-              </p>
+              <EmptyState message={t("calculator.buy.empty")} />
             )}
-            <p className="mt-5 text-xs leading-relaxed text-neutral-500">
-              Комиссия — доля от суммы платежа. Фактические тарифы и округления могут отличаться.
-            </p>
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {tab === "sell" ? (
-        <section className="scroll-mt-28 space-y-6" aria-labelledby="calc-sell-title">
-          <div className="rounded-3xl bg-white px-5 py-7 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] sm:px-8 sm:py-9">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Калькулятор · Secondary</p>
-            <h2 id="calc-sell-title" className="mt-1 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
-              Продажа на secondary
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-neutral-500">Gross, комиссия вторичного рынка и сумма к получению.</p>
-
-            <div className="mt-8 grid gap-5 lg:grid-cols-2">
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-                <Label htmlFor="sell-units" className="text-xs font-medium text-neutral-500">
-                  UNT к продаже
-                </Label>
-                <Input
-                  id="sell-units"
-                  inputMode="decimal"
-                  value={sellUnits}
-                  onChange={(e) => setSellUnits(e.target.value)}
-                  className={cn(inputClass, "mt-3 w-full")}
-                />
-              </div>
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-                <Label htmlFor="sell-price" className="text-xs font-medium text-neutral-500">
-                  Цена за UNT, USDT
-                </Label>
-                <Input
-                  id="sell-price"
-                  inputMode="decimal"
-                  value={sellPrice}
-                  onChange={(e) => setSellPrice(e.target.value)}
-                  className={cn(inputClass, "mt-3 w-full")}
-                />
-              </div>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={resetSell} className="mt-6 border-0 bg-[#f1f1f2] hover:bg-neutral-200/80">
-              Сбросить
-            </Button>
-
-            {sellCalc ? (
-              <>
-                <div className="mt-8 rounded-2xl bg-neutral-50 px-5 py-3 sm:px-6">
-                  <FeeLine label="Сумма сделки (gross)" value={`${USDT_FMT.format(sellCalc.gross)} USDT`} />
-                  <div className="border-t border-neutral-100/80" />
-                  <FeeLine label="Комиссия secondary" value={`− ${USDT_FMT.format(sellCalc.secondaryFee)} USDT`} muted />
-                </div>
-                <div className="mt-4 rounded-2xl bg-neutral-50 px-5 py-5 sm:px-6">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">К получению (net)</p>
-                  <CalcDisplay value={USDT_FMT.format(sellCalc.net)} suffix=" USDT" tone="primary" size="xl" />
-                </div>
-              </>
-            ) : (
-              <p className="mt-8 rounded-2xl bg-neutral-50 px-5 py-8 text-center text-sm text-neutral-500">
-                Укажите UNT и цену за UNT.
-              </p>
-            )}
-            <p className="mt-5 text-xs text-neutral-500">Иллюстрация; на стакане могут быть дополнительные правила.</p>
-          </div>
-        </section>
-      ) : null}
-
-      {tab === "withdraw" ? (
-        <section className="scroll-mt-28 space-y-6" aria-labelledby="calc-wd-title">
-          <div className="rounded-3xl bg-white px-5 py-7 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] sm:px-8 sm:py-9">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Калькулятор · Вывод</p>
-            <h2 id="calc-wd-title" className="mt-1 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
-              Вывод USDT
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-neutral-500">Удержание платформы и сумма к зачислению на адрес TRC20.</p>
-
-            <div className="mt-8 max-w-md rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-              <Label htmlFor="wd-amt" className="text-xs font-medium text-neutral-500">
-                Сумма вывода, USDT
-              </Label>
-              <Input
-                id="wd-amt"
-                inputMode="decimal"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                className={cn(inputClass, "mt-3 w-full")}
+        {tab === "sell" ? (
+          <div className="mt-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                id="calc-sell-units"
+                label={t("calculator.sell.unitsLabel")}
+                value={sellUnits}
+                onChange={setSellUnits}
+                suffix={<UntMark />}
+                suffixLabel="UNT"
+              />
+              <Field
+                id="calc-sell-price"
+                label={t("calculator.sell.priceLabel")}
+                value={sellPrice}
+                onChange={setSellPrice}
+                suffix={<UntMark />}
+                suffixLabel="USDT / UNT"
               />
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={resetWithdraw} className="mt-6 border-0 bg-[#f1f1f2] hover:bg-neutral-200/80">
-              Сбросить
-            </Button>
+
+            {sellCalc ? (
+              <ResultPanel
+                headline={`${fmtUsdt(sellCalc.net)} USDT`}
+                subline={t("calculator.sell.net")}
+                rows={[
+                  { label: t("calculator.sell.gross"), value: `${fmtUsdt(sellCalc.gross)} USDT` },
+                  { label: t("calculator.sell.feeSecondary"), value: `− ${fmtUsdt(sellCalc.fee)} USDT` },
+                  { label: t("calculator.sell.net"), value: `${fmtUsdt(sellCalc.net)} USDT`, strong: true },
+                ]}
+              />
+            ) : (
+              <EmptyState message={t("calculator.sell.empty")} />
+            )}
+          </div>
+        ) : null}
+
+        {tab === "withdraw" ? (
+          <div className="mt-6">
+            <div className="max-w-md">
+              <Field
+                id="calc-withdraw-amount"
+                label={t("calculator.withdraw.amountLabel")}
+                value={withdrawAmount}
+                onChange={setWithdrawAmount}
+                suffix={<UsdtMark />}
+                suffixLabel="USDT"
+              />
+            </div>
 
             {withdrawCalc ? (
-              <>
-                <div className="mt-8 max-w-lg rounded-2xl bg-neutral-50 px-5 py-3 sm:px-6">
-                  <FeeLine label="Комиссия вывода" value={`${USDT_FMT.format(withdrawCalc.fee)} USDT`} muted />
-                  <div className="border-t border-neutral-100/80" />
-                  <FeeLine label="К получению на адрес" value={`${USDT_FMT.format(withdrawCalc.finalAmount)} USDT`} />
-                </div>
-                <div className="mt-4 max-w-lg rounded-2xl bg-neutral-50 px-5 py-5 sm:px-6">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Итог на кошелёк</p>
-                  <CalcDisplay value={USDT_FMT.format(withdrawCalc.finalAmount)} suffix=" USDT" tone="primary" size="xl" />
-                </div>
-              </>
+              <ResultPanel
+                headline={`${fmtUsdt(withdrawCalc.net)} USDT`}
+                subline={t("calculator.withdraw.toAddress")}
+                rows={[
+                  { label: t("calculator.withdraw.amountLabel"), value: `${fmtUsdt(withdrawCalc.amount)} USDT` },
+                  { label: t("calculator.withdraw.fee"), value: `− ${fmtUsdt(withdrawCalc.fee)} USDT` },
+                  { label: t("calculator.withdraw.toAddress"), value: `${fmtUsdt(withdrawCalc.net)} USDT`, strong: true },
+                ]}
+              />
             ) : (
-              <p className="mt-8 rounded-2xl bg-neutral-50 px-5 py-8 text-center text-sm text-neutral-500">Введите сумму вывода.</p>
+              <EmptyState message={t("calculator.withdraw.empty")} />
             )}
-            <div className="mt-6 rounded-2xl bg-neutral-50 px-5 py-4 text-xs leading-relaxed text-neutral-600">
-              Сеть: <span className="font-semibold text-neutral-800">TRC20 (USDT)</span>. Адрес должен поддерживать стандарт.
-              Комиссия сети — отдельно у провайдера или кошелька.
-            </div>
+            <p className="mt-3 text-xs text-neutral-500">{t("calculator.withdraw.networkNote")}</p>
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {tab === "payout" ? (
-        <section className="scroll-mt-28 space-y-6" aria-labelledby="calc-pay-title">
-          <div className="rounded-3xl bg-white px-5 py-7 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] sm:px-8 sm:py-9">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Калькулятор · Оценка</p>
-            <h2 id="calc-pay-title" className="mt-1 text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
-              Оценка начисления
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-neutral-500">
-              Иллюстрация по введённым значениям. Не официальный отчёт и не прогноз будущих выплат.
-            </p>
+        {rates?.fromLive && rates.effectiveFrom ? (
+          <p className="mt-4 text-xs text-neutral-500">
+            {tf(t("calculator.product.feesUpdated"), { date: formatDate(rates.effectiveFrom, locale) })}
+          </p>
+        ) : null}
 
-            <div className="mt-8 grid gap-5 sm:grid-cols-2">
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-                <Label htmlFor="payout-u" className="text-xs font-medium text-neutral-500">
-                  Ваши UNT
-                </Label>
-                <Input
-                  id="payout-u"
-                  inputMode="decimal"
-                  value={payoutUnits}
-                  onChange={(e) => setPayoutUnits(e.target.value)}
-                  className={cn(inputClass, "mt-3 w-full")}
-                />
-              </div>
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6">
-                <Label htmlFor="payout-pool" className="text-xs font-medium text-neutral-500">
-                  Пример объёма для распределения, USDT
-                </Label>
-                <Input
-                  id="payout-pool"
-                  inputMode="decimal"
-                  value={payoutPool}
-                  onChange={(e) => setPayoutPool(e.target.value)}
-                  className={cn(inputClass, "mt-3 w-full")}
-                />
-              </div>
-              <div className="rounded-2xl bg-[#f5f5f6] p-5 sm:p-6 sm:col-span-2">
-                <Label htmlFor="payout-total" className="text-xs font-medium text-neutral-500">
-                  Условный объём UNT по релизу
-                </Label>
-                <Input
-                  id="payout-total"
-                  inputMode="decimal"
-                  value={payoutTotalUnits}
-                  onChange={(e) => setPayoutTotalUnits(e.target.value)}
-                  className={cn(inputClass, "mt-3 max-w-md w-full")}
-                />
-              </div>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={resetPayout} className="mt-6 border-0 bg-[#f1f1f2] hover:bg-neutral-200/80">
-              Сбросить
-            </Button>
+        <div className="mt-6 flex flex-col gap-2 border-t border-neutral-100 pt-5 sm:flex-row sm:flex-wrap">
+          <Link
+            href={ROUTES.dashboardCatalog}
+            className="inline-flex h-10 items-center justify-center rounded-full bg-[#B7F500] px-5 text-[13px] font-semibold text-black transition hover:bg-[#c8ff3d]"
+          >
+            {t("calculator.product.ctaCatalog")}
+          </Link>
+          <Link
+            href={ROUTES.fees}
+            className="inline-flex h-10 items-center justify-center rounded-full bg-neutral-100 px-5 text-[13px] font-semibold text-neutral-800 transition hover:bg-neutral-200/80"
+          >
+            {t("calculator.product.ctaFees")}
+          </Link>
+          {tab !== "sell" ? (
+            <Link
+              href={ROUTES.dashboardSecondaryMarket}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-neutral-100 px-5 text-[13px] font-semibold text-neutral-800 transition hover:bg-neutral-200/80"
+            >
+              {t("calculator.product.ctaSecondary")}
+            </Link>
+          ) : null}
+        </div>
 
-            {payoutCalc ? (
-              <div className="mt-8 space-y-4">
-                <div className="rounded-2xl bg-neutral-50 px-5 py-4 sm:px-6">
-                  <FeeLine label="Доля позиции (иллюстрация)" value={`${(payoutCalc.share * 100).toFixed(4)} %`} muted />
-                </div>
-                <div className="rounded-2xl bg-neutral-50 px-5 py-5 sm:px-6">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Оценочное начисление</p>
-                  <CalcDisplay value={USDT_FMT.format(payoutCalc.estimated)} suffix=" USDT" tone="units" size="xl" />
-                </div>
-              </div>
-            ) : (
-              <p className="mt-8 rounded-2xl bg-neutral-50 px-5 py-8 text-center text-sm text-neutral-500">
-                Заполните поля положительными числами.
-              </p>
-            )}
-            <p className="mt-6 rounded-2xl bg-neutral-50 px-5 py-4 text-xs leading-relaxed text-neutral-600">
-              Фактические начисления зависят от периода, условий релиза и правил платформы.
-            </p>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Полезное о калькуляторе">
-        {BENEFIT_CARDS.map((b) => (
-          <article key={b.title} className="rounded-3xl bg-white px-5 py-5 shadow-[0_16px_34px_-24px_rgba(0,0,0,0.18)] sm:px-6 sm:py-6">
-            <h3 className="text-sm font-semibold text-neutral-900">{b.title}</h3>
-            <p className="mt-2 text-xs leading-relaxed text-neutral-500 sm:text-sm">{b.text}</p>
-          </article>
-        ))}
+        <p className="mt-4 text-xs leading-relaxed text-neutral-500">{t("calculator.disclaimer")}</p>
       </section>
-
-      <footer className="rounded-3xl bg-neutral-50 px-5 py-6 text-xs leading-relaxed text-neutral-600 sm:px-7">
-        <p className="font-medium text-neutral-800">Общие примечания</p>
-        <ul className="mt-2 list-inside list-disc space-y-1 text-neutral-600">
-          <li>Комиссии и лимиты могут меняться — ориентируйтесь на актуальные тарифы в продукте.</li>
-          <li>После подключения API подставятся реальные параметры сделки.</li>
-          <li>Оценки начислений не гарантируют будущие выплаты.</li>
-        </ul>
-      </footer>
     </div>
+  );
+}
+
+function calculatorConfigFees(config: CalculatorConfig | null) {
+  if (!config?.fees) return null;
+  const f = config.fees;
+  return {
+    buyPlatformFeeRate: pctToRate(f.primaryPurchaseFeePct),
+    secondaryMarketFeeRate: pctToRate(f.secondaryMarketFeePct),
+    withdrawFeeMinUsdt: Number(f.withdrawalFeeFixedUsdt) || CALCULATOR_MOCK.withdrawFeeMinUsdt,
+    withdrawFeeRate: pctToRate(f.withdrawalFeePct),
+    effectiveFrom: f.effectiveFrom,
+  };
+}
+
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  suffix,
+  suffixLabel,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  suffix: ReactNode;
+  suffixLabel: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-neutral-50 p-4 sm:p-5">
+      <Label htmlFor={id} className="text-xs font-medium text-neutral-600">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(inputClass, "mt-2 w-full")}
+      />
+      <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-neutral-600">
+        {suffix}
+        <span>{suffixLabel}</span>
+      </p>
+    </div>
+  );
+}
+
+function ResultPanel({
+  headline,
+  subline,
+  rows,
+}: {
+  headline: string;
+  subline: string;
+  rows: { label: string; value: string; strong?: boolean }[];
+}) {
+  return (
+    <div className="mt-6 space-y-3">
+      <div className="rounded-2xl bg-[#f6f7f9] px-4 py-5 sm:px-6">
+        <p className="text-[1.75rem] font-semibold tracking-tight text-neutral-900 tabular-nums sm:text-3xl">{headline}</p>
+        <p className="mt-1 text-sm text-neutral-600">{subline}</p>
+      </div>
+      <div className="divide-y divide-neutral-100 rounded-2xl border border-neutral-100 bg-white px-4 sm:px-5">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-4 py-3.5">
+            <span className={cn("text-sm", row.strong ? "font-medium text-neutral-900" : "text-neutral-600")}>
+              {row.label}
+            </span>
+            <span
+              className={cn(
+                "font-mono text-sm tabular-nums text-neutral-900",
+                row.strong ? "font-semibold" : "font-medium",
+              )}
+            >
+              {row.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <p className="mt-6 rounded-2xl bg-neutral-50 px-4 py-8 text-center text-sm text-neutral-500">{message}</p>
   );
 }

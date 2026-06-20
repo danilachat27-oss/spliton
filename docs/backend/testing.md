@@ -61,12 +61,16 @@ For production-grade CI, provision a **dedicated** Postgres database (or Supabas
 
 ## GitHub Actions
 
-Workflow: `.github/workflows/backend-ci.yml`.
+Primary workflow: `.github/workflows/ci.yml` (Prisma, backend, frontend, e2e, Playwright).
 
-- **Always:** `npm ci`, `prisma generate`, `npm run build`, `npm run lint:ci`, `npm run test` in `apps/backend`.
-- **E2E job:** runs only when all of the following repository secrets are non-empty: `BACKEND_E2E_DATABASE_URL`, `BACKEND_E2E_DIRECT_URL`, `BACKEND_E2E_JWT_SECRET`, `BACKEND_E2E_JWT_REFRESH_SECRET`. Optional: `BACKEND_E2E_TEST_DATABASE_URL` maps to `TEST_DATABASE_URL` for an isolated DB.
+Legacy path filter workflow: `.github/workflows/backend-ci.yml`.
 
-If secrets are missing, the workflow still passes the build/lint/unit gate; the e2e job is skipped so forks and new repos do not fail CI.
+- **Always:** backend build, lint, unit; frontend build; `prisma validate` + migrate diff.
+- **E2E job:** when repository secrets are set: `BACKEND_E2E_DATABASE_URL`, `BACKEND_E2E_DIRECT_URL`, `BACKEND_E2E_JWT_SECRET`, `BACKEND_E2E_JWT_REFRESH_SECRET`. Optional: `BACKEND_E2E_TEST_DATABASE_URL` → `TEST_DATABASE_URL`.
+
+If secrets are missing, e2e is skipped; other jobs still run.
+
+See also [E2E_DATABASE.md](../testing/E2E_DATABASE.md).
 
 ## Commands not used here
 

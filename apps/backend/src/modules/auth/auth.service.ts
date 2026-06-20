@@ -1,11 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { ConsentSource, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { AuthRepository } from './auth.repository';
@@ -13,8 +14,10 @@ import {
   LoginDto,
   LogoutDto,
   RefreshTokenDto,
+  ForgotPasswordDto,
   RegisterDto,
   ResendEmailVerificationDto,
+  ResetPasswordDto,
   TwoFactorDisableDto,
   TwoFactorRegenerateRecoveryCodesDto,
   TwoFactorVerifyDto,
@@ -23,6 +26,7 @@ import {
 } from './dto';
 import { AuthAuditService } from './services/auth-audit.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { PasswordResetService } from './services/password-reset.service';
 import { SessionService } from './services/session.service';
 import { TokenService } from './services/token.service';
 import { TwoFactorService } from './services/two-factor.service';
@@ -38,6 +42,9 @@ import {
   assertUserCanLogin,
   prismaUserToSafeUser,
 } from './utils/safe-user.mapper';
+import { LegalConsentsService } from '../legal/legal-consents.service';
+import { ReferralsService } from '../referrals/referrals.service';
+import { ReferralEventsService } from '../referrals/referral-events.service';
 
 type RequestMeta = {
   ip?: string | null;
@@ -54,12 +61,22 @@ export class AuthService {
     private readonly authAuditService: AuthAuditService,
     private readonly twoFactorService: TwoFactorService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly passwordResetService: PasswordResetService,
+    private readonly legalConsents: LegalConsentsService,
+    private readonly referrals: ReferralsService,
+    private readonly referralEvents: ReferralEventsService,
   ) {}
 
   async register(
     dto: RegisterDto,
     meta?: RequestMeta,
   ): Promise<RegisterEmailVerificationResponse> {
+    if (!dto.acceptedTerms || !dto.acceptedPrivacy) {
+      throw new BadRequestException(
+        'Необходимо принять условия использования и политику конфиденциальности Spliton',
+      );
+    }
+
     const email = dto.email.trim().toLowerCase();
     const existingUser = await this.authRepository.findUserByEmail(email);
     if (existingUser) {
@@ -88,11 +105,27 @@ export class AuthService {
       userAgent: meta?.userAgent,
       safeMeta: { userId: user.id, email: user.email },
     });
+    await this.legalConsents.recordConsentsForSource(
+      user.id,
+      ConsentSource.REGISTER,
+      { ip: meta?.ip, userAgent: meta?.userAgent },
+    );
     await this.emailVerificationService.issueForNewUser({
       userId: user.id,
       email: user.email,
       meta,
     });
+
+    if (dto.referralCode?.trim()) {
+      try {
+        await this.referrals.attachOnRegistration(user.id, dto.referralCode, {
+          utmSource: dto.utmSource,
+          utmCampaign: dto.utmCampaign,
+        });
+      } catch {
+        /* invalid/self referral must not block registration */
+      }
+    }
 
     return { requiresEmailVerification: true };
   }
@@ -235,7 +268,14 @@ export class AuthService {
     dto: VerifyEmailDto,
     meta?: RequestMeta,
   ): Promise<EmailVerifyResponse> {
-    return this.emailVerificationService.verifyToken(dto.token, meta);
+    const result = await this.emailVerificationService.verifyToken(
+      dto.token,
+      meta,
+    );
+    if (result.verified && result.userId) {
+      void this.referralEvents.onEmailVerified(result.userId);
+    }
+    return result;
   }
 
   async resendEmailVerification(
@@ -243,6 +283,18 @@ export class AuthService {
     meta?: RequestMeta,
   ): Promise<EmailResendResponse> {
     return this.emailVerificationService.resend(dto.email, meta);
+  }
+
+  forgotPassword(dto: ForgotPasswordDto, meta?: RequestMeta) {
+    return this.passwordResetService.requestReset(dto.email, meta);
+  }
+
+  resetPassword(dto: ResetPasswordDto, meta?: RequestMeta) {
+    return this.passwordResetService.resetPassword(
+      dto.token,
+      dto.password,
+      meta,
+    );
   }
 
   async refresh(

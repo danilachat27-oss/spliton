@@ -16,14 +16,32 @@ export type ReleaseAnalyticsRow = {
   changePct: string;
   payouts: string;
   units: string;
+  soldUnits?: string;
+  availableUnits?: string;
+  pricePerUnitUsdt?: string;
+  targetUsdt?: string;
+  /**
+   * Прогресс первичного раунда в процентах (0..100).
+   * Может отсутствовать для некоторых релизов/выборок.
+   */
+  progressPercent?: number | null;
   status: ReleaseRowStatus;
   trend: ReleaseRowTrend;
   sparkline: number[];
   payoutBand: { lo: string; hi: string; t: number };
+
+  /** Сумма привлечённых средств в USDT. */
+  raisedUsdt?: number | null;
+  /** Количество держателей. */
+  holdersCount?: number | null;
+
+  secondaryListingsCount?: number | null;
+  secondaryVolumeUsdt?: string;
+  liquidityPercent?: number | null;
+  lastTradePrice?: string | null;
+  updatedAt?: string;
 };
 
 export type ReleaseAnalyticsSortKey = "yield" | "payouts" | "units";
 
 export type ReleaseAnalyticsChipPreset = "all" | "top" | "stable" | "growth";
-
-export type ReleaseAnalyticsSectionTab = "analytics" | "ratings";

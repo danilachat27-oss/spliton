@@ -3,9 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { Dialog } from "@base-ui/react/dialog";
-import { CheckCircle2, Download, XCircle } from "lucide-react";
-import { jsPDF } from "jspdf";
+import { CheckCircle2, Download, XCircle } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +20,15 @@ export type BuyUnitsPaymentReceipt = {
   paidAtIso: string;
   transactionId: string;
   status: "approved" | "declined";
+  orderId?: string;
+  useServerReceipt?: boolean;
 };
 
 type BuyUnitsPaymentResultModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt: BuyUnitsPaymentReceipt | null;
+  onDownloadServerReceipt?: (orderId: string) => Promise<void>;
 };
 
 function formatMoney(n: number) {
@@ -45,7 +48,8 @@ function SummaryRow({ label, value }: { label: string; value: React.ReactNode })
   );
 }
 
-function downloadReceiptPdf(receipt: BuyUnitsPaymentReceipt) {
+async function downloadReceiptPdf(receipt: BuyUnitsPaymentReceipt) {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -71,7 +75,7 @@ function downloadReceiptPdf(receipt: BuyUnitsPaymentReceipt) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
   doc.setTextColor(24, 24, 27);
-  doc.text("RevShare payment receipt", margin + 80, margin + 34);
+  doc.text("Spliton purchase receipt", margin + 80, margin + 34);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(82, 82, 91);
@@ -157,15 +161,22 @@ function downloadReceiptPdf(receipt: BuyUnitsPaymentReceipt) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   doc.text(
-    "This receipt confirms processing status for a revenue share UNT purchase on RevShare platform.",
+    "This receipt confirms processing status for a revenue share UNT purchase on Spliton.",
     margin,
     pageHeight - 34,
   );
 
-  doc.save(`revshare-receipt-${receipt.releaseId}-${receipt.transactionId}.pdf`);
+  doc.save(`spliton-receipt-${receipt.releaseId}-${receipt.transactionId}.pdf`);
 }
 
-export function BuyUnitsPaymentResultModal({ open, onOpenChange, receipt }: BuyUnitsPaymentResultModalProps) {
+export function BuyUnitsPaymentResultModal({
+  open,
+  onOpenChange,
+  receipt,
+  onDownloadServerReceipt,
+}: BuyUnitsPaymentResultModalProps) {
+  const { t } = useI18n();
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
   if (!receipt) return null;
 
   const isApproved = receipt.status === "approved";
@@ -196,27 +207,34 @@ export function BuyUnitsPaymentResultModal({ open, onOpenChange, receipt }: BuyU
             )}
             <div className="min-w-0">
               <Dialog.Title className="text-[18px] font-semibold tracking-tight text-zinc-950">
-                {isApproved ? "Оплата подтверждена" : "Оплата отклонена"}
+                {isApproved ? t("catalog.buy.receipt.approvedTitle") : t("catalog.buy.receipt.declinedTitle")}
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-[13px] leading-relaxed text-zinc-600">
                 {isApproved
-                  ? "Покупка UNT успешно создана. Ниже доступен полный чек операции."
-                  : "Платеж не прошел. Проверьте баланс/лимиты и попробуйте снова."}
+                  ? t("catalog.buy.receipt.approvedBody")
+                  : t("catalog.buy.receipt.declinedBody")}
               </Dialog.Description>
             </div>
           </div>
 
           <div className="mt-5 rounded-2xl bg-zinc-50 px-4 py-3.5">
-            <SummaryRow label="Релиз" value={`${receipt.releaseTitle} · ${receipt.symbol}`} />
-            <SummaryRow label="Артист" value={receipt.artist} />
-            <SummaryRow label="ID релиза" value={receipt.releaseId} />
-            <SummaryRow label="Количество UNT" value={receipt.units} />
-            <SummaryRow label="Цена за UNT" value={formatMoney(receipt.unitPriceUsdt)} />
-            <SummaryRow label="Сумма" value={formatMoney(receipt.totalUsdt)} />
-            <SummaryRow label="Статус" value={isApproved ? "APPROVED" : "DECLINED"} />
-            <SummaryRow label="Дата" value={formatDate(receipt.paidAtIso)} />
+            <SummaryRow label={t("catalog.buy.receipt.release")} value={`${receipt.releaseTitle} · ${receipt.symbol}`} />
+            <SummaryRow label={t("catalog.buy.receipt.artist")} value={receipt.artist} />
+            <SummaryRow label={t("catalog.buy.receipt.releaseId")} value={receipt.releaseId} />
+            <SummaryRow label={t("catalog.buy.receipt.units")} value={receipt.units} />
+            <SummaryRow label={t("catalog.buy.receipt.unitPrice")} value={formatMoney(receipt.unitPriceUsdt)} />
+            <SummaryRow label={t("catalog.buy.receipt.total")} value={formatMoney(receipt.totalUsdt)} />
+            <SummaryRow
+              label={t("catalog.buy.receipt.status")}
+              value={isApproved ? t("catalog.buy.receipt.statusApproved") : t("catalog.buy.receipt.statusDeclined")}
+            />
+            <SummaryRow label={t("catalog.buy.receipt.date")} value={formatDate(receipt.paidAtIso)} />
             <SummaryRow label="Transaction ID" value={receipt.transactionId} />
           </div>
+
+          {downloadError ? (
+            <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-800">{downloadError}</p>
+          ) : null}
 
           <div className="mt-5 flex flex-wrap justify-end gap-2">
             {isApproved ? (
@@ -224,23 +242,38 @@ export function BuyUnitsPaymentResultModal({ open, onOpenChange, receipt }: BuyU
                 href={ROUTES.dashboardPositions}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-900 px-4 text-[13px] font-semibold text-white transition hover:bg-zinc-800"
               >
-                К позиции
+                {t("catalog.buy.receipt.toPosition")}
               </Link>
             ) : null}
             <button
               type="button"
-              onClick={() => downloadReceiptPdf(receipt)}
+              onClick={async () => {
+                setDownloadError(null);
+                if (receipt.useServerReceipt && receipt.orderId && onDownloadServerReceipt) {
+                  try {
+                    await onDownloadServerReceipt(receipt.orderId);
+                  } catch (e) {
+                    setDownloadError(t("catalog.buy.receipt.downloadFailed"));
+                  }
+                  return;
+                }
+                try {
+                  await downloadReceiptPdf(receipt);
+                } catch {
+                  setDownloadError(t("catalog.buy.receipt.downloadFailed"));
+                }
+              }}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 text-[13px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
             >
               <Download className="size-4" />
-              Скачать PDF чек
+              {t("catalog.buy.receipt.downloadPdf")}
             </button>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
               className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 px-4 text-[13px] font-semibold text-zinc-700 transition hover:bg-zinc-50"
             >
-              Закрыть
+              {t("catalog.buy.receipt.close")}
             </button>
           </div>
         </Dialog.Popup>

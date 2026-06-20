@@ -4,6 +4,7 @@ export type RegisterEmailVerificationResponse = {
 
 export type EmailVerifyResponse = {
   verified: true;
+  userId?: string;
 };
 
 export type EmailResendResponse = {

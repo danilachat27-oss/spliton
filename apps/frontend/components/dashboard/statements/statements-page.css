@@ -1,0 +1,90 @@
+/* Выписки — анимация формирования */
+
+.stmt-gen-step {
+  transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.stmt-gen-step--active {
+  animation: stmt-step-pulse 1.4s ease-in-out infinite;
+}
+
+.stmt-gen-step--done {
+  animation: none;
+}
+
+@keyframes stmt-step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  50% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.35); }
+}
+
+.stmt-gen-progress {
+  animation: stmt-progress 2.4s ease-in-out infinite;
+}
+
+@keyframes stmt-progress {
+  0% { width: 18%; }
+  45% { width: 62%; }
+  100% { width: 92%; }
+}
+
+.stmt-gen-check-circle {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: stmt-check-circle 0.55s ease forwards;
+}
+
+.stmt-gen-check-path {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: stmt-check-path 0.45s ease 0.35s forwards;
+}
+
+@keyframes stmt-check-circle {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes stmt-check-path {
+  to { stroke-dashoffset: 0; }
+}
+
+.stmt-preview-row {
+  animation: stmt-row-in 0.4s ease both;
+}
+
+@keyframes stmt-row-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ——— Предпросмотр справки (бланк) ——— */
+.stmt-doc {
+  background-image:
+    linear-gradient(180deg, rgb(255 255 255) 0%, rgb(252 252 253) 100%);
+}
+
+.stmt-doc--generating .stmt-doc-stamp {
+  animation: stmt-doc-stamp-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes stmt-doc-stamp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.stmt-doc--ready .stmt-doc-accent {
+  box-shadow: 0 4px 20px -6px rgb(183 245 0 / 0.45);
+}
+
+.stmt-doc-summary tr {
+  transition: background-color 0.2s ease;
+}
+
+.stmt-doc-download {
+  animation: stmt-row-in 0.4s ease both;
+}
+
+@media (max-width: 639px) {
+  .stmt-doc-meta {
+    grid-template-columns: 1fr;
+  }
+}

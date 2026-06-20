@@ -1,10 +1,14 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { Info } from "@/lib/lucide";
 import type { MouseEvent } from "react";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { formatNumber } from "@/lib/i18n/formatters";
+import { widgetMonthLabels } from "@/lib/i18n/widget-month-labels";
+import { tf } from "@/lib/i18n/widget-messages";
 
 type RangeId = "30d" | "90d" | "1y" | "all";
 
@@ -14,11 +18,11 @@ type MonthPoint = {
   navUSDT: number;
 };
 
-const RANGES: { id: RangeId; label: string }[] = [
-  { id: "30d", label: "30 дн." },
-  { id: "90d", label: "90 дн." },
-  { id: "1y", label: "1 г." },
-  { id: "all", label: "Всё" },
+const RANGE_CONFIG: { id: RangeId; key: string }[] = [
+  { id: "30d", key: "chart.range30d" },
+  { id: "90d", key: "chart.range90d" },
+  { id: "1y", key: "chart.range1y" },
+  { id: "all", key: "assets.overview.rangeAll" },
 ];
 
 const VIEW_W = 960;
@@ -30,10 +34,9 @@ function hash01(seed: number, i: number) {
   return x - Math.floor(x);
 }
 
-function buildSeries(range: RangeId): MonthPoint[] {
+function buildSeries(range: RangeId, months: string[]): MonthPoint[] {
   const n = range === "30d" ? 14 : range === "90d" ? 18 : range === "1y" ? 16 : 28;
   const seed = range === "30d" ? 3 : range === "90d" ? 7 : range === "1y" ? 11 : 19;
-  const months = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
   const out: MonthPoint[] = [];
   let nav = 5800 + hash01(seed, 0) * 400;
   for (let i = 0; i < n; i++) {
@@ -49,12 +52,11 @@ function buildSeries(range: RangeId): MonthPoint[] {
   return out;
 }
 
-function fmtKpiSigned(n: number) {
-  const abs = Math.abs(n);
-  const fmt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(abs);
-  if (n > 0) return `+${fmt}`;
-  if (n < 0) return `−${fmt}`;
-  return fmt;
+function fmtKpiSigned(n: number, locale: Parameters<typeof formatNumber>[1]) {
+  const abs = formatNumber(Math.abs(n), locale);
+  if (n > 0) return `+${abs}`;
+  if (n < 0) return `−${abs}`;
+  return abs;
 }
 
 function fmtNavAxis(n: number) {
@@ -68,20 +70,22 @@ function fmtNetAxis(n: number) {
 }
 
 export function OverviewEtfFlowsChart() {
+  const { t, locale } = useI18n();
+  const months = useMemo(() => widgetMonthLabels(t), [t]);
   const chartRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<RangeId>("all");
   const [mode, setMode] = useState<"portfolio" | "usdt">("portfolio");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   const series = useMemo(() => {
-    const base = buildSeries(range);
+    const base = buildSeries(range, months);
     const m = mode === "usdt" ? 1 : 1.08;
     return base.map((p) => ({
       ...p,
       netUSDT: Math.round(p.netUSDT * m),
       navUSDT: p.navUSDT * (mode === "usdt" ? 1 : 1.02),
     }));
-  }, [range, mode]);
+  }, [range, mode, months]);
 
   const innerW = VIEW_W - PAD.left - PAD.right;
   const innerH = VIEW_H - PAD.top - PAD.bottom;
@@ -185,38 +189,38 @@ export function OverviewEtfFlowsChart() {
       <div className="flex flex-col gap-4 border-b border-neutral-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Holdings · Chart</p>
-            <span className="text-neutral-400" title="Мок: оценка портфеля и чистый поток по точкам. Под API подставятся реальные ряды.">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">{t("assets.overview.flowsEyebrow")}</p>
+            <span className="text-neutral-400" title={t("assets.overview.flowsMockHint")}>
               <Info className="size-3.5" strokeWidth={2} aria-hidden />
             </span>
           </div>
-          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">Динамика портфеля</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">{t("assets.overview.flowsTitle")}</h3>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label="Режим">
+          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label={t("assets.overview.flowsModeAria")}>
             {(
               [
-                { id: "portfolio" as const, label: "Портфель" },
+                { id: "portfolio" as const, label: t("assets.overview.flowsModePortfolio") },
                 { id: "usdt" as const, label: "USDT" },
               ] as const
-            ).map((t) => (
+            ).map((tab) => (
               <button
-                key={t.id}
+                key={tab.id}
                 type="button"
                 role="tab"
-                aria-selected={mode === t.id}
-                onClick={() => setMode(t.id)}
+                aria-selected={mode === tab.id}
+                onClick={() => setMode(tab.id)}
                 className={cn(
                   "rounded-lg px-3 py-2 text-[11px] font-semibold transition-colors",
-                  mode === t.id ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
+                  mode === tab.id ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
                 )}
               >
-                {t.label}
+                {tab.label}
               </button>
             ))}
           </div>
-          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label="Период">
-            {RANGES.map((r) => (
+          <div className="flex rounded-xl bg-neutral-100 p-1" role="tablist" aria-label={t("assets.overview.flowsPeriodAria")}>
+            {RANGE_CONFIG.map((r) => (
               <button
                 key={r.id}
                 type="button"
@@ -228,7 +232,7 @@ export function OverviewEtfFlowsChart() {
                   range === r.id ? "bg-white text-neutral-900 ring-1 ring-neutral-200/80" : "text-neutral-500 hover:text-neutral-800",
                 )}
               >
-                {r.label}
+                {t(r.key)}
               </button>
             ))}
           </div>
@@ -237,12 +241,12 @@ export function OverviewEtfFlowsChart() {
 
       <div className="grid gap-3 border-b border-neutral-100 px-4 py-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 sm:px-6">
         {[
-          { label: "Чистый поток (посл. точка)", value: `${fmtKpiSigned(dailyMock)} USDT`, tone: dailyMock >= 0 ? "text-blue-700" : "text-neutral-600" },
-          { label: "Чистый за окно", value: `${fmtKpiSigned(net30)} USDT`, tone: net30 >= 0 ? "text-blue-700" : "text-neutral-600" },
-          { label: "Накопительно (мок)", value: `${fmtKpiSigned(sumNet)} USDT`, tone: "text-neutral-900" },
-          { label: "Оборот (мок)", value: `${new Intl.NumberFormat("ru-RU").format(volumeMock)} USDT`, tone: "text-neutral-800" },
-          { label: "Оценка TVL", value: `${new Intl.NumberFormat("ru-RU").format(tvl)} USDT`, tone: "text-neutral-900" },
-          { label: "Доля к бенчмарку", value: `${mcapPct}%`, tone: "text-neutral-500" },
+          { label: t("assets.overview.kpiNetLastPoint"), value: `${fmtKpiSigned(dailyMock, locale)} USDT`, tone: dailyMock >= 0 ? "text-blue-700" : "text-neutral-600" },
+          { label: t("assets.overview.kpiNetWindow"), value: `${fmtKpiSigned(net30, locale)} USDT`, tone: net30 >= 0 ? "text-blue-700" : "text-neutral-600" },
+          { label: t("assets.overview.kpiCumulativeMock"), value: `${fmtKpiSigned(sumNet, locale)} USDT`, tone: "text-neutral-900" },
+          { label: t("assets.overview.kpiVolumeMock"), value: `${formatNumber(volumeMock, locale)} USDT`, tone: "text-neutral-800" },
+          { label: t("assets.overview.kpiTvl"), value: `${formatNumber(tvl, locale)} USDT`, tone: "text-neutral-900" },
+          { label: t("assets.overview.kpiBenchmarkShare"), value: `${mcapPct}%`, tone: "text-neutral-500" },
         ].map((k) => (
           <div key={k.label} className="min-w-0 rounded-2xl bg-neutral-50/90 px-3 py-2.5 ring-1 ring-neutral-100 sm:px-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{k.label}</p>
@@ -262,7 +266,7 @@ export function OverviewEtfFlowsChart() {
           className="block h-[260px] w-full max-w-full sm:h-[300px]"
           preserveAspectRatio="xMidYMid meet"
           role="img"
-          aria-label="График оценки портфеля и чистого потока"
+          aria-label={t("assets.overview.flowsChartAria")}
         >
           <defs>
             <linearGradient id="overviewNavAreaFill" x1="0" y1="0" x2="0" y2="1">
@@ -369,7 +373,7 @@ export function OverviewEtfFlowsChart() {
             fontWeight={600}
             className="uppercase tracking-wide"
           >
-            TVL
+            {t("assets.overview.axisTvl")}
           </text>
           <text
             x={VIEW_W - PAD.right + 8}
@@ -380,7 +384,7 @@ export function OverviewEtfFlowsChart() {
             fontWeight={600}
             className="uppercase tracking-wide"
           >
-            Поток
+            {t("assets.overview.axisFlow")}
           </text>
 
           {Array.from({ length: netTicks }, (_, i) => {
@@ -417,15 +421,15 @@ export function OverviewEtfFlowsChart() {
 
         {hoverIdx !== null && series[hoverIdx] && (
           <div className="pointer-events-none absolute left-3 top-10 z-10 max-w-[240px] rounded-xl border border-neutral-200 bg-white/95 px-3 py-2.5 text-xs shadow-lg ring-1 ring-neutral-100 backdrop-blur-sm">
-            <p className="font-semibold text-neutral-900">{series[hoverIdx]!.label || `Точка ${hoverIdx + 1}`}</p>
+            <p className="font-semibold text-neutral-900">{series[hoverIdx]!.label || tf(t("metrics.tooltipPoint"), { n: String(hoverIdx + 1) })}</p>
             <p className="mt-1 font-mono text-neutral-700">
-              TVL:{" "}
+              {t("assets.overview.axisTvl")}:{" "}
               <span className="font-semibold text-neutral-900">
-                {new Intl.NumberFormat("ru-RU").format(Math.round(series[hoverIdx]!.navUSDT))} USDT
+                {formatNumber(Math.round(series[hoverIdx]!.navUSDT), locale)} USDT
               </span>
             </p>
             <p className="font-mono text-neutral-600">
-              Поток: {fmtKpiSigned(series[hoverIdx]!.netUSDT)} USDT
+              {t("assets.overview.axisFlow")}: {fmtKpiSigned(series[hoverIdx]!.netUSDT, locale)} USDT
             </p>
           </div>
         )}
@@ -434,11 +438,11 @@ export function OverviewEtfFlowsChart() {
       <div className="flex flex-wrap items-center justify-center gap-8 border-t border-neutral-100 px-4 py-3 text-[11px] text-neutral-500">
         <span className="inline-flex items-center gap-2">
           <span className="inline-block h-2.5 w-6 rounded-sm bg-linear-to-r from-blue-600 to-blue-400" aria-hidden />
-          Оценка портфеля (линия и заливка)
+          {t("assets.overview.legendNav")}
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="inline-block h-px w-7 border-t-2 border-dashed border-slate-400" aria-hidden />
-          Чистый поток (вторая шкала)
+          {t("assets.overview.legendNet")}
         </span>
       </div>
     </div>

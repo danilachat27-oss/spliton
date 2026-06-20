@@ -104,7 +104,7 @@ export class EmailVerificationService {
       safeMeta: { userId: row.userId, email: row.user.email },
     });
 
-    return { verified: true };
+    return { verified: true, userId: row.userId };
   }
 
   private async issueTokenAndSend(

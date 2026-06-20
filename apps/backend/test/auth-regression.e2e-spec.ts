@@ -1,6 +1,8 @@
 import request from 'supertest';
+import { e2eRegisterPayload } from './helpers/register-e2e-user';
 import { cleanupAuthRegressionUsers } from './helpers/cleanup-auth-regression-users';
 import { createE2eApp, E2eApp } from './helpers/create-e2e-app';
+import { e2eEmail } from './helpers/e2e-unique';
 
 const SHOULD_RETURN_REFRESH_IN_BODY =
   process.env.AUTH_RETURN_REFRESH_TOKEN_IN_BODY !== 'false';
@@ -8,7 +10,7 @@ const REFRESH_COOKIE_NAME =
   process.env.AUTH_REFRESH_COOKIE_NAME ?? 'spliton_refresh_token';
 
 function regressionEmail(): string {
-  return `test-auth-regression-${Date.now()}@example.com`;
+  return e2eEmail('test-auth-regression');
 }
 
 function requireToken(token: string | null): string {
@@ -83,7 +85,7 @@ describe('Auth regression (e2e)', () => {
 
     const reg = await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, displayName: 'Regression' })
+      .send(e2eRegisterPayload(email, password, 'Regression'))
       .expect(201);
 
     expect(reg.body).toEqual({ requiresEmailVerification: true });
@@ -94,15 +96,13 @@ describe('Auth regression (e2e)', () => {
       .send({ email, password })
       .expect(403)
       .expect(({ body }) => {
-        expect(body.message).toMatchObject({
-          code: 'EMAIL_NOT_VERIFIED',
-          message: 'Email verification required',
-        });
+        expect(body.code).toBe('EMAIL_NOT_VERIFIED');
+        expect(body.message).toBe('Email verification required');
       });
 
     await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ email, password })
+      .send(e2eRegisterPayload(email, password))
       .expect(409);
 
     await request(app!.getHttpServer())
@@ -115,7 +115,7 @@ describe('Auth regression (e2e)', () => {
       .post('/auth/email/verify')
       .send({ token })
       .expect(201)
-      .expect(({ body }) => expect(body).toEqual({ verified: true }));
+      .expect(({ body }) => expect(body).toMatchObject({ verified: true }));
 
     const login = await request(app!.getHttpServer())
       .post('/auth/login')
@@ -195,7 +195,7 @@ describe('Auth regression (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password })
+      .send(e2eRegisterPayload(email, password))
       .expect(201);
 
     const oldToken = requireToken(app!.fakeEmailService.getLatestToken(email));
@@ -226,7 +226,7 @@ describe('Auth regression (e2e)', () => {
 
     await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ email, password })
+      .send(e2eRegisterPayload(email, password))
       .expect(201);
 
     await request(app!.getHttpServer())
@@ -251,7 +251,7 @@ describe('Auth regression (e2e)', () => {
 
     await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ email, password })
+      .send(e2eRegisterPayload(email, password))
       .expect(201);
     const token = requireToken(app!.fakeEmailService.getLatestToken(email));
     await request(app!.getHttpServer())
@@ -292,7 +292,7 @@ describe('Auth regression (e2e)', () => {
 
     await request(app!.getHttpServer())
       .post('/auth/register')
-      .send({ email, password })
+      .send(e2eRegisterPayload(email, password))
       .expect(201);
     const token = requireToken(app!.fakeEmailService.getLatestToken(email));
     await request(app!.getHttpServer())

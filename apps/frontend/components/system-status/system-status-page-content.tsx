@@ -1,259 +1,360 @@
-"use client";
+﻿"use client";
 
-import { AlertCircle, ArrowRight, CheckCircle2, Clock, LifeBuoy, Wrench } from "lucide-react";
+import * as React from "react";
+import { ArrowRight, LifeBuoy, Search } from "@/lib/lucide";
 import Link from "next/link";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { buttonVariants } from "@/components/ui/button";
 import {
-  getSystemStatusPageData,
+  StatusPill,
+  UptimeBars,
+  getIncidentStateTone,
+  getServiceStatusTone,
+  getUptimeBars,
+} from "@/components/system-status/system-status-indicators";
+import { SystemStatusOverallHero } from "@/components/system-status/system-status-overall-hero";
+import {
   type IncidentRow,
-  type OverallTone,
-  type ServiceHealthStatus,
   type ServiceStatusRow,
+  type SystemStatusPageData,
 } from "@/constants/system-status-mock";
+import { isLiveStatusEnabled } from "@/lib/public-env";
+import { ProductDemoBanner } from "@/components/shared/product-demo-banner";
+import { fetchSystemStatusPageData } from "@/services/system-status.service";
 import { ROUTES } from "@/constants/routes";
+import { tf } from "@/lib/i18n/financial-messages";
+import { getLegendItems, systemStatusLabel } from "@/lib/i18n/system-status-messages";
 import { cn } from "@/lib/utils";
 
-function toneRingClass(tone: OverallTone) {
-  const map: Record<OverallTone, string> = {
-    success: "border-white/25 bg-white/5 text-white",
-    warning: "border-white/25 bg-white/5 text-white",
-    maintenance: "border-white/25 bg-white/5 text-white",
-    danger: "border-white/25 bg-white/5 text-white",
-  };
-  return map[tone];
-}
-
-function serviceBadgeClass(s: ServiceHealthStatus) {
-  const map: Record<ServiceHealthStatus, string> = {
-    operational: "border-white/12 bg-white/8 text-zinc-100",
-    degraded: "border-white/12 bg-white/8 text-zinc-100",
-    delayed: "border-white/12 bg-white/8 text-zinc-100",
-    maintenance: "border-white/12 bg-white/8 text-zinc-100",
-    incident: "border-white/12 bg-white/8 text-zinc-100",
-  };
-  return map[s];
-}
-
-function incidentStateClass(state: IncidentRow["state"]) {
-  const map: Record<IncidentRow["state"], string> = {
-    resolved: "border-white/12 bg-white/8 text-zinc-100",
-    monitoring: "border-white/12 bg-white/8 text-zinc-100",
-    investigating: "border-white/12 bg-white/8 text-zinc-100",
-  };
-  return map[state];
-}
-
-function OverallIcon({ tone }: { tone: OverallTone }) {
-  if (tone === "success") return <CheckCircle2 className="size-9 text-white" aria-hidden />;
-  if (tone === "maintenance") return <Wrench className="size-9 text-white" aria-hidden />;
-  if (tone === "danger") return <AlertCircle className="size-9 text-white" aria-hidden />;
-  return <Clock className="size-9 text-white" aria-hidden />;
-}
-
-export function SystemStatusPageContent() {
-  const data = getSystemStatusPageData();
-  const pulse =
-    data.overall.tone === "danger" || data.overall.tone === "warning" || data.overall.tone === "maintenance";
+function ServiceTableRow({
+  service,
+  maintenanceLabel,
+  locale,
+}: {
+  service: ServiceStatusRow;
+  maintenanceLabel: string | null;
+  locale: ReturnType<typeof useI18n>["locale"];
+}) {
+  const tone = getServiceStatusTone(service.status);
+  const uptime = getUptimeBars(service.id, service.status);
+  const isOk = service.status === "operational";
 
   return (
+    <tr className="border-b border-white/[0.06] last:border-b-0">
+      <td className="py-4 pr-4 align-top sm:py-5">
+        <div className="flex gap-3">
+          <span
+            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-zinc-600"
+            aria-hidden
+          >
+            <span className="size-3.5 rounded-full border border-zinc-600" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-medium text-white">{service.name}</p>
+            <p className="mt-1 max-w-md text-sm leading-relaxed text-zinc-500">{service.note}</p>
+          </div>
+        </div>
+      </td>
+      <td className="py-4 pr-4 align-middle sm:py-5">
+        <StatusPill tone={tone} ok={isOk}>
+          {systemStatusLabel("service", service.status, locale)}
+        </StatusPill>
+      </td>
+      <td className="py-4 pr-4 align-middle sm:py-5">
+        <UptimeBars bars={uptime} />
+      </td>
+      <td className="py-4 align-middle text-sm text-zinc-500 sm:py-5">
+        {maintenanceLabel ?? "—"}
+      </td>
+    </tr>
+  );
+}
+
+function IncidentRowItem({
+  incident,
+  locale,
+}: {
+  incident: IncidentRow;
+  locale: ReturnType<typeof useI18n>["locale"];
+}) {
+  const tone = getIncidentStateTone(incident.state);
+  const isOk = incident.state === "resolved";
+
+  return (
+    <tr className="border-b border-white/[0.06] last:border-b-0">
+      <td className="py-4 pr-4 align-top sm:py-5">
+        <p className="font-medium text-white">{incident.service}</p>
+        <p className="mt-1 text-sm leading-relaxed text-zinc-500">{incident.summary}</p>
+      </td>
+      <td className="py-4 pr-4 align-middle sm:py-5">
+        <StatusPill tone={tone} ok={isOk}>
+          {systemStatusLabel("incident", incident.state, locale)}
+        </StatusPill>
+      </td>
+      <td className="py-4 pr-4 align-middle sm:py-5">
+        <span className="font-mono text-xs text-zinc-500">{incident.date}</span>
+      </td>
+    </tr>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
     <div className="space-y-8 sm:space-y-10">
-      <section className="rounded-3xl bg-[#111111]/96 px-5 py-8 sm:px-8 sm:py-10" aria-labelledby="health-overview">
-        <div className="text-center">
-          <p id="health-overview" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Общий статус
-          </p>
-          <div className="mt-6 flex justify-center">
-            <div
-              className={cn(
-                "animate-revshare-status-breathe relative flex size-36 items-center justify-center rounded-full border-2 sm:size-40",
-                toneRingClass(data.overall.tone),
+      <div className="h-64 animate-pulse bg-zinc-900/40" />
+      <div className="space-y-0 divide-y divide-white/[0.06]">
+        {Array.from({ length: 20 }).map((_, index) => (
+          <div key={index} className="h-16 animate-pulse bg-transparent" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const LIVE_REFRESH_MS = 30_000;
+
+export function SystemStatusPageContent() {
+  const { t, locale } = useI18n();
+  const [data, setData] = React.useState<SystemStatusPageData | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const live = isLiveStatusEnabled();
+
+  const legendItems = React.useMemo(() => getLegendItems(locale), [locale]);
+
+  const load = React.useCallback((options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+    }
+    setError(false);
+    return fetchSystemStatusPageData()
+      .then(setData)
+      .catch(() => setError(true))
+      .finally(() => {
+        if (!options?.silent) {
+          setLoading(false);
+        }
+      });
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  React.useEffect(() => {
+    if (!live) return undefined;
+    const timer = window.setInterval(() => {
+      void load({ silent: true });
+    }, LIVE_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [live, load]);
+
+  if (loading && !data) {
+    return <LoadingSkeleton />;
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-4 px-6 py-10 text-center">
+        <p className="text-sm text-red-200">
+          {live ? t("systemStatus.error.live") : t("systemStatus.error.demo")}
+        </p>
+        <button
+          type="button"
+          className="text-sm font-medium text-zinc-300 underline-offset-2 hover:underline"
+          onClick={() => void load()}
+        >
+          {t("systemStatus.retry")}
+        </button>
+      </div>
+    );
+  }
+
+  const query = search.trim().toLowerCase();
+  const filteredServices = data.services.filter((service) => {
+    if (!query) return true;
+    const statusText = systemStatusLabel("service", service.status, locale).toLowerCase();
+    return (
+      service.name.toLowerCase().includes(query) ||
+      service.note.toLowerCase().includes(query) ||
+      statusText.includes(query)
+    );
+  });
+
+  const maintenanceByService = new Map<string, string>();
+  if (data.maintenance) {
+    for (const name of data.maintenance.affectedServices) {
+      maintenanceByService.set(name, data.maintenance.windowLabel);
+    }
+  }
+
+  return (
+    <div className="space-y-10 sm:space-y-12">
+      {!live ? (
+        <ProductDemoBanner
+          messageKey="systemStatus.demoBanner"
+          className="bg-white/[0.03] px-4 py-3 text-sm leading-relaxed text-zinc-300"
+        />
+      ) : null}
+
+      <SystemStatusOverallHero
+        tone={data.overall.tone}
+        headline={data.overall.headline}
+        subline={data.overall.subline}
+        explanation={data.overall.explanation}
+        lastUpdatedLabel={data.overall.lastUpdatedLabel}
+        flyLabels={data.services.map((service) => service.name)}
+      />
+
+      <section aria-labelledby="services-title">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="services-title" className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
+              {t("systemStatus.services.title")}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {live
+                ? tf(t("systemStatus.services.liveMeta"), { count: String(data.services.length) })
+                : t("systemStatus.services.demoMeta")}
+            </p>
+          </div>
+          <label className="relative block w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" aria-hidden />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t("systemStatus.services.searchPlaceholder")}
+              className="h-10 w-full rounded-lg bg-zinc-900/50 pl-9 pr-4 text-sm text-white outline-none placeholder:text-zinc-600 focus:bg-zinc-900/70"
+            />
+          </label>
+        </div>
+
+        <div className="mt-6 overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse">
+            <thead>
+              <tr className="border-b border-white/[0.08] text-left text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500">
+                <th className="pb-3 pr-4 font-medium">{t("systemStatus.services.col.service")}</th>
+                <th className="pb-3 pr-4 font-medium">{t("systemStatus.services.col.status")}</th>
+                <th className="pb-3 pr-4 font-medium">{t("systemStatus.services.col.uptime")}</th>
+                <th className="pb-3 font-medium">{t("systemStatus.services.col.maintenance")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredServices.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-10 text-center text-sm text-zinc-500">
+                    {tf(t("systemStatus.services.emptySearch"), { query: search.trim() })}
+                  </td>
+                </tr>
+              ) : (
+                filteredServices.map((service) => (
+                  <ServiceTableRow
+                    key={service.id}
+                    service={service}
+                    locale={locale}
+                    maintenanceLabel={
+                      service.status === "maintenance"
+                        ? (maintenanceByService.get(service.name) ?? t("systemStatus.services.maintenanceScheduled"))
+                        : (maintenanceByService.get(service.name) ?? null)
+                    }
+                  />
+                ))
               )}
-            >
-              <span className="pointer-events-none absolute inset-2 rounded-full border border-white/10" aria-hidden />
-              <span
-                className="animate-revshare-status-orbit pointer-events-none absolute inset-0"
-                aria-hidden
-              >
-                <span
-                  className={cn(
-                    "absolute left-1/2 top-1.5 inline-flex size-3.5 -translate-x-1/2 rounded-full shadow-[0_0_18px_rgba(255,255,255,0.35)]",
-                    data.overall.tone === "success" && "bg-emerald-400",
-                    data.overall.tone === "warning" && "bg-amber-400",
-                    data.overall.tone === "maintenance" && "bg-sky-400",
-                    data.overall.tone === "danger" && "bg-rose-400",
-                  )}
-                />
-              </span>
-              <span
-                className={cn(
-                  "absolute inline-flex size-4 rounded-full opacity-55",
-                  pulse && "animate-ping bg-current",
-                  data.overall.tone === "success" && "text-emerald-500",
-                  data.overall.tone === "warning" && "text-amber-500",
-                  data.overall.tone === "maintenance" && "text-sky-500",
-                  data.overall.tone === "danger" && "text-rose-500",
-                )}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  "absolute left-1/2 top-2 inline-flex size-2.5 -translate-x-1/2 rounded-full",
-                  data.overall.tone === "success" && "bg-emerald-500",
-                  data.overall.tone === "warning" && "bg-amber-500",
-                  data.overall.tone === "maintenance" && "bg-sky-500",
-                  data.overall.tone === "danger" && "bg-rose-500",
-                )}
-              />
-              <OverallIcon tone={data.overall.tone} />
-            </div>
-          </div>
-          <h2 className="mt-6 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{data.overall.headline}</h2>
-          <p className="mx-auto mt-3 max-w-3xl text-sm leading-relaxed text-zinc-300">{data.overall.subline}</p>
-          <p className="mx-auto mt-2 max-w-3xl text-xs leading-relaxed text-zinc-500">{data.overall.explanation}</p>
-          <div className="mx-auto mt-6 w-fit rounded-xl bg-zinc-900/80 px-4 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Обновлено</p>
-            <p className="mt-1 font-mono text-xs text-zinc-300">{data.overall.lastUpdatedLabel}</p>
-          </div>
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <section aria-labelledby="services-title">
-        <h2 id="services-title" className="text-lg font-semibold tracking-tight text-white sm:text-xl">
-          Сервисы
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          Состояние продуктовых потоков — только пользовательский контур.
-        </p>
-        <ul className="mt-5 space-y-2" role="list">
-          {data.services.map((s: ServiceStatusRow) => (
-            <li key={s.id} className="rounded-2xl bg-zinc-900/70 px-4 py-4 transition-colors hover:bg-zinc-900 sm:px-5 sm:py-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-medium text-white">{s.name}</h3>
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
-                        serviceBadgeClass(s.status),
-                      )}
-                    >
-                      {s.statusLabel}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-zinc-300">{s.note}</p>
-                </div>
-                <p className="shrink-0 font-mono text-[11px] text-zinc-500 sm:text-right">{s.lastUpdatedLabel}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <section aria-labelledby="maintenance-title">
-        <h2 id="maintenance-title" className="text-lg font-semibold tracking-tight text-white sm:text-xl">
-          Плановые работы
+        <h2 id="maintenance-title" className="text-lg font-semibold tracking-tight text-white">
+          {t("systemStatus.maintenance.title")}
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">Ближайшие окна и влияние на операции.</p>
+        <p className="mt-1 text-sm text-zinc-500">{t("systemStatus.maintenance.subtitle")}</p>
         {data.maintenance ? (
-          <div className="mt-5 rounded-3xl bg-zinc-900/75 px-5 py-6 sm:px-7 sm:py-7">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">План</p>
-            <h3 className="mt-2 text-lg font-semibold text-white">{data.maintenance.title}</h3>
-            <p className="mt-1 font-mono text-sm text-zinc-300">{data.maintenance.windowLabel}</p>
-            <p className="mt-4 text-sm text-zinc-300">{data.maintenance.impactNote}</p>
-            <div className="mt-4 border-t border-white/10 pt-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Затронутые сервисы</p>
-              <ul className="mt-2 list-inside list-disc text-sm text-zinc-300">
-                {data.maintenance.affectedServices.map((a) => (
-                  <li key={a}>{a}</li>
-                ))}
-              </ul>
+          <div className="mt-4 border-b border-white/[0.06] pb-6">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
+              <StatusPill tone={getServiceStatusTone("maintenance")} ok={false} className="shrink-0">
+                {t("systemStatus.maintenance.badge")}
+              </StatusPill>
+              <h3 className="text-base font-medium text-white">{data.maintenance.title}</h3>
             </div>
-          </div>
-        ) : (
-          <div className="mt-5 rounded-3xl bg-zinc-900/70 px-6 py-12 text-center">
-            <p className="text-sm font-medium text-white">Запланированных работ нет</p>
-            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-zinc-400">
-              Когда появится окно профилактики, здесь будут дата, сервисы и ожидаемое влияние на пополнения, выводы и торги.
+            <p className="mt-2 font-mono text-sm text-zinc-400">{data.maintenance.windowLabel}</p>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-500">{data.maintenance.impactNote}</p>
+            <p className="mt-4 text-xs text-zinc-600">
+              {tf(t("systemStatus.maintenance.affected"), {
+                services: data.maintenance.affectedServices.join(" · "),
+              })}
             </p>
           </div>
+        ) : (
+          <p className="mt-4 border-b border-white/[0.06] pb-6 text-sm text-zinc-500">
+            {t("systemStatus.maintenance.none")}
+          </p>
         )}
       </section>
 
       <section aria-labelledby="incidents-title">
-        <h2 id="incidents-title" className="text-lg font-semibold tracking-tight text-white sm:text-xl">
-          Недавние события
+        <h2 id="incidents-title" className="text-lg font-semibold tracking-tight text-white">
+          {t("systemStatus.incidents.title")}
         </h2>
-        <p className="mt-1 text-sm text-zinc-400">Инциденты и закрытые кейсы для прозрачности.</p>
-        <div className="mt-5 overflow-hidden rounded-2xl bg-zinc-900/70">
-          <ul role="list">
-            {data.incidents.map((inc: IncidentRow, idx: number) => (
-              <li
-                key={inc.id}
-                className={cn(
-                  "border-t border-white/8 px-4 py-4 first:border-t-0 sm:px-5",
-                  idx === 0 && "bg-white/3",
-                )}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-zinc-500">{inc.date}</span>
-                  <span className="text-zinc-500">·</span>
-                  <span className="text-sm font-medium text-white">{inc.service}</span>
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                      incidentStateClass(inc.state),
-                    )}
-                  >
-                    {inc.stateLabel}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-zinc-300">{inc.summary}</p>
-              </li>
-            ))}
-          </ul>
+        <p className="mt-1 text-sm text-zinc-500">{t("systemStatus.incidents.subtitle")}</p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[520px] border-collapse">
+            <thead>
+              <tr className="border-b border-white/[0.08] text-left text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-500">
+                <th className="pb-3 pr-4 font-medium">{t("systemStatus.incidents.col.event")}</th>
+                <th className="pb-3 pr-4 font-medium">{t("systemStatus.incidents.col.status")}</th>
+                <th className="pb-3 font-medium">{t("systemStatus.incidents.col.date")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.incidents.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-8 text-center text-sm text-zinc-500">
+                    {live ? t("systemStatus.incidents.emptyLive") : t("systemStatus.incidents.emptyDemo")}
+                  </td>
+                </tr>
+              ) : (
+                data.incidents.map((incident) => (
+                  <IncidentRowItem key={incident.id} incident={incident} locale={locale} />
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 
-      <section className="rounded-3xl bg-zinc-900/70 px-5 py-6 sm:px-7" aria-labelledby="legend-title">
+      <section aria-labelledby="legend-title">
         <h2 id="legend-title" className="text-sm font-semibold text-white">
-          Как читать статусы
+          {t("systemStatus.legend.title")}
         </h2>
-        <ul className="mt-4 space-y-3 text-xs leading-relaxed text-zinc-300 sm:text-sm">
-          <li>
-            <span className="font-medium text-white">Работает штатно</span> — задержки в пределах SLA, операции без
-            ограничений.
-          </li>
-          <li>
-            <span className="font-medium text-white">Пониженная производительность</span> — сервис доступен, часть
-            действий дольше обычного.
-          </li>
-          <li>
-            <span className="font-medium text-white">Задержки</span> — очередь длиннее нормы; средства не теряются,
-            статус виден в форме.
-          </li>
-          <li>
-            <span className="font-medium text-white">Техработы</span> — запланированное окно, часть операций может
-            быть недоступна.
-          </li>
-          <li>
-            <span className="font-medium text-white">Инцидент</span> — расследование; следите за обновлениями здесь и в
-            кабинете.
-          </li>
+        <ul className="mt-4 divide-y divide-white/[0.06]">
+          {legendItems.map((item) => {
+            const tone = getServiceStatusTone(item.status);
+            return (
+              <li key={item.status} className="flex gap-3 py-3 text-sm leading-relaxed text-zinc-500 first:pt-0">
+                <StatusPill tone={tone} ok={item.status === "operational"} className="shrink-0">
+                  {item.title}
+                </StatusPill>
+                <span className="min-w-0 pt-0.5">{item.description}</span>
+              </li>
+            );
+          })}
         </ul>
       </section>
 
-      <section className="rounded-3xl bg-[#111111]/96 px-5 py-8 sm:px-8">
+      <section className="border-t border-white/[0.06] pt-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-4">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-zinc-100">
+            <div className="flex size-10 shrink-0 items-center justify-center text-zinc-400">
               <LifeBuoy className="size-5" aria-hidden />
             </div>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-white">Нужна помощь?</h2>
-              <p className="mt-1 max-w-xl text-sm text-zinc-400">
-                Если операция длится дольше, чем в интерфейсе, откройте поддержку или раздел с тарифами.
-              </p>
+              <h2 className="text-lg font-semibold tracking-tight text-white">{t("systemStatus.help.title")}</h2>
+              <p className="mt-1 max-w-xl text-sm text-zinc-500">{t("systemStatus.help.body")}</p>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -264,17 +365,8 @@ export function SystemStatusPageContent() {
                 "inline-flex h-10 border-0 bg-white px-6 text-sm font-semibold text-neutral-950 hover:bg-zinc-200",
               )}
             >
-              Центр поддержки
+              {t("systemStatus.help.cta")}
               <ArrowRight className="ml-1.5 size-4" aria-hidden />
-            </Link>
-            <Link
-              href={ROUTES.fees}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "inline-flex h-10 border-white/15 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
-              )}
-            >
-              Комиссии и условия
             </Link>
           </div>
         </div>

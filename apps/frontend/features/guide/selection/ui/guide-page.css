@@ -1,0 +1,124 @@
+/* Guide /selection — page shell & mobile nav */
+
+.guide-page {
+  --guide-header-offset: 3rem;
+  --guide-mobile-nav-h: 2.75rem;
+}
+
+@media (min-width: 640px) {
+  .guide-page {
+    --guide-header-offset: 3.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .guide-page {
+    --guide-header-offset: 4rem;
+    --guide-mobile-nav-h: 0px;
+  }
+}
+
+.guide-page [data-guide-section] {
+  scroll-margin-top: calc(var(--guide-header-offset) + var(--guide-mobile-nav-h) + 0.75rem);
+}
+
+.guide-mobile-nav {
+  position: sticky;
+  top: var(--guide-header-offset);
+  z-index: 30;
+  margin-inline: -1rem;
+  border-bottom: 1px solid rgb(255 255 255 / 0.06);
+  background: rgb(0 0 0 / 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@media (min-width: 640px) {
+  .guide-mobile-nav {
+    margin-inline: -1.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .guide-mobile-nav {
+    display: none;
+  }
+}
+
+.guide-mobile-nav-track {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 0.5rem 1rem 0.65rem;
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(0 0 0) 1rem,
+    rgb(0 0 0) calc(100% - 1rem),
+    transparent
+  );
+}
+
+.guide-mobile-nav-track::-webkit-scrollbar {
+  display: none;
+}
+
+.guide-mobile-nav-item {
+  display: inline-flex;
+  shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.guide-mobile-nav-item.is-active {
+  background: rgb(183 245 0 / 0.12);
+  color: rgb(212 245 112);
+  box-shadow: inset 0 0 0 1px rgb(183 245 0 / 0.22);
+}
+
+.guide-mobile-nav-item:not(.is-active) {
+  background: rgb(255 255 255 / 0.04);
+  color: rgb(113 113 122);
+}
+
+.guide-mobile-nav-item:not(.is-active):hover {
+  background: rgb(255 255 255 / 0.07);
+  color: rgb(212 212 216);
+}
+
+.guide-mobile-nav-index {
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.guide-panel {
+  border-radius: 0.75rem;
+  background: rgb(17 17 17);
+}
+
+.guide-panel-muted {
+  border-radius: 0.75rem;
+  background: rgb(10 10 10);
+}
+
+.guide-desktop-nav-item.is-active {
+  border-left-color: rgb(183 245 0 / 0.75);
+  background: rgb(183 245 0 / 0.06);
+}
+
+.guide-desktop-nav-item.is-active .guide-desktop-nav-index {
+  color: rgb(196 245 112);
+}

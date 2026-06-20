@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { buildDetailedSeries } from "@/lib/analytics/detailed-series";
 import { buildLinePath } from "@/lib/analytics/chart-path";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ export function MarketTopCardInteractiveChart({
   mode: ChartMode;
   className?: string;
 }) {
+  const { t: tr } = useI18n();
   const uid = React.useId().replace(/:/g, "");
   const glowNeonId = `mtc-neon-${uid}`;
   const glowId = `mtc-core-${uid}`;
@@ -175,7 +177,7 @@ export function MarketTopCardInteractiveChart({
         preserveAspectRatio="xMidYMid meet"
         className="block w-full touch-none select-none"
         role="img"
-        aria-label="Динамика показателя"
+        aria-label={tr("marketOverview.topCard.chartAria")}
         onPointerMove={handleSvgPointer}
         onPointerDown={handleSvgPointer}
         onPointerLeave={handleSvgPointer}

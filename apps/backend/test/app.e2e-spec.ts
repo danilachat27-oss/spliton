@@ -10,10 +10,14 @@ describe('App (e2e)', () => {
   });
 
   it('/health (GET)', () => {
-    return request(app.getHttpServer()).get('/health').expect(200).expect({
-      status: 'ok',
-      service: 'spliton-backend',
-    });
+    return request(app.getHttpServer())
+      .get('/health')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.status).toBe('ok');
+        expect(res.body.service).toBe('spliton-backend');
+        expect(res.body.timestamp).toBeDefined();
+      });
   });
 
   afterEach(async () => {

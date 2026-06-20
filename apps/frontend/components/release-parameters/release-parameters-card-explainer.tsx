@@ -1,91 +1,94 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  BarChart3,
-  CircleDot,
-  Gauge,
-  Layers,
-  Percent,
-  Play,
-  Target,
-} from "lucide-react";
+"use client";
 
-import { RELEASE_PARAMETERS_CARD_ZONES } from "@/constants/release-parameters/page";
+import Image from "next/image";
+import { useState } from "react";
+
+import { useI18n } from "@/components/providers/i18n-provider";
+import { RELEASE_PARAMETERS_CARD_ZONES, RELEASE_PARAMETERS_MOCK_CARD } from "@/constants/release-parameters/page";
+import { cn } from "@/lib/utils";
 
 import { ReleaseSectionShell } from "./ui/release-section-shell";
 
-const ZONE_ICONS: Record<(typeof RELEASE_PARAMETERS_CARD_ZONES)[number]["id"], LucideIcon> = {
-  yield: Percent,
-  available: Layers,
-  history: BarChart3,
-  status: CircleDot,
-  filled: Gauge,
-  raise: Target,
-};
+const COVER_SRC = "/images/hero-journey/1.webp";
 
 export function ReleaseParametersCardExplainer() {
+  const { t } = useI18n();
+  const [activeZone, setActiveZone] = useState(RELEASE_PARAMETERS_CARD_ZONES[0]!.id);
+  const mock = RELEASE_PARAMETERS_MOCK_CARD;
+
   return (
     <ReleaseSectionShell
       id="rp-card"
-      kicker="Каталог"
-      title="Как читать карточку релиза"
-      subtitle="Каждый параметр — отдельная плитка с номером и иконкой: так проще сопоставить список с реальной карточкой в каталоге. Слева — слот под видео-обложку."
+      title={t("catalog.releaseParameters.card.title")}
+      subtitle={t("catalog.releaseParameters.card.subtitle")}
     >
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 lg:items-start">
-        <div className="overflow-hidden rounded-2xl bg-[#2a2a2a]">
-          <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-4 px-4">
-            <div
-              className="flex size-[72px] items-center justify-center rounded-full bg-black/40 text-white/95"
-              aria-hidden
-            >
-              <Play className="ml-1 size-8 fill-current" strokeWidth={0} />
-            </div>
-            <p className="text-center font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-              Видео · позже MP4 / HLS
-            </p>
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-6 lg:items-stretch">
+        <article className="overflow-hidden rounded-2xl bg-[#0c0c0e] font-mono text-[13px] tabular-nums tracking-tight">
+          <div className="relative aspect-[16/10] w-full min-h-[140px] bg-[#070707]">
+            <Image src={COVER_SRC} alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 420px" />
           </div>
-          <p className="bg-black/25 px-4 py-3.5 text-center text-[12px] leading-relaxed text-zinc-500">
-            Место под ролик по карточке релиза. Справа — расшифровка полей в том же порядке, как на экране.
-          </p>
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-3 p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3 border-b border-white/6 pb-2.5">
+              <span className="truncate font-sans text-[11px] font-medium text-zinc-200">
+                {t("catalog.releaseParameters.card.mockStrip")}
+              </span>
+              <span className="shrink-0 font-mono text-[10px] text-zinc-100">{mock.statusBadge}</span>
+            </div>
             <div>
-              <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                Параметры карточки
+              <h3 className="truncate font-sans text-lg font-semibold text-white">{mock.title}</h3>
+              <p className="truncate text-sm text-zinc-500">{mock.artist}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-[12px]">
+              <div className={cn("rounded-lg p-2.5 transition-colors", activeZone === "yield" && "bg-[#B7F500]/8")}>
+                <p className="text-[10px] uppercase tracking-wide text-zinc-500">{t("catalog.releaseParameters.zone.yield.title")}</p>
+                <p className="mt-1 text-xl font-bold text-zinc-100">{mock.yield}</p>
               </div>
-              <p className="mt-1 text-sm text-zinc-500">6 зон · сверху вниз</p>
+              <div className={cn("rounded-lg p-2.5 transition-colors", activeZone === "available" && "bg-[#B7F500]/8")}>
+                <p className="text-[10px] uppercase tracking-wide text-zinc-500">{t("catalog.releaseParameters.zone.available.title")}</p>
+                <p className="mt-1 text-sm font-semibold text-zinc-100">{mock.availableUnits}</p>
+              </div>
+              <div className={cn("rounded-lg p-2.5 transition-colors", activeZone === "filled" && "bg-[#B7F500]/8")}>
+                <p className="text-[10px] uppercase tracking-wide text-zinc-500">{t("catalog.releaseParameters.zone.filled.title")}</p>
+                <p className="mt-1 text-sm font-semibold text-zinc-100">{mock.filledPct}%</p>
+              </div>
+              <div className={cn("rounded-lg p-2.5 transition-colors", activeZone === "raise" && "bg-[#B7F500]/8")}>
+                <p className="text-[10px] uppercase tracking-wide text-zinc-500">{t("catalog.releaseParameters.zone.raise.title")}</p>
+                <p className="mt-1 text-sm font-semibold text-zinc-100">{mock.raiseTarget}</p>
+              </div>
             </div>
           </div>
+        </article>
 
-          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-            {RELEASE_PARAMETERS_CARD_ZONES.map((z, i) => {
-              const Icon = ZONE_ICONS[z.id] ?? Percent;
-              const n = String(i + 1).padStart(2, "0");
-              return (
-                <li key={z.id} data-zone={z.id}>
-                  <div className="group flex h-full min-h-[140px] flex-col rounded-2xl bg-[#111111] p-5 transition-colors hover:bg-[#141414] md:min-h-[148px] md:p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#0a0a0a] text-sky-400/95 transition-colors group-hover:bg-sky-500/10 group-hover:text-sky-300">
-                        <Icon className="size-[22px]" strokeWidth={1.35} aria-hidden />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                          <span className="font-mono text-[11px] font-semibold tabular-nums text-sky-500/85">
-                            {n}
-                          </span>
-                          <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-white md:text-base">
-                            {z.title}
-                          </h3>
-                        </div>
-                        <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-400 md:text-sm">{z.body}</p>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+        <div className="flex flex-col justify-center gap-1 rounded-2xl bg-[#0c0c0e] p-3 sm:p-4">
+          {RELEASE_PARAMETERS_CARD_ZONES.map((zone, index) => {
+            const isActive = activeZone === zone.id;
+            return (
+              <button
+                key={zone.id}
+                type="button"
+                onClick={() => setActiveZone(zone.id)}
+                className={cn(
+                  "grid w-full grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-lg px-2 py-3 text-left transition-colors",
+                  isActive ? "bg-[#B7F500]/5" : "opacity-55 hover:opacity-80 hover:bg-white/3",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full font-mono text-[10px] font-bold",
+                    isActive
+                      ? "border border-[#B7F500]/55 bg-[#B7F500]/12 text-[#c4f570]"
+                      : "bg-[#18181b] text-zinc-500",
+                  )}
+                >
+                  {index + 1}
+                </span>
+                <span>
+                  <span className="text-sm font-semibold text-white">{t(`catalog.releaseParameters.zone.${zone.id}.title`)}</span>
+                  <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">{t(`catalog.releaseParameters.zone.${zone.id}.body`)}</p>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </ReleaseSectionShell>

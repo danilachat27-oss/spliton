@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import type { ReleaseDetailPageData } from "@/types/analytics/release-detail";
 
 import { cn } from "@/lib/utils";
@@ -10,10 +11,15 @@ import { cn } from "@/lib/utils";
 import { DetailSection } from "./detail-section";
 
 export function ReleaseDetailFaq({ data }: { data: ReleaseDetailPageData }) {
+  const { t } = useI18n();
   const [open, setOpen] = React.useState<number | null>(0);
 
+  if (data.faq.length === 0) {
+    return null;
+  }
+
   return (
-    <DetailSection eyebrow="FAQ" title="Вопросы по релизу и платформе">
+    <DetailSection eyebrow="FAQ" title={t("analytics.detail.faq.title")}>
       <div className="space-y-2">
         {data.faq.map((item, i) => {
           const isOpen = open === i;

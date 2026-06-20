@@ -1,0 +1,15 @@
+-- Additive metadata for Spliton release catalog / operator portal
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "description" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "audio_preview_url" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "release_date" DATE;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "release_type" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "copyright_owner" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "isrc" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "upc" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "spotify_url" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "apple_music_url" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "youtube_url" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "yandex_music_url" TEXT;
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "min_purchase_units" DECIMAL(20,8);
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "max_purchase_units" DECIMAL(20,8);
+ALTER TABLE "releases" ADD COLUMN IF NOT EXISTS "distribution_notes" TEXT;

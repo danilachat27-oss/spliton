@@ -1,69 +1,82 @@
+"use client";
+
 import type { ActivityRecord, ActivityStatus } from "@/components/dashboard/assets/activity-mock-data";
+import { assetsCardClass, assetsTableCellClass, assetsTableHeadClass } from "@/components/dashboard/assets/assets-ui";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { cn } from "@/lib/utils";
 
 const statusStyles: Record<ActivityStatus, string> = {
-  Completed: "border-blue-100 bg-blue-50 text-blue-800",
-  Pending: "border-neutral-200 bg-white text-neutral-700",
-  Processing: "border-neutral-200 bg-white text-neutral-700",
-  Cancelled: "border-neutral-200 bg-neutral-50 text-neutral-500",
+  Completed: "text-[#3d7a00]",
+  Pending: "text-neutral-600",
+  Processing: "text-neutral-600",
+  Cancelled: "text-neutral-400",
+};
+
+function activityTypeLabel(row: ActivityRecord, t: (key: string) => string) {
+  return row.typeKey ? t(`activity.widgets.type.${row.typeKey}`) : (row.type ?? "");
+}
+
+function activityDetailsLabel(row: ActivityRecord, t: (key: string) => string) {
+  return row.detailsKey ? t(`activity.widgets.details.${row.detailsKey}`) : (row.details ?? "");
+}
+
+const STATUS_KEYS: Record<ActivityStatus, string> = {
+  Completed: "activity.widgets.status.completed",
+  Pending: "activity.widgets.status.pending",
+  Processing: "activity.widgets.status.processing",
+  Cancelled: "activity.widgets.status.cancelled",
 };
 
 export function ActivityTableCard({
   rows,
   state,
+  compact = false,
 }: {
   rows: ActivityRecord[];
   state: "default" | "empty" | "loading";
+  compact?: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
-    <section className="space-y-5 rounded-3xl bg-white px-5 py-6 sm:space-y-6 sm:px-7 sm:py-8" aria-label="История действий">
-      <div className="space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Activity · Ledger</p>
-        <h3 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">История действий</h3>
-      </div>
+    <section className={cn(assetsCardClass, compact && "py-4")} aria-label={t("activity.widgets.historyAria")}>
+      {!compact ? (
+        <h3 className="mb-4 text-base font-semibold text-neutral-900">{t("activity.widgets.historyTitle")}</h3>
+      ) : null}
 
       {state === "loading" ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-10 animate-pulse rounded-xl bg-neutral-100" />
+            <div key={i} className="h-10 animate-pulse rounded-lg bg-neutral-100" />
           ))}
         </div>
       ) : state === "empty" ? (
-        <div className="rounded-2xl bg-neutral-50/90 py-10 text-center ring-1 ring-neutral-100">
-          <p className="text-base font-semibold text-neutral-900">Пока нет активности</p>
-          <p className="mt-1 text-sm text-neutral-500">
-            История действий появится после первых пополнений, входа в релизы или операций на secondary market.
-          </p>
+        <div className="py-10 text-center">
+          <p className="text-base font-semibold text-neutral-900">{t("activity.emptyTitle")}</p>
+          <p className="mt-1 text-sm text-neutral-500">{t("activity.emptyBody")}</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl ring-1 ring-neutral-100">
-          <table className="w-full min-w-[1120px] border-collapse text-left text-sm">
-            <thead className="bg-neutral-50/90 text-[11px] font-medium uppercase tracking-wide text-neutral-500">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left text-sm">
+            <thead>
               <tr>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">Дата</th>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">Тип действия</th>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">Релиз</th>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">Units</th>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">Сумма</th>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">Статус</th>
-                <th className="border-r border-neutral-200 px-3 py-2.5 font-medium">ID операции</th>
-                <th className="px-3 py-2.5 font-medium">Детали</th>
+                <th className={assetsTableHeadClass}>{t("activity.widgets.tableDate")}</th>
+                <th className={assetsTableHeadClass}>{t("activity.widgets.tableType")}</th>
+                <th className={assetsTableHeadClass}>{t("activity.widgets.tableRelease")}</th>
+                <th className={assetsTableHeadClass}>{t("activity.widgets.tableAmount")}</th>
+                <th className={assetsTableHeadClass}>{t("activity.widgets.tableStatus")}</th>
+                <th className={assetsTableHeadClass}>{t("activity.widgets.tableDetails")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-t border-neutral-200 hover:bg-neutral-50">
-                  <td className="border-r border-neutral-200 px-3 py-2.5 text-neutral-700">{row.date}</td>
-                  <td className="border-r border-neutral-200 px-3 py-2.5 text-neutral-900">{row.type}</td>
-                  <td className="border-r border-neutral-200 px-3 py-2.5 text-neutral-700">{row.release}</td>
-                  <td className="border-r border-neutral-200 px-3 py-2.5 text-neutral-700">{row.units}</td>
-                  <td className="border-r border-neutral-200 px-3 py-2.5 font-medium text-neutral-900">{row.amount}</td>
-                  <td className="border-r border-neutral-200 px-3 py-2.5">
-                    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${statusStyles[row.status]}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="border-r border-neutral-200 px-3 py-2.5 font-mono text-[12px] text-neutral-600">{row.txId}</td>
-                  <td className="px-3 py-2.5 text-neutral-700">{row.details}</td>
+                <tr key={row.id} className="hover:bg-neutral-50/80">
+                  <td className={cn(assetsTableCellClass, "text-neutral-600")}>{row.date}</td>
+                  <td className={cn(assetsTableCellClass, "font-medium text-neutral-900")}>{activityTypeLabel(row, t)}</td>
+                  <td className={cn(assetsTableCellClass, "text-neutral-700")}>{row.release}</td>
+                  <td className={cn(assetsTableCellClass, "font-mono font-medium tabular-nums text-neutral-900")}>{row.amount}</td>
+                  <td className={cn(assetsTableCellClass, statusStyles[row.status])}>{t(STATUS_KEYS[row.status])}</td>
+                  <td className={cn(assetsTableCellClass, "text-neutral-600")}>{activityDetailsLabel(row, t)}</td>
                 </tr>
               ))}
             </tbody>

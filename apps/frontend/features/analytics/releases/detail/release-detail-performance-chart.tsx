@@ -3,9 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 
-import { catalogBuyUnitsPath } from "@/constants/routes";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { catalogBuyUnitsPathForRelease } from "@/constants/routes";
+import { RELEASE_DETAIL_ANALYTICS_ICONS } from "@/constants/analytics/release-detail-analytics-icons";
+import { filterMetricRows } from "@/lib/analytics/display-value";
+import { detailPageText } from "@/lib/i18n/analytics-detail-page-messages";
 import { cn } from "@/lib/utils";
-import type { ReleaseDetailChartPeriod } from "@/types/analytics/release-detail";
+import type { ReleaseDetailChartPeriod, ReleaseDetailPageData } from "@/types/analytics/release-detail";
+
+import { DetailEmptyState } from "./detail-empty-state";
 
 const PERIODS: { id: ReleaseDetailChartPeriod; label: string }[] = [
   { id: "7d", label: "7D" },
@@ -19,6 +25,17 @@ type DomainWindow = { start: number; end: number };
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n));
+}
+
+function uniqueSeriesIndices(count: number, maxLabels = 6): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [0];
+  const indices = new Set<number>();
+  for (let i = 0; i < maxLabels; i++) {
+    const r = maxLabels === 1 ? 0 : i / (maxLabels - 1);
+    indices.add(Math.round(r * (count - 1)));
+  }
+  return [...indices].sort((a, b) => a - b);
 }
 
 function buildChartGeometry(
@@ -37,14 +54,37 @@ function buildChartGeometry(
       activeLine: "",
       vmin: 0,
       vmax: 1,
+      sparseSingle: false,
     };
   }
-  const span = n <= 1 ? 1 : Math.max(d1 - d0, 1e-6);
+
+  if (n === 1) {
+    const v = values[0]!;
+    const padding = Math.max(Math.abs(v) * 0.06, 0.5);
+    const vmin = v - padding;
+    const vmax = v + padding;
+    const y = chartY + chartH / 2;
+    const x = chartX + chartW / 2;
+    return {
+      pointCoords: [{ x, y, value: v, i: 0 }],
+      activeLine: `${chartX},${y.toFixed(2)} ${chartX + chartW},${y.toFixed(2)}`,
+      vmin,
+      vmax,
+      sparseSingle: true,
+    };
+  }
+
+  const span = Math.max(d1 - d0, 1e-6);
   const i0 = Math.max(0, Math.floor(d0));
   const i1 = Math.min(n - 1, Math.ceil(d1));
   const slice = values.slice(i0, i1 + 1);
-  const vmin = Math.min(...slice);
-  const vmax = Math.max(...slice);
+  let vmin = Math.min(...slice);
+  let vmax = Math.max(...slice);
+  if (vmax === vmin) {
+    const padding = Math.max(Math.abs(vmin) * 0.06, 0.5);
+    vmin -= padding;
+    vmax += padding;
+  }
   const vspan = Math.max(vmax - vmin, 1e-9);
 
   const pointCoords = values.map((v, i) => ({
@@ -54,7 +94,7 @@ function buildChartGeometry(
     i,
   }));
   const activeLine = pointCoords.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
-  return { pointCoords, activeLine, vmin, vmax };
+  return { pointCoords, activeLine, vmin, vmax, sparseSingle: false };
 }
 
 export function ReleaseDetailPerformanceChart({
@@ -65,20 +105,30 @@ export function ReleaseDetailPerformanceChart({
   releaseId,
   buyHref,
   buyLabel,
+  releaseSlug,
+  pageState,
+  chartLoading = false,
 }: {
   title: string;
   subtitle: string;
   seriesByPeriod: Record<ReleaseDetailChartPeriod, number[]>;
   miniStats: { label: string; value: string }[];
-  /** Id релиза в каталоге / обзоре рынка — для ссылки «Купить UNT», если не задан `buyHref`. */
   releaseId: string;
-  /** Переопределение целевой ссылки (напр. стакан вторичного рынка). */
+  releaseSlug?: string | null;
   buyHref?: string;
-  /** Подпись кнопки рядом с графиком. */
   buyLabel?: string;
+  pageState?: ReleaseDetailPageData["pageState"];
+  chartLoading?: boolean;
 }) {
-  const resolvedBuyHref = buyHref ?? catalogBuyUnitsPath(releaseId);
-  const resolvedBuyLabel = buyLabel ?? "Купить UNT";
+  const { t, locale } = useI18n();
+  const visibleMiniStats = filterMetricRows(miniStats);
+  const canBuy = pageState?.canBuyPrimary ?? false;
+  const secondaryHref = pageState?.secondaryMarketHref;
+  const secondaryEnabled = pageState?.secondaryEnabled ?? false;
+
+  const resolvedBuyHref =
+    buyHref ?? catalogBuyUnitsPathForRelease({ id: releaseId, slug: releaseSlug });
+  const resolvedBuyLabel = buyLabel ?? t("analytics.detail.cta.buyUnits");
   const uid = React.useId().replace(/:/g, "");
   const glowId = `release-detail-line-glow-${uid}`;
   const clipId = `release-detail-chart-clip-${uid}`;
@@ -135,9 +185,64 @@ export function ReleaseDetailPerformanceChart({
   const delta = last - prev;
   const deltaPct = prev === 0 ? 0 : (delta / prev) * 100;
   const avg = activeSeries.reduce((a, v) => a + v, 0) / Math.max(activeSeries.length, 1);
-  const displayPrice = 76000 + last * 8.7;
+  const displayPrice = last;
+  const hasData = n > 0;
+  const sparseSingle = n === 1;
+  const chartInteractive = n >= 2;
+  const chartText = (key: Parameters<typeof detailPageText>[1]) => detailPageText(locale, key);
 
-  const { pointCoords, activeLine, vmin, vmax } = buildChartGeometry(
+  if (chartLoading) {
+    return (
+      <div className="rounded-2xl bg-[#0d0d0d] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.35)] md:p-5">
+        <div className="h-4 w-32 animate-pulse rounded bg-white/10" />
+        <div className="mt-4 h-[180px] animate-pulse rounded-xl bg-white/[0.04]" />
+      </div>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <div className="rounded-2xl bg-[#0d0d0d] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.35)] md:p-5">
+        <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+          {detailPageText(locale, "analytics.detail.chart.title")}
+        </p>
+        <div className="mt-2 overflow-hidden rounded-xl bg-[#111111] ring-1 ring-white/6">
+          <DetailEmptyState
+            imageSrc={RELEASE_DETAIL_ANALYTICS_ICONS.chartEmpty}
+            imageSize="lg"
+            title={detailPageText(locale, "analytics.detail.chart.emptyTitle")}
+            body={detailPageText(locale, "analytics.detail.chart.emptyBody")}
+            action={
+              secondaryEnabled && secondaryHref ? (
+                <Link
+                  href={secondaryHref}
+                  className="inline-flex rounded-full bg-[#B7F500] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[#c9ff52]"
+                >
+                  {detailPageText(locale, "analytics.detail.cta.openSecondary")}
+                </Link>
+              ) : (
+                <span className="inline-flex rounded-full bg-white/8 px-4 py-2 text-sm text-zinc-500">
+                  {detailPageText(locale, "analytics.detail.chart.emptySecondaryOff")}
+                </span>
+              )
+            }
+          />
+        </div>
+        <div className="mt-4 flex flex-wrap justify-center gap-1">
+          {PERIODS.map((p) => (
+            <span
+              key={p.id}
+              className="cursor-not-allowed rounded-full px-3 py-1 text-[11px] font-medium text-zinc-600 ring-1 ring-white/8 opacity-60"
+            >
+              {p.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const { pointCoords, activeLine, vmin, vmax, sparseSingle: geometrySparse } = buildChartGeometry(
     activeSeries,
     chartX,
     chartY,
@@ -146,12 +251,10 @@ export function ReleaseDetailPerformanceChart({
     d0,
     d1,
   );
+  const isSparseChart = sparseSingle || geometrySparse;
 
-  const yTicks =
-    vmax === vmin
-      ? [vmax + 1, vmax, vmax - 1]
-      : [vmax, vmin + (vmax - vmin) * 0.66, vmin + (vmax - vmin) * 0.33, vmin];
-  const xTicks = [0, 0.2, 0.4, 0.6, 0.8, 1].map((r) => Math.round(r * (activeSeries.length - 1)));
+  const yTicks = [vmax, vmin + (vmax - vmin) * 0.5, vmin];
+  const xTickIndices = uniqueSeriesIndices(n);
   const xLabelsByPeriod: Record<ReleaseDetailChartPeriod, string[]> = {
     "7d": ["1д", "2д", "3д", "4д", "5д", "7д"],
     "30d": ["1д", "6д", "12д", "18д", "24д", "30д"],
@@ -160,6 +263,7 @@ export function ReleaseDetailPerformanceChart({
     all: ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"],
   };
   const windowLabel = (idx: number) => {
+    if (isSparseChart) return chartText("analytics.detail.chart.sparseWindow");
     const clamped = Math.max(0, Math.min(idx, activeSeries.length - 1));
     const ratio = clamped / Math.max(activeSeries.length - 1, 1);
     const i = Math.min(
@@ -305,62 +409,73 @@ export function ReleaseDetailPerformanceChart({
     <div className="rounded-2xl bg-[#0d0d0d] p-4 shadow-[0_14px_34px_rgba(0,0,0,0.35)] md:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">Цена релиза</p>
-          <h3 className="mt-1 text-[42px] font-semibold leading-none tracking-tight text-white sm:text-[52px]">
-            ${displayPrice.toLocaleString("ru-RU", { maximumFractionDigits: 1 })}
-          </h3>
-          <p className={cn("mt-2 text-[30px] font-semibold leading-none", delta >= 0 ? "text-[#B7F500]" : "text-rose-300")}>
-            {delta >= 0 ? "+" : ""}
-            {delta.toFixed(2)} ({deltaPct >= 0 ? "+" : ""}
-            {deltaPct.toFixed(2)}%)
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+            {chartText("analytics.detail.chart.title")}
           </p>
+          <h3 className="mt-1 text-[42px] font-semibold leading-none tracking-tight text-white sm:text-[52px]">
+            {displayPrice.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} USDT
+          </h3>
+          {!isSparseChart ? (
+            <p className={cn("mt-2 text-[30px] font-semibold leading-none", delta >= 0 ? "text-[#B7F500]" : "text-rose-300")}>
+              {delta >= 0 ? "+" : ""}
+              {delta.toFixed(2)} ({deltaPct >= 0 ? "+" : ""}
+              {deltaPct.toFixed(2)}%)
+            </p>
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed text-zinc-500">{chartText("analytics.detail.chart.sparseHint")}</p>
+          )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-          <div className="flex items-center gap-1 rounded-full bg-[#161616] p-0.5">
-            <button
-              type="button"
-              onClick={() => {
-                const el = svgWrapRef.current;
-                const cx = el ? el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 : 0;
-                applyZoomRef.current(cx, false);
-              }}
-              className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-[#24272b] hover:text-white"
-              aria-label="Увеличить"
+          {chartInteractive ? (
+            <div className="flex items-center gap-1 rounded-full bg-[#161616] p-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = svgWrapRef.current;
+                  const cx = el ? el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 : 0;
+                  applyZoomRef.current(cx, false);
+                }}
+                className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-[#24272b] hover:text-white"
+                aria-label={t("analytics.detail.performanceChart.zoomIn")}
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = svgWrapRef.current;
+                  const cx = el ? el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 : 0;
+                  applyZoomRef.current(cx, true);
+                }}
+                className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-[#24272b] hover:text-white"
+                aria-label={t("analytics.detail.performanceChart.zoomOut")}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                onClick={resetView}
+                className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-zinc-400 transition hover:bg-[#24272b] hover:text-zinc-100"
+              >
+                {t("analytics.detail.performanceChart.reset")}
+              </button>
+            </div>
+          ) : null}
+          {canBuy ? (
+            <Link
+              href={resolvedBuyHref}
+              className="rounded-full bg-[#B7F500] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[#c9ff52]"
             >
-              +
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const el = svgWrapRef.current;
-                const cx = el ? el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 : 0;
-                applyZoomRef.current(cx, true);
-              }}
-              className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-[#24272b] hover:text-white"
-              aria-label="Уменьшить"
+              {resolvedBuyLabel}
+            </Link>
+          ) : secondaryEnabled && secondaryHref ? (
+            <Link
+              href={secondaryHref}
+              className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              −
-            </button>
-            <button
-              type="button"
-              onClick={resetView}
-              className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-zinc-400 transition hover:bg-[#24272b] hover:text-zinc-100"
-            >
-              Сброс
-            </button>
-          </div>
-          <Link
-            href={resolvedBuyHref}
-            className="rounded-full bg-[#B7F500] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[#c9ff52]"
-          >
-            {resolvedBuyLabel}
-          </Link>
-          <button
-            type="button"
-            className="rounded-full bg-[#24272b] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#2d3136]"
-          >
-            USD
-          </button>
+              {detailPageText(locale, "analytics.detail.cta.openSecondary")}
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -384,15 +499,22 @@ export function ReleaseDetailPerformanceChart({
 
       <div
         ref={svgWrapRef}
-        className={cn("mt-4 w-full select-none touch-none", isPanning ? "cursor-grabbing" : "cursor-crosshair")}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onPointerLeave={(e) => {
-          onPointerUp(e);
-          setHoverIndex(null);
-        }}
+        className={cn(
+          "mt-4 w-full select-none touch-none",
+          chartInteractive && (isPanning ? "cursor-grabbing" : "cursor-crosshair"),
+        )}
+        onPointerDown={chartInteractive ? onPointerDown : undefined}
+        onPointerMove={chartInteractive ? onPointerMove : undefined}
+        onPointerUp={chartInteractive ? onPointerUp : undefined}
+        onPointerCancel={chartInteractive ? onPointerUp : undefined}
+        onPointerLeave={
+          chartInteractive
+            ? (e) => {
+                onPointerUp(e);
+                setHoverIndex(null);
+              }
+            : undefined
+        }
         style={{ touchAction: "none" }}
       >
         <svg
@@ -400,7 +522,7 @@ export function ReleaseDetailPerformanceChart({
           preserveAspectRatio="xMidYMid meet"
           className="block h-[50vh] min-h-[320px] w-full max-h-[600px] sm:h-[48vh] sm:min-h-[380px]"
           role="img"
-          aria-label="Динамика начислений по релизу"
+          aria-label={t("analytics.detail.performanceChart.aria")}
         >
           <defs>
             <filter id={glowId} x="-40%" y="-40%" width="180%" height="180%">
@@ -433,7 +555,7 @@ export function ReleaseDetailPerformanceChart({
               </g>
             );
           })}
-          {startPt ? (
+          {startPt && !isSparseChart && n >= 3 ? (
             <text
               x={chartX + 4}
               y={chartY + 14}
@@ -444,7 +566,7 @@ export function ReleaseDetailPerformanceChart({
               {startPt.value.toFixed(1)}
             </text>
           ) : null}
-          {endPt ? (
+          {endPt && !isSparseChart && n >= 3 ? (
             <text
               x={chartX + chartW - 4}
               y={chartY + 14}
@@ -456,7 +578,7 @@ export function ReleaseDetailPerformanceChart({
               {endPt.value.toFixed(1)}
             </text>
           ) : null}
-          {activePoint ? (
+          {activePoint && chartInteractive ? (
             <line
               x1={activePoint.x}
               y1={chartY}
@@ -468,27 +590,44 @@ export function ReleaseDetailPerformanceChart({
             />
           ) : null}
           <g clipPath={`url(#${clipId})`}>
-            <polyline
-              points={activeLine}
-              fill="none"
-              stroke="#B7F500"
-              strokeWidth="5"
-              strokeLinecap="round"
-              opacity="0.18"
-            />
-            <polyline
-              points={activeLine}
-              fill="none"
-              stroke="#B7F500"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              filter={`url(#${glowId})`}
-            />
+            {isSparseChart ? (
+              <line
+                x1={chartX}
+                y1={activePoint?.y ?? chartY + chartH / 2}
+                x2={chartX + chartW}
+                y2={activePoint?.y ?? chartY + chartH / 2}
+                stroke="#B7F500"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity="0.35"
+                strokeDasharray="6 6"
+              />
+            ) : null}
+            {!isSparseChart ? (
+              <>
+                <polyline
+                  points={activeLine}
+                  fill="none"
+                  stroke="#B7F500"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  opacity="0.18"
+                />
+                <polyline
+                  points={activeLine}
+                  fill="none"
+                  stroke="#B7F500"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  filter={`url(#${glowId})`}
+                />
+              </>
+            ) : null}
           </g>
           {activePoint ? (
-            <circle cx={activePoint.x} cy={activePoint.y} r="4" fill="#B7F500" stroke="#0d0d0d" strokeWidth="2" />
+            <circle cx={activePoint.x} cy={activePoint.y} r={isSparseChart ? 5 : 4} fill="#B7F500" stroke="#0d0d0d" strokeWidth="2" />
           ) : null}
-          {activePoint ? (
+          {activePoint && chartInteractive ? (
             <g
               transform={`translate(${Math.min(activePoint.x + 10, chartX + chartW - 150)},${Math.max(activePoint.y - 52, chartY + 4)})`}
             >
@@ -505,19 +644,31 @@ export function ReleaseDetailPerformanceChart({
               </text>
             </g>
           ) : null}
-          {xTicks.map((idx, i) => {
-            const x = chartX + ((idx - d0) / domainSpan) * chartW;
+          {xTickIndices.map((idx) => {
+            const x = isSparseChart
+              ? chartX + chartW / 2
+              : chartX + ((idx - d0) / domainSpan) * chartW;
             if (x < chartX - 2 || x > chartX + chartW + 2) return null;
+            const label = isSparseChart
+              ? chartText("analytics.detail.chart.axisNow")
+              : (() => {
+                  const ratio = idx / Math.max(activeSeries.length - 1, 1);
+                  const labelIdx = Math.min(
+                    xLabelsByPeriod[period].length - 1,
+                    Math.round(ratio * (xLabelsByPeriod[period].length - 1)),
+                  );
+                  return xLabelsByPeriod[period][labelIdx] ?? "—";
+                })();
             return (
               <text
-                key={`x-${i}`}
+                key={`x-${idx}`}
                 x={x}
                 y={chartBottom + 16}
                 textAnchor="middle"
                 fill="rgba(161,161,170,0.75)"
                 fontSize="10"
               >
-                {xLabelsByPeriod[period][i]}
+                {label}
               </text>
             );
           })}
@@ -540,14 +691,16 @@ export function ReleaseDetailPerformanceChart({
           <div className="text-[10px] uppercase tracking-wide text-zinc-600">Среднее</div>
           <div className="mt-1 text-sm font-semibold tabular-nums text-white">{avg.toFixed(1)}</div>
         </div>
-        {miniStats.map((s) => (
+        {visibleMiniStats.map((s) => (
           <div key={s.label} className="rounded-xl bg-[#090909] px-2.5 py-2">
             <div className="text-[10px] uppercase tracking-wide text-zinc-600">{s.label}</div>
             <div className="mt-1 text-sm font-semibold tabular-nums text-zinc-200">{s.value}</div>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-[11px] text-zinc-600">Обновлено: mock · индекс не равен сумме USDT без пересчёта</p>
+      <p className="mt-3 text-[11px] text-zinc-600">
+        {detailPageText(locale, "analytics.detail.chart.sourceNote")}
+      </p>
     </div>
   );
 }

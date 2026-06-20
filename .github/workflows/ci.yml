@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prisma:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/backend/package-lock.json
+      - run: npm ci
+      - run: npm run prisma:validate
+      - name: Prisma migrate diff
+        env:
+          CI: true
+          SHADOW_DATABASE_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
+          PRISMA_MIGRATE_DIFF_STRICT: ${{ secrets.BACKEND_E2E_DIRECT_URL != '' && '1' || '' }}
+        run: npm run prisma:migrate:diff
+
+  backend:
+    needs: prisma
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint:ci
+      - run: npm run test
+
+  frontend:
+    needs: prisma
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    env:
+      NEXT_PUBLIC_APP_ENV: staging
+      NEXT_PUBLIC_API_BASE_URL: https://api.example.test
+      NEXT_PUBLIC_ADMIN_DATA_SOURCE: live
+      NEXT_PUBLIC_WALLET_DATA_SOURCE: live
+      NEXT_PUBLIC_SUPPORT_DATA_SOURCE: live
+      NEXT_PUBLIC_CATALOG_DATA_SOURCE: live
+      NEXT_PUBLIC_NEWS_DATA_SOURCE: live
+      NEXT_PUBLIC_STATUS_DATA_SOURCE: live
+      NEXT_PUBLIC_PORTFOLIO_DATA_SOURCE: live
+      NEXT_PUBLIC_PAYOUTS_DATA_SOURCE: live
+      NEXT_PUBLIC_SERVICES_DATA_SOURCE: live
+      NEXT_PUBLIC_RELEASE_ANALYTICS_DATA_SOURCE: live
+      NEXT_PUBLIC_MARKET_OVERVIEW_DATA_SOURCE: live
+      NEXT_PUBLIC_AUTH_DATA_SOURCE: live
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+
+  e2e:
+    needs: backend
+    if: |
+      secrets.BACKEND_E2E_TEST_DATABASE_URL != '' &&
+      secrets.BACKEND_E2E_DIRECT_URL != '' &&
+      secrets.BACKEND_E2E_JWT_SECRET != '' &&
+      secrets.BACKEND_E2E_JWT_REFRESH_SECRET != ''
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      CI: true
+      DIRECT_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
+      TEST_DIRECT_URL: ${{ secrets.BACKEND_E2E_DIRECT_URL }}
+      JWT_SECRET: ${{ secrets.BACKEND_E2E_JWT_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.BACKEND_E2E_JWT_REFRESH_SECRET }}
+      TEST_DATABASE_URL: ${{ secrets.BACKEND_E2E_TEST_DATABASE_URL }}
+      ALLOW_E2E_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/backend/package-lock.json
+      - run: npm ci
+      - name: Migrate test database
+        run: npm run test:db:setup
+      - name: Backend e2e
+        working-directory: apps/backend
+        run: |
+          npm ci
+          npm run test:e2e
+
+  playwright:
+    needs: frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    env:
+      NEXT_PUBLIC_APP_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:9
+      NEXT_PUBLIC_ADMIN_DATA_SOURCE: live
+      NEXT_PUBLIC_WALLET_DATA_SOURCE: live
+      NEXT_PUBLIC_SUPPORT_DATA_SOURCE: live
+      NEXT_PUBLIC_CATALOG_DATA_SOURCE: live
+      NEXT_PUBLIC_NEWS_DATA_SOURCE: live
+      NEXT_PUBLIC_STATUS_DATA_SOURCE: live
+      NEXT_PUBLIC_PORTFOLIO_DATA_SOURCE: live
+      NEXT_PUBLIC_PAYOUTS_DATA_SOURCE: live
+      NEXT_PUBLIC_SERVICES_DATA_SOURCE: live
+      NEXT_PUBLIC_RELEASE_ANALYTICS_DATA_SOURCE: live
+      NEXT_PUBLIC_MARKET_OVERVIEW_DATA_SOURCE: live
+      NEXT_PUBLIC_AUTH_DATA_SOURCE: live
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e

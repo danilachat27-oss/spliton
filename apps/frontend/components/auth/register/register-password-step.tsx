@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ROUTES } from "@/constants/routes";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { tf } from "@/lib/i18n/auth-messages";
 import { cn } from "@/lib/utils";
 
 export type RegisterPasswordStepProps = {
@@ -62,6 +64,7 @@ export function RegisterPasswordStep({
   onSubmit,
   onBackToEmail,
 }: RegisterPasswordStepProps) {
+  const { t } = useI18n();
   return (
     <>
       <button
@@ -69,21 +72,20 @@ export function RegisterPasswordStep({
         onClick={onBackToEmail}
         className="mb-4 text-left text-xs font-medium text-neutral-500 underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-neutral-900 hover:decoration-neutral-900"
       >
-        ← Изменить адрес почты
+        {t("auth.register.changeEmail")}
       </button>
 
       <h2 className="text-[2.25rem] font-semibold leading-none tracking-tight sm:text-[2.5rem]">
-        Задайте пароль
+        {t("auth.register.passwordTitle")}
       </h2>
       <p className="mt-2 text-[14px] leading-snug text-neutral-600">
-        Аккаунт для <span className="font-medium text-neutral-900">{trimmedEmail}</span>. После
-        регистрации вы сможете войти с этим адресом.
+        {tf(t("auth.register.passwordBody"), { email: trimmedEmail })}
       </p>
 
       <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
         <div className="space-y-2">
           <Label htmlFor="register-password" className="sr-only">
-            Пароль
+            {t("auth.login.password")}
           </Label>
           <div className="relative">
             <Input
@@ -92,7 +94,7 @@ export function RegisterPasswordStep({
               name="password"
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
-              placeholder="Пароль"
+              placeholder={t("auth.login.password")}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
@@ -122,14 +124,14 @@ export function RegisterPasswordStep({
 
         <div className="space-y-2">
           <Label htmlFor="register-confirm" className="sr-only">
-            Подтвердите пароль
+            {t("auth.register.confirmPassword")}
           </Label>
           <Input
             id="register-confirm"
             name="confirmPassword"
             type={showPassword ? "text" : "password"}
             autoComplete="new-password"
-            placeholder="Подтвердите пароль"
+            placeholder={t("auth.register.confirmPassword")}
             value={confirmPassword}
             onChange={(e) => {
               setConfirmPassword(e.target.value);
@@ -169,19 +171,19 @@ export function RegisterPasswordStep({
               htmlFor="register-terms"
               className="min-w-0 flex-1 cursor-pointer text-[11px] font-normal leading-snug text-pretty text-neutral-400"
             >
-              Принимаю{" "}
+              {t("auth.register.termsPrefix")}{" "}
               <Link
                 href={ROUTES.terms}
                 className="text-neutral-600 underline underline-offset-2 hover:text-neutral-900"
               >
-                условия
+                {t("auth.register.termsLink")}
               </Link>{" "}
-              и{" "}
+              {t("auth.register.termsAnd")}{" "}
               <Link
                 href={ROUTES.privacy}
                 className="text-neutral-600 underline underline-offset-2 hover:text-neutral-900"
               >
-                конфиденциальность
+                {t("auth.register.privacyLink")}
               </Link>
               .
             </Label>
@@ -207,10 +209,7 @@ export function RegisterPasswordStep({
 
         {duplicateEmailConflict ? (
           <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3">
-            <p className="text-[13px] leading-snug text-neutral-700">
-              Аккаунт с этим email уже существует. Если вы ещё не подтвердили email, мы можем
-              отправить письмо повторно.
-            </p>
+            <p className="text-[13px] leading-snug text-neutral-700">{t("auth.register.duplicateHint")}</p>
             <Button
               type="button"
               className="h-[44px] w-full rounded-xl border border-neutral-900 bg-neutral-900 text-[14px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px disabled:opacity-50"
@@ -220,14 +219,14 @@ export function RegisterPasswordStep({
               }}
             >
               {isResendingExistingEmail
-                ? "Отправляем письмо..."
-                : "Отправить письмо подтверждения"}
+                ? t("auth.register.resendExistingSending")
+                : t("auth.register.resendExisting")}
             </Button>
             <Link
               href={ROUTES.login}
               className="inline-flex h-[44px] w-full items-center justify-center rounded-xl border border-neutral-200 bg-white text-[14px] font-medium text-neutral-900 transition-colors hover:bg-neutral-100"
             >
-              Перейти ко входу
+              {t("auth.register.goToLogin")}
             </Link>
           </div>
         ) : null}
@@ -237,17 +236,17 @@ export function RegisterPasswordStep({
           className="mt-1 h-[52px] w-full rounded-xl border border-neutral-900 bg-neutral-900 text-[15px] font-semibold text-white transition-[background-color,transform] hover:bg-neutral-800 active:translate-y-px disabled:opacity-50"
           disabled={isSubmitting}
         >
-          Создать аккаунт
+          {isSubmitting ? t("auth.register.continueSending") : t("auth.register.createAccount")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-[15px] text-neutral-600">
-        Уже есть аккаунт?{" "}
+        {t("auth.register.hasAccount")}{" "}
         <Link
           href={ROUTES.login}
           className="font-semibold text-neutral-900 underline decoration-neutral-900 underline-offset-4"
         >
-          Войти
+          {t("auth.register.signIn")}
         </Link>
       </p>
     </>

@@ -1,9 +1,10 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { Info } from "@/lib/lucide";
 import { useMemo, useState } from "react";
 
 import { MetricsDetailChart, type MetricsPoint } from "@/components/dashboard/assets/metrics-charts";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 
 const RANGE_PRESETS = [
@@ -64,6 +65,7 @@ function countForRange(range: string) {
 }
 
 export function PositionsPortfolioValueChart({ portfolioUsdt }: { portfolioUsdt: number }) {
+  const { t } = useI18n();
   const [range, setRange] = useState<(typeof RANGE_PRESETS)[number]["id"]>("90d");
 
   const series = useMemo(() => {
@@ -71,7 +73,7 @@ export function PositionsPortfolioValueChart({ portfolioUsdt }: { portfolioUsdt:
     return buildPortfolioValueSeries(portfolioUsdt, n);
   }, [range, portfolioUsdt]);
 
-  const headline = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(portfolioUsdt));
+  const headline = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(portfolioUsdt));
 
   return (
     <section className="space-y-6 rounded-3xl bg-white px-5 py-6 sm:space-y-8 sm:px-7 sm:py-8" aria-label="Оценка портфеля">
@@ -117,14 +119,15 @@ export function PositionsPortfolioValueChart({ portfolioUsdt }: { portfolioUsdt:
       />
 
       <div className="flex items-center justify-between border-t border-neutral-100 pt-4 text-[11px] text-neutral-500">
-        <span>Начало периода</span>
-        <span>Срез: сегодня</span>
+        <span>{t("positions.chart.periodStart")}</span>
+        <span>{t("positions.chart.periodEnd")}</span>
       </div>
     </section>
   );
 }
 
 export function PositionsUnitsTrajectoryChart({ totalUnits }: { totalUnits: number }) {
+  const { t } = useI18n();
   const [range, setRange] = useState<(typeof RANGE_PRESETS)[number]["id"]>("30d");
 
   const series = useMemo(() => {
@@ -132,7 +135,7 @@ export function PositionsUnitsTrajectoryChart({ totalUnits }: { totalUnits: numb
     return buildUnitsSeries(totalUnits, n);
   }, [range, totalUnits]);
 
-  const headline = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(totalUnits));
+  const headline = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(totalUnits));
 
   return (
     <section className="space-y-6 rounded-3xl bg-white px-5 py-6 sm:space-y-8 sm:px-7 sm:py-8" aria-label="Units в портфеле">
@@ -175,12 +178,12 @@ export function PositionsUnitsTrajectoryChart({ totalUnits }: { totalUnits: numb
         valueIsPercent={false}
         tooltipPrimaryLabel="Units"
         tooltipValueSuffix=""
-        tooltipFormatPrimary={(n) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(n))}
+        tooltipFormatPrimary={(n) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(Math.round(n))}
       />
 
       <div className="flex items-center justify-between border-t border-neutral-100 pt-4 text-[11px] text-neutral-500">
-        <span>Начало периода</span>
-        <span>Срез: сегодня</span>
+        <span>{t("positions.chart.periodStart")}</span>
+        <span>{t("positions.chart.periodEnd")}</span>
       </div>
     </section>
   );

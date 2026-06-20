@@ -1,19 +1,17 @@
 "use client";
 
-import { Filter, Search } from "lucide-react";
+import { Filter, Search } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { FilterChip } from "@/components/shared/exchange/filter-chip";
 import { UnderlineTab } from "@/components/shared/exchange/underline-tab";
 import type {
   ReleaseAnalyticsChipPreset,
-  ReleaseAnalyticsSectionTab,
   ReleaseRowGenre,
   ReleaseRowStatus,
 } from "@/types/analytics/releases";
 
 export function ReleaseAnalyticsFiltersToolbar({
-  sectionTab,
-  onSectionTab,
   statusTab,
   onStatusTab,
   chipPreset,
@@ -23,8 +21,6 @@ export function ReleaseAnalyticsFiltersToolbar({
   genre,
   onGenre,
 }: {
-  sectionTab: ReleaseAnalyticsSectionTab;
-  onSectionTab: (t: ReleaseAnalyticsSectionTab) => void;
   statusTab: "all" | ReleaseRowStatus;
   onStatusTab: (t: "all" | ReleaseRowStatus) => void;
   chipPreset: ReleaseAnalyticsChipPreset;
@@ -34,18 +30,11 @@ export function ReleaseAnalyticsFiltersToolbar({
   genre: "all" | ReleaseRowGenre;
   onGenre: (g: "all" | ReleaseRowGenre) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="sticky top-0 z-[60] shrink-0 bg-black/90 backdrop-blur-sm">
       <div className="mx-auto w-full max-w-[1400px] space-y-2 px-4 py-2 md:px-6 lg:px-8">
-        <div className="flex min-h-9 flex-wrap items-end gap-x-7 gap-y-1">
-          <UnderlineTab tone="neutral" active={sectionTab === "analytics"} onClick={() => onSectionTab("analytics")}>
-            Аналитика
-          </UnderlineTab>
-          <UnderlineTab tone="neutral" active={sectionTab === "ratings"} onClick={() => onSectionTab("ratings")}>
-            Рейтинги
-          </UnderlineTab>
-        </div>
-
         <div className="flex min-h-9 flex-wrap items-end gap-x-5 gap-y-1">
           <UnderlineTab tone="neutral" active={statusTab === "all"} onClick={() => onStatusTab("all")}>
             Все релизы
@@ -82,7 +71,7 @@ export function ReleaseAnalyticsFiltersToolbar({
               <input
                 value={query}
                 onChange={(e) => onQuery(e.target.value)}
-                placeholder="Поиск"
+                placeholder={t("analytics.releases.searchPlaceholder")}
                 className="h-8 w-full border-0 border-b border-white/10 bg-transparent py-1.5 pl-6 pr-1 font-mono text-[12px] text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-white/25"
               />
             </div>

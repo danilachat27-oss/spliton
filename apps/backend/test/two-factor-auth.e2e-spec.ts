@@ -2,6 +2,7 @@ import { generateSync } from 'otplib';
 import request from 'supertest';
 import { cleanupTwoFactorRegressionUsers } from './helpers/cleanup-two-factor-regression-users';
 import { createE2eApp, E2eApp } from './helpers/create-e2e-app';
+import { e2eRegisterPayload } from './helpers/register-e2e-user';
 
 const SHOULD_RETURN_REFRESH_IN_BODY =
   process.env.AUTH_RETURN_REFRESH_TOKEN_IN_BODY !== 'false';
@@ -37,11 +38,7 @@ async function registerVerifyAndLogin(params: {
 }): Promise<{ accessToken: string }> {
   await request(params.app.getHttpServer())
     .post('/auth/register')
-    .send({
-      email: params.email,
-      password: params.password,
-      displayName: '2FA',
-    })
+    .send(e2eRegisterPayload(params.email, params.password, '2FA'))
     .expect(201)
     .expect(({ body }) => {
       expect(body).toEqual({ requiresEmailVerification: true });

@@ -121,15 +121,49 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
   html {
     @apply font-sans;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    overflow-x: clip;
+    max-width: 100%;
+    background-color: #000;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  html:has(body.mobile-tab-bar-active),
+  body.mobile-tab-bar-active {
+    background-color: #000 !important;
+  }
+  @media (max-width: 639px) {
+    body.mobile-tab-bar-active::after {
+      content: "";
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 108;
+      height: calc(env(safe-area-inset-bottom, 0px) + 4px);
+      background-color: #000;
+      pointer-events: none;
+    }
+  }
+  body.mobile-tab-bar-active footer[data-footer-variant="compact"] {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+  @media (max-width: 639px) {
+    body.mobile-tab-bar-active {
+      padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    }
+    body.mobile-tab-bar-active [data-mobile-scroll-root] {
+      padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px) + 1rem);
+      scroll-padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px) + 1rem);
+    }
   }
 
   /* Viewport: hide native scrollbar; wheel / touch / keys still scroll */
@@ -249,6 +283,17 @@
   }
 }
 
+@keyframes service-preview-page-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @layer utilities {
   .animate-dashboard-megamenu-in {
     animation: dashboard-megamenu-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -269,9 +314,60 @@
   .animate-secondary-market-surface-in {
     animation: secondary-market-surface-in 0.22s ease-out both;
   }
+
+  .animate-service-preview-page-in {
+    animation: service-preview-page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }
 
-/* Футер: пунктирные дуги + «играет» — движение пунктира и лёгкий пульс */
+/* Футер: анимированные линейные графики */
+@keyframes footer-chart-line-flow {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0.55;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.85;
+  }
+}
+
+@keyframes footer-chart-area-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes footer-chart-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@keyframes footer-chart-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-1px, -1px);
+  }
+}
+
+/* @deprecated — старые дуги футера, оставлено для совместимости */
 @keyframes revshare-footer-track-dash {
   to {
     stroke-dashoffset: -96;
@@ -353,7 +449,49 @@
   }
 }
 
+@keyframes instrument-candle-rise {
+  from {
+    transform: scaleY(0.08);
+    opacity: 0.12;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes instrument-candle-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 @layer utilities {
+  .animate-footer-chart-line-flow {
+    stroke-dasharray: 100;
+    animation: footer-chart-line-flow 5.5s ease-in-out infinite;
+  }
+
+  .animate-footer-chart-area-pulse {
+    animation: footer-chart-area-pulse 3.2s ease-in-out infinite;
+  }
+
+  .animate-footer-chart-drift {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: footer-chart-drift 4.8s ease-in-out infinite;
+  }
+
+  .animate-footer-chart-dot-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: footer-chart-dot-pulse 2.4s ease-in-out infinite;
+  }
+
   .animate-revshare-footer-track-accent {
     animation: revshare-footer-track-dash 7.5s linear infinite;
   }
@@ -376,6 +514,19 @@
 
   .animate-support-fade-up {
     animation: support-fade-up 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-instrument-candle-rise {
+    transform-origin: bottom center;
+    animation: instrument-candle-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-instrument-candle-float {
+    animation: instrument-candle-float 4.5s ease-in-out infinite;
+  }
+
+  .group:hover .animate-instrument-candle-float {
+    animation-duration: 3s;
   }
 
   .animate-support-aurora {
@@ -420,6 +571,55 @@
   .revshare-scrollbar::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, rgb(183 245 0 / 0.88), rgb(183 245 0 / 0.62));
   }
+
+  /* Operator portal: тёмная тема без рамок, lime primary */
+  .admin-portal {
+    --background: oklch(0.09 0 0);
+    --foreground: oklch(0.92 0 0);
+    --card: oklch(0.15 0 0);
+    --card-foreground: oklch(0.92 0 0);
+    --popover: oklch(0.15 0 0);
+    --popover-foreground: oklch(0.92 0 0);
+    --primary: oklch(0.88 0.22 123);
+    --primary-foreground: oklch(0.12 0 0);
+    --secondary: oklch(0.2 0 0);
+    --secondary-foreground: oklch(0.88 0 0);
+    --muted: oklch(0.18 0 0);
+    --muted-foreground: oklch(0.58 0 0);
+    --accent: oklch(0.2 0 0);
+    --accent-foreground: oklch(0.92 0 0);
+    --destructive: oklch(0.65 0.2 25);
+    --border: oklch(1 0 0 / 0%);
+    --input: oklch(0.17 0 0);
+    --ring: oklch(0.88 0.22 123 / 35%);
+  }
+
+  .admin-portal [data-slot="input"] {
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .admin-portal [data-slot="button"] {
+    box-shadow: none;
+  }
+
+  /* Убираем видимые «белые» вставки и тени внутри операторской панели */
+  .admin-portal [class*="shadow"] {
+    box-shadow: none !important;
+  }
+
+  .admin-portal [class*="bg-white"]:not([class*="bg-white/"]),
+  .admin-portal [class*="bg-neutral-100"],
+  .admin-portal [class*="bg-neutral-200"],
+  .admin-portal [class*="bg-neutral-50"],
+  .admin-portal [class*="bg-zinc-50"] {
+    background-color: rgb(24 24 27 / 0.92) !important;
+    color: rgb(228 228 231 / 1) !important;
+  }
+
+  .admin-portal [class*="border-neutral-200"] {
+    border-color: rgb(63 63 70 / 0.55) !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -431,6 +631,33 @@
   .animate-payout-flow-panel-in,
   .animate-payout-flow-summary-in,
   .animate-secondary-market-surface-in,
+  .animate-service-preview-page-in,
+  .service-preview-scene [class*="preview-"] {
+    animation: none !important;
+  }
+
+  .animate-service-preview-page-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .service-preview-cursor-local {
+    opacity: 1 !important;
+  }
+
+  .service-preview-local-tip {
+    opacity: 1 !important;
+  }
+
+  .service-preview-scene .preview-statements-request {
+    background: #b7f500 !important;
+    color: #000 !important;
+  }
+
+  .animate-footer-chart-line-flow,
+  .animate-footer-chart-area-pulse,
+  .animate-footer-chart-drift,
+  .animate-footer-chart-dot-pulse,
   .animate-revshare-footer-track-accent,
   .animate-revshare-footer-track-accent-reverse,
   .animate-revshare-footer-track-base-drift,
@@ -439,11 +666,17 @@
   .animate-support-aurora,
   .animate-support-search-ring,
   .animate-revshare-status-orbit,
-  .animate-revshare-status-breathe {
+  .animate-revshare-status-breathe,
+  .animate-instrument-candle-rise,
+  .animate-instrument-candle-float {
     animation: none !important;
   }
 
   .animate-revshare-footer-track-breathe {
+    opacity: 0.85 !important;
+  }
+
+  .animate-footer-chart-area-pulse {
     opacity: 0.85 !important;
   }
 

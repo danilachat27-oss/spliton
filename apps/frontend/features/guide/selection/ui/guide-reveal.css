@@ -1,0 +1,190 @@
+/* Guide /selection — scroll reveal (landing hero journey language) */
+
+.guide-reveal-root:not(.is-visible) .guide-reveal-purpose,
+.guide-reveal-root:not(.is-visible) .guide-reveal-panel,
+.guide-reveal-root:not(.is-visible) .guide-reveal-row,
+.guide-reveal-root:not(.is-visible) .guide-reveal-block,
+.guide-reveal-root:not(.is-visible) .guide-reveal-footer {
+  opacity: 0;
+}
+
+.guide-reveal-purpose {
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgb(24 24 27 / 0.72);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.35);
+}
+
+.guide-reveal-purpose-dot {
+  position: relative;
+  margin-top: 0.15rem;
+  size: 0.75rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+}
+
+.guide-reveal-purpose-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgb(183 245 0 / 0.88);
+}
+
+.guide-reveal-purpose-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 2px solid rgb(183 245 0 / 0.45);
+  opacity: 0;
+}
+
+.guide-reveal-root.is-visible .guide-reveal-purpose {
+  animation: guide-reveal-purpose-in 0.55s ease forwards;
+}
+
+.guide-reveal-root.is-visible .guide-reveal-purpose-dot::after {
+  animation: guide-reveal-ring-pulse 1.4s ease 0.35s 2;
+}
+
+.guide-reveal-root.is-visible .guide-reveal-panel {
+  animation: guide-reveal-panel-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s forwards;
+}
+
+.guide-reveal-root.is-visible .guide-reveal-block {
+  animation: guide-reveal-panel-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(0.18s + var(--guide-block-i, 0) * 0.08s);
+}
+
+.guide-reveal-root.is-visible .guide-reveal-row {
+  animation: guide-reveal-row-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(0.32s + var(--guide-row-i, 0) * 0.07s);
+}
+
+.guide-reveal-root.is-visible .guide-reveal-footer {
+  animation: guide-reveal-footer-in 0.45s ease forwards;
+  animation-delay: calc(0.32s + var(--guide-row-count, 5) * 0.07s + 0.12s);
+}
+
+.guide-reveal-registry-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-reveal-registry-scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(245 158 11 / 0.12) 45%,
+    rgb(245 158 11 / 0.22) 50%,
+    rgb(245 158 11 / 0.12) 55%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  opacity: 0;
+}
+
+.guide-reveal-root.is-visible .guide-reveal-registry-scan::after {
+  animation: guide-reveal-registry-scan 1.05s ease 0.28s forwards;
+}
+
+@keyframes guide-reveal-purpose-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-reveal-ring-pulse {
+  0% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes guide-reveal-panel-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-reveal-row-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes guide-reveal-footer-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-reveal-registry-scan {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-reveal-root:not(.is-visible) .guide-reveal-purpose,
+  .guide-reveal-root:not(.is-visible) .guide-reveal-panel,
+  .guide-reveal-root:not(.is-visible) .guide-reveal-row,
+  .guide-reveal-root:not(.is-visible) .guide-reveal-block,
+  .guide-reveal-root:not(.is-visible) .guide-reveal-footer {
+    opacity: 1;
+  }
+
+  .guide-reveal-root.is-visible .guide-reveal-purpose,
+  .guide-reveal-root.is-visible .guide-reveal-panel,
+  .guide-reveal-root.is-visible .guide-reveal-row,
+  .guide-reveal-root.is-visible .guide-reveal-block,
+  .guide-reveal-root.is-visible .guide-reveal-footer,
+  .guide-reveal-root.is-visible .guide-reveal-purpose-dot::after,
+  .guide-reveal-root.is-visible .guide-reveal-registry-scan::after {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

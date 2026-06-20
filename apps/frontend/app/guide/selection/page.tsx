@@ -6,7 +6,7 @@ import { GuideSelectionPage } from "@/components/guide/guide-selection-page";
 export const metadata: Metadata = {
   title: "Гид по выбору",
   description:
-    "Практический guide RevShare: как выбирать релизы, оценивать структуру сделки, payout history, риски и liquidity potential.",
+    "Практический guide Spliton: как выбирать релизы, оценивать структуру сделки, payout history, риски и liquidity potential.",
 };
 
 export default function GuideSelectionRoutePage() {

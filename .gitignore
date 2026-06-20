@@ -10,3 +10,50 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+storage/reports/
+
+# App build / dev cache
+apps/frontend/.next/
+apps/backend/dist/
+.next/dev/logs/
+
+# Test & coverage artifacts
+apps/frontend/test-results/
+apps/frontend/playwright-report/
+apps/frontend/blob-report/
+apps/frontend/coverage/
+apps/backend/coverage/
+**/e2e-full-run*.log
+
+# TypeScript incremental build info
+*.tsbuildinfo
+# Local credentials / secrets
+spliton_pass.txt
+*pass*.txt
+*password*.txt
+*secret*.txt
+*token*.txt
+*.pem
+*.key
+
+# Recovery artifacts
+.recovery-backup-*
+.recovery-log.json
+
+# Logs / reports
+logs/
+*.log
+!**/*.log.example
+build-error.log
+build-errors.txt
+lint-output.txt
+
+# Archives
+*.rar
+*.zip
+*.7z
+
+# Env variants
+.env.*
+!.env.example
+!.env.*.example

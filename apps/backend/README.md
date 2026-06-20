@@ -50,12 +50,26 @@ $ npm run start:prod
 # unit tests
 $ npm run test
 
-# e2e tests
+# e2e tests (use isolated test database — see repo root .env.example)
 $ npm run test:e2e
 
 # test coverage
 $ npm run test:cov
 ```
+
+### E2E database (required for stable CI)
+
+1. Create a dedicated Postgres/Supabase project for tests (not dev/staging/prod).
+2. Set in repo root `.env` or shell:
+
+```bash
+TEST_DATABASE_URL=postgresql://...
+TEST_DIRECT_URL=postgresql://...   # optional, for migrations
+```
+
+3. Prepare schema: `node scripts/test-db-setup.mjs --seed` (from repo root).
+4. Jest maps `TEST_DATABASE_URL` → `DATABASE_URL` for the test process only (`test/jest-e2e.setup.ts`).
+5. Global teardown deletes only `@example.com` users (`test/helpers/cleanup-e2e-users.ts`).
 
 ## Deployment
 

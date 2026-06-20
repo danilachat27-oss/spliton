@@ -11,13 +11,25 @@ export type ExchangeNeonTrend = "up" | "down" | "flat";
 const STROKE: Record<ExchangeNeonTrend, string> = {
   up: "#B7F500",
   down: "#fb7185",
-  flat: "#38bdf8",
+  flat: "rgba(255,255,255,0.82)",
+};
+
+const STROKE_MUTED: Record<ExchangeNeonTrend, string> = {
+  up: "#71717a",
+  down: "#a8a29e",
+  flat: "rgba(255,255,255,0.42)",
 };
 
 const HI: Record<ExchangeNeonTrend, string> = {
   up: "#e8ff9a",
   down: "#fecdd3",
-  flat: "#99f6ff",
+  flat: "#ffffff",
+};
+
+const HI_MUTED: Record<ExchangeNeonTrend, string> = {
+  up: "#e4e4e7",
+  down: "#d6d3d1",
+  flat: "rgba(255,255,255,0.72)",
 };
 
 function normalizeValues(values: number[]): number[] {
@@ -38,6 +50,7 @@ export function ExchangeNeonSparkline({
   fitContainer,
   /** Чем больше, тем плавнее линия между опорными точками */
   detailSegments = 5,
+  palette = "neon",
 }: {
   values: number[];
   trend: ExchangeNeonTrend;
@@ -46,6 +59,7 @@ export function ExchangeNeonSparkline({
   className?: string;
   fitContainer?: boolean;
   detailSegments?: number;
+  palette?: "neon" | "muted";
 }) {
   const uid = React.useId().replace(/:/g, "");
   const glowNeonId = `ex-neon-wide-${uid}`;
@@ -84,8 +98,9 @@ export function ExchangeNeonSparkline({
       .join(" ");
   }, [series, innerW, innerH, domain, padX, padY]);
 
-  const stroke = STROKE[trend];
-  const hi = HI[trend];
+  const stroke = palette === "muted" ? STROKE_MUTED[trend] : STROKE[trend];
+  const hi = palette === "muted" ? HI_MUTED[trend] : HI[trend];
+  const useNeonGlow = palette === "neon" && trend === "up";
   const sw5 = Math.max(2.2, height * 0.11);
   const sw9 = Math.max(3.5, height * 0.2);
   const sw28 = Math.max(1.35, height * 0.065);
@@ -101,7 +116,7 @@ export function ExchangeNeonSparkline({
       aria-hidden
     >
       <defs>
-        {trend === "up" ? (
+        {useNeonGlow ? (
           <>
             <filter id={glowNeonId} x="-55%" y="-55%" width="210%" height="210%">
               <feGaussianBlur in="SourceGraphic" stdDeviation={Math.max(1.8, 6.5 * k * 0.42)} result="blurWide" />
@@ -184,7 +199,7 @@ export function ExchangeNeonSparkline({
         strokeLinecap="round"
         strokeLinejoin="round"
         opacity="0.22"
-        filter={trend === "up" ? `url(#${glowNeonId})` : `url(#${softWideId})`}
+        filter={useNeonGlow ? `url(#${glowNeonId})` : `url(#${softWideId})`}
       />
       <polyline
         points={points}
@@ -193,7 +208,7 @@ export function ExchangeNeonSparkline({
         strokeWidth={sw28}
         strokeLinecap="round"
         strokeLinejoin="round"
-        filter={trend === "up" ? `url(#${glowId})` : `url(#${softCoreId})`}
+        filter={useNeonGlow ? `url(#${glowId})` : `url(#${softCoreId})`}
       />
       <polyline
         points={points}
@@ -202,7 +217,7 @@ export function ExchangeNeonSparkline({
         strokeWidth={sw11}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.55"
+        opacity={palette === "muted" ? "0.35" : "0.55"}
       />
     </svg>
   );

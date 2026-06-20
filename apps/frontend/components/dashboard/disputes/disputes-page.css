@@ -1,0 +1,82 @@
+/* Центр споров — анимация обработки */
+
+.dsp-step {
+  transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.dsp-step--active {
+  animation: dsp-step-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dsp-step-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  50% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.35); }
+}
+
+.dsp-progress {
+  animation: dsp-progress 2.2s ease-in-out infinite;
+}
+
+@keyframes dsp-progress {
+  0% { width: 12%; }
+  40% { width: 48%; }
+  75% { width: 78%; }
+  100% { width: 88%; }
+}
+
+.dsp-check-circle {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: dsp-check-circle 0.55s ease forwards;
+}
+
+.dsp-check-path {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: dsp-check-path 0.45s ease 0.35s forwards;
+}
+
+@keyframes dsp-check-circle {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes dsp-check-path {
+  to { stroke-dashoffset: 0; }
+}
+
+.dsp-ticket-in {
+  animation: dsp-ticket-in 0.45s ease both;
+}
+
+@keyframes dsp-ticket-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ——— Бланк обращения ——— */
+.dsp-doc {
+  background-image: linear-gradient(180deg, rgb(255 255 255) 0%, rgb(252 252 253) 100%);
+}
+
+.dsp-doc--processing .dsp-doc-stamp {
+  animation: dsp-doc-stamp-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dsp-doc-stamp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.dsp-doc--resolved .dsp-doc-accent {
+  box-shadow: 0 0 0 1px rgb(183 245 0 / 0.35);
+}
+
+.dsp-doc-action {
+  animation: dsp-ticket-in 0.4s ease both;
+}
+
+@media (max-width: 639px) {
+  .dsp-doc-meta {
+    grid-template-columns: 1fr;
+  }
+}

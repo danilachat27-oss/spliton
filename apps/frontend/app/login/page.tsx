@@ -1,19 +1,21 @@
-import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { BrandPanel } from "@/components/auth/brand-panel";
 import { LoginForm } from "@/components/auth/login-form";
+import { LoginPageFallback } from "@/components/auth/login-page-fallback";
 import { AuthSplitLayout } from "@/components/layout/auth-split-layout";
+import { criticalPageMetaAsync } from "@/lib/i18n/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Вход",
-  description:
-    "Вход в RevShare: управление балансом USDT (TRC20), долями дохода треков и выплатами.",
-};
+export async function generateMetadata() {
+  return criticalPageMetaAsync("meta.auth.login.title", "meta.auth.login.description");
+}
 
 export default function LoginPage() {
   return (
     <AuthSplitLayout brand={<BrandPanel />}>
-      <LoginForm />
+      <Suspense fallback={<LoginPageFallback />}>
+        <LoginForm />
+      </Suspense>
     </AuthSplitLayout>
   );
 }

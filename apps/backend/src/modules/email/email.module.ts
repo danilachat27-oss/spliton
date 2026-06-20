@@ -5,6 +5,7 @@ import { EmailService } from './email.service';
 import { DevEmailService } from './services/dev-email.service';
 import { DevEmailOutboxService } from './services/dev-email-outbox.service';
 import { PostmarkEmailService } from './services/postmark-email.service';
+import { ResendEmailService } from './services/resend-email.service';
 
 @Module({
   imports: [ConfigModule],
@@ -22,6 +23,9 @@ import { PostmarkEmailService } from './services/postmark-email.service';
         const provider = configService.get<string>('EMAIL_PROVIDER') ?? 'dev';
         if (provider === 'postmark') {
           return new PostmarkEmailService(configService);
+        }
+        if (provider === 'resend') {
+          return new ResendEmailService(configService);
         }
         return devService;
       },

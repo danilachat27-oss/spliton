@@ -1,0 +1,421 @@
+/* Что проверить в кабинете — мини-сцена профиля */
+
+.trust-cab-scene {
+  --tcb-duration: 16s;
+}
+
+.trust-cab-panel {
+  animation-duration: var(--tcb-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.trust-cab-panel--history { animation-name: tcb-panel-history; }
+.trust-cab-panel--statements { animation-name: tcb-panel-statements; }
+.trust-cab-panel--withdrawals { animation-name: tcb-panel-withdrawals; }
+.trust-cab-panel--documents { animation-name: tcb-panel-documents; }
+
+@keyframes tcb-panel-history {
+  0%, 2% { opacity: 0; visibility: hidden; transform: translateY(6px); }
+  4%, 23% { opacity: 1; visibility: visible; transform: translateY(0); }
+  25%, 100% { opacity: 0; visibility: hidden; transform: translateY(-4px); }
+}
+
+@keyframes tcb-panel-statements {
+  0%, 23% { opacity: 0; visibility: hidden; transform: translateY(6px); }
+  25%, 48% { opacity: 1; visibility: visible; transform: translateY(0); }
+  50%, 100% { opacity: 0; visibility: hidden; transform: translateY(-4px); }
+}
+
+@keyframes tcb-panel-withdrawals {
+  0%, 48% { opacity: 0; visibility: hidden; transform: translateY(6px); }
+  50%, 73% { opacity: 1; visibility: visible; transform: translateY(0); }
+  75%, 100% { opacity: 0; visibility: hidden; transform: translateY(-4px); }
+}
+
+@keyframes tcb-panel-documents {
+  0%, 73% { opacity: 0; visibility: hidden; transform: translateY(6px); }
+  75%, 96% { opacity: 1; visibility: visible; transform: translateY(0); }
+  98%, 100% { opacity: 0; visibility: hidden; transform: translateY(-4px); }
+}
+
+.trust-cab-spinner,
+.trust-cab-detail,
+.trust-cab-tab-label,
+.trust-cab-underline,
+.trust-cab-tab-dot,
+.trust-cab-progress,
+.trust-cab-history-row,
+.trust-cab-history-total,
+.trust-cab-statement-card,
+.trust-cab-statement-btn,
+.trust-cab-receipt,
+.trust-cab-withdraw-card,
+.trust-cab-withdraw-status,
+.trust-cab-withdraw-step,
+.trust-cab-withdraw-done,
+.trust-cab-doc-row,
+.trust-cab-doc-cta,
+.trust-cab-check-circle,
+.trust-cab-check-path,
+.trust-cab-profile-dot {
+  animation-duration: var(--tcb-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.trust-cab-spinner { opacity: 0; }
+
+.trust-cab-spinner--history { animation-name: tcb-spinner-history; }
+.trust-cab-spinner--statements { animation-name: tcb-spinner-statements; }
+.trust-cab-spinner--withdrawals { animation-name: tcb-spinner-withdrawals; }
+.trust-cab-spinner--documents { animation-name: tcb-spinner-documents; }
+
+@keyframes tcb-spinner-history {
+  0%, 4% { opacity: 0; } 6%, 11% { opacity: 1; } 13%, 100% { opacity: 0; }
+}
+@keyframes tcb-spinner-statements {
+  0%, 25% { opacity: 0; } 27%, 32% { opacity: 1; } 34%, 100% { opacity: 0; }
+}
+@keyframes tcb-spinner-withdrawals {
+  0%, 50% { opacity: 0; } 52%, 57% { opacity: 1; } 59%, 100% { opacity: 0; }
+}
+@keyframes tcb-spinner-documents {
+  0%, 75% { opacity: 0; } 77%, 82% { opacity: 1; } 84%, 100% { opacity: 0; }
+}
+
+.trust-cab-spin-icon { animation: tcb-spin 0.9s linear infinite; }
+@keyframes tcb-spin { to { transform: rotate(360deg); } }
+
+.trust-cab-history-row--1 { animation-name: tcb-history-row-1; }
+.trust-cab-history-row--2 { animation-name: tcb-history-row-2; }
+.trust-cab-history-row--3 { animation-name: tcb-history-row-3; }
+
+@keyframes tcb-history-row-1 {
+  0%, 10% { opacity: 0; transform: translateX(-6px); }
+  12%, 22% { opacity: 1; transform: translateX(0); background: rgb(250 250 250); }
+  24%, 100% { opacity: 0; }
+}
+@keyframes tcb-history-row-2 {
+  0%, 13% { opacity: 0; transform: translateX(-6px); }
+  15%, 17% { opacity: 1; transform: translateX(0); background: rgb(250 250 250); }
+  18%, 22% { opacity: 1; background: rgb(236 253 245); box-shadow: 0 0 0 1px rgb(183 245 0 / 0.35); }
+  24%, 100% { opacity: 0; box-shadow: none; }
+}
+@keyframes tcb-history-row-3 {
+  0%, 16% { opacity: 0; }
+  18%, 22% { opacity: 1; }
+  24%, 100% { opacity: 0; }
+}
+
+.trust-cab-history-total { animation-name: tcb-history-total; }
+
+@keyframes tcb-history-total {
+  0%, 18% { opacity: 0; transform: translateY(4px); }
+  20%, 22% { opacity: 1; transform: translateY(0); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); }
+  24%, 100% { opacity: 0; transform: translateY(4px); box-shadow: none; }
+}
+
+.trust-cab-statement-card { animation-name: tcb-statement-card; }
+
+@keyframes tcb-statement-card {
+  0%, 30% { box-shadow: none; }
+  32%, 46% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); background: rgb(236 253 245 / 0.5); }
+  48%, 100% { box-shadow: none; background: rgb(250 250 250); }
+}
+
+.trust-cab-statement-btn { animation-name: tcb-statement-btn; }
+
+@keyframes tcb-statement-btn {
+  0%, 38% { box-shadow: none; }
+  40%, 46% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.45); }
+  48%, 100% { box-shadow: none; }
+}
+
+.trust-cab-receipt { animation-name: tcb-receipt; opacity: 0; }
+
+@keyframes tcb-receipt {
+  0%, 40% { opacity: 0; transform: translateY(4px); }
+  42%, 47% { opacity: 1; transform: translateY(0); }
+  49%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+.trust-cab-withdraw-card { animation-name: tcb-withdraw-card; }
+
+@keyframes tcb-withdraw-card {
+  0%, 55% { box-shadow: none; }
+  57%, 71% { box-shadow: 0 0 0 2px rgb(183 245 0 / 0.35); }
+  73%, 100% { box-shadow: none; }
+}
+
+.trust-cab-withdraw-status { animation-name: tcb-withdraw-status; }
+
+@keyframes tcb-withdraw-status {
+  0%, 58% { background: rgb(254 243 199); color: rgb(146 64 14); }
+  60%, 64% { background: rgb(254 243 199); color: rgb(146 64 14); }
+  66%, 71% { background: rgb(220 252 231); color: rgb(21 128 61); }
+  73%, 100% { background: rgb(254 243 199); color: rgb(146 64 14); }
+}
+
+.trust-cab-withdraw-step--1 { animation-name: tcb-wstep-1; }
+.trust-cab-withdraw-step--2 { animation-name: tcb-wstep-2; }
+.trust-cab-withdraw-step--3 { animation-name: tcb-wstep-3; }
+
+@keyframes tcb-wstep-1 {
+  0%, 58% { background: rgb(23 23 23); color: white; }
+  60%, 71% { background: rgb(23 23 23); color: white; }
+  73%, 100% { background: rgb(245 245 245); color: rgb(115 115 115); }
+}
+@keyframes tcb-wstep-2 {
+  0%, 62% { background: rgb(245 245 245); color: rgb(115 115 115); }
+  64%, 71% { background: rgb(254 243 199); color: rgb(146 64 14); }
+  73%, 100% { background: rgb(245 245 245); color: rgb(115 115 115); }
+}
+@keyframes tcb-wstep-3 {
+  0%, 66% { background: rgb(245 245 245); color: rgb(163 163 163); }
+  68%, 71% { background: rgb(245 245 245); color: rgb(163 163 163); }
+  73%, 100% { background: rgb(245 245 245); color: rgb(163 163 163); }
+}
+
+.trust-cab-withdraw-done { animation-name: tcb-withdraw-done; opacity: 0; }
+
+@keyframes tcb-withdraw-done {
+  0%, 66% { opacity: 0; transform: translateY(4px); }
+  68%, 72% { opacity: 1; transform: translateY(0); }
+  74%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+.trust-cab-doc-row--1 { animation-name: tcb-doc-1; }
+.trust-cab-doc-row--2 { animation-name: tcb-doc-2; }
+.trust-cab-doc-row--3 { animation-name: tcb-doc-3; }
+
+@keyframes tcb-doc-1 {
+  0%, 84% { opacity: 0.5; transform: scale(0.98); }
+  86%, 87% { opacity: 1; transform: scale(1); background: rgb(236 253 245); box-shadow: 0 0 0 1px rgb(183 245 0 / 0.35); }
+  89%, 95% { opacity: 1; background: rgb(250 250 250); box-shadow: none; }
+  97%, 100% { opacity: 0.5; }
+}
+@keyframes tcb-doc-2 {
+  0%, 87% { opacity: 0.5; transform: scale(0.98); }
+  89%, 90% { opacity: 1; transform: scale(1); background: rgb(236 253 245); box-shadow: 0 0 0 1px rgb(183 245 0 / 0.35); }
+  92%, 95% { opacity: 1; background: rgb(250 250 250); box-shadow: none; }
+  97%, 100% { opacity: 0.5; }
+}
+@keyframes tcb-doc-3 {
+  0%, 90% { opacity: 0.5; transform: scale(0.98); }
+  92%, 93% { opacity: 1; transform: scale(1); background: rgb(236 253 245); box-shadow: 0 0 0 1px rgb(183 245 0 / 0.35); }
+  95%, 96% { opacity: 1; background: rgb(250 250 250); box-shadow: none; }
+  98%, 100% { opacity: 0.5; }
+}
+
+.trust-cab-doc-cta { animation-name: tcb-doc-cta; }
+
+@keyframes tcb-doc-cta {
+  0%, 92% { box-shadow: none; transform: scale(1); }
+  94%, 96% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.45); transform: scale(1.02); }
+  98%, 100% { box-shadow: none; transform: scale(1); }
+}
+
+.trust-cab-check-circle {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+}
+
+.trust-cab-check-path {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+}
+
+.trust-cab-check-circle--statements { animation-name: tcb-check-circle-statements; }
+.trust-cab-check-path--statements { animation-name: tcb-check-path-statements; }
+.trust-cab-check-circle--withdrawals { animation-name: tcb-check-circle-withdrawals; }
+.trust-cab-check-path--withdrawals { animation-name: tcb-check-path-withdrawals; }
+
+@keyframes tcb-check-circle-statements {
+  0%, 32% { stroke-dashoffset: 120; }
+  34%, 36% { stroke-dashoffset: 0; }
+  38%, 47% { stroke-dashoffset: 0; }
+  49%, 100% { stroke-dashoffset: 120; }
+}
+@keyframes tcb-check-path-statements {
+  0%, 34% { stroke-dashoffset: 36; opacity: 0; }
+  35%, 37% { stroke-dashoffset: 0; opacity: 1; }
+  38%, 47% { stroke-dashoffset: 0; opacity: 1; }
+  49%, 100% { stroke-dashoffset: 36; opacity: 0; }
+}
+@keyframes tcb-check-circle-withdrawals {
+  0%, 66% { stroke-dashoffset: 120; }
+  68%, 70% { stroke-dashoffset: 0; }
+  72%, 100% { stroke-dashoffset: 120; }
+}
+@keyframes tcb-check-path-withdrawals {
+  0%, 68% { stroke-dashoffset: 36; opacity: 0; }
+  69%, 71% { stroke-dashoffset: 0; opacity: 1; }
+  73%, 100% { stroke-dashoffset: 36; opacity: 0; }
+}
+
+.trust-cab-profile-dot { animation-name: tcb-profile-dot; }
+
+@keyframes tcb-profile-dot {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.trust-cab-tab-label--history { animation: tcb-label-history var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-tab-label--statements { animation: tcb-label-statements var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-tab-label--withdrawals { animation: tcb-label-withdrawals var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-tab-label--documents { animation: tcb-label-documents var(--tcb-duration) ease-in-out infinite; }
+
+.trust-cab-underline--history { animation: tcb-underline-history var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-underline--statements { animation: tcb-underline-statements var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-underline--withdrawals { animation: tcb-underline-withdrawals var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-underline--documents { animation: tcb-underline-documents var(--tcb-duration) ease-in-out infinite; }
+
+.trust-cab-timeline-step {
+  overflow: visible;
+}
+
+.trust-cab-tab-dot {
+  background: white;
+  color: rgb(115 115 115);
+  box-shadow: 0 0 0 2px rgb(229 229 229), 0 0 0 5px white;
+  transform-origin: center center;
+  will-change: transform, background-color, color, box-shadow;
+}
+
+.trust-cab-tab-dot--history { animation: tcb-dot-history var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-tab-dot--statements { animation: tcb-dot-statements var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-tab-dot--withdrawals { animation: tcb-dot-withdrawals var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-tab-dot--documents { animation: tcb-dot-documents var(--tcb-duration) ease-in-out infinite; }
+
+.trust-cab-detail--history { animation: tcb-detail-history var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-detail--statements { animation: tcb-detail-statements var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-detail--withdrawals { animation: tcb-detail-withdrawals var(--tcb-duration) ease-in-out infinite; }
+.trust-cab-detail--documents { animation: tcb-detail-documents var(--tcb-duration) ease-in-out infinite; }
+
+@keyframes tcb-label-history { 0%, 3% { color: rgb(115 115 115); font-weight: 500; } 4%, 23% { color: rgb(23 23 23); font-weight: 600; } 25%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes tcb-label-statements { 0%, 23% { color: rgb(115 115 115); font-weight: 500; } 25%, 48% { color: rgb(23 23 23); font-weight: 600; } 50%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes tcb-label-withdrawals { 0%, 48% { color: rgb(115 115 115); font-weight: 500; } 50%, 73% { color: rgb(23 23 23); font-weight: 600; } 75%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes tcb-label-documents { 0%, 73% { color: rgb(115 115 115); font-weight: 500; } 75%, 96% { color: rgb(23 23 23); font-weight: 600; } 98%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+
+@keyframes tcb-dot-history {
+  0%, 3% {
+    background: white;
+    color: rgb(115 115 115);
+    box-shadow: 0 0 0 2px rgb(229 229 229), 0 0 0 5px white;
+    transform: scale(1);
+  }
+  4%, 23% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white, 0 0 0 7px rgb(183 245 0 / 0.42);
+    transform: scale(1.08);
+  }
+  25%, 100% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white;
+    transform: scale(1);
+  }
+}
+
+@keyframes tcb-dot-statements {
+  0%, 23% {
+    background: white;
+    color: rgb(115 115 115);
+    box-shadow: 0 0 0 2px rgb(229 229 229), 0 0 0 5px white;
+    transform: scale(1);
+  }
+  25%, 48% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white, 0 0 0 7px rgb(183 245 0 / 0.42);
+    transform: scale(1.08);
+  }
+  50%, 100% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white;
+    transform: scale(1);
+  }
+}
+
+@keyframes tcb-dot-withdrawals {
+  0%, 48% {
+    background: white;
+    color: rgb(115 115 115);
+    box-shadow: 0 0 0 2px rgb(229 229 229), 0 0 0 5px white;
+    transform: scale(1);
+  }
+  50%, 73% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white, 0 0 0 7px rgb(183 245 0 / 0.42);
+    transform: scale(1.08);
+  }
+  75%, 100% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white;
+    transform: scale(1);
+  }
+}
+
+@keyframes tcb-dot-documents {
+  0%, 73% {
+    background: white;
+    color: rgb(115 115 115);
+    box-shadow: 0 0 0 2px rgb(229 229 229), 0 0 0 5px white;
+    transform: scale(1);
+  }
+  75%, 96% {
+    background: rgb(23 23 23);
+    color: white;
+    box-shadow: 0 0 0 2px rgb(23 23 23), 0 0 0 5px white, 0 0 0 7px rgb(183 245 0 / 0.42);
+    transform: scale(1.08);
+  }
+  98%, 100% {
+    background: white;
+    color: rgb(115 115 115);
+    box-shadow: 0 0 0 2px rgb(229 229 229), 0 0 0 5px white;
+    transform: scale(1);
+  }
+}
+
+@keyframes tcb-underline-history { 0%, 3% { transform: scaleX(0); opacity: 0; } 4%, 23% { transform: scaleX(1); opacity: 1; } 25%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes tcb-underline-statements { 0%, 23% { transform: scaleX(0); opacity: 0; } 25%, 48% { transform: scaleX(1); opacity: 1; } 50%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes tcb-underline-withdrawals { 0%, 48% { transform: scaleX(0); opacity: 0; } 50%, 73% { transform: scaleX(1); opacity: 1; } 75%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes tcb-underline-documents { 0%, 73% { transform: scaleX(0); opacity: 0; } 75%, 96% { transform: scaleX(1); opacity: 1; } 98%, 100% { transform: scaleX(0); opacity: 0; } }
+
+@keyframes tcb-detail-history { 0%, 3% { opacity: 0; visibility: hidden; } 4%, 23% { opacity: 1; visibility: visible; } 25%, 100% { opacity: 0; visibility: hidden; } }
+@keyframes tcb-detail-statements { 0%, 23% { opacity: 0; visibility: hidden; } 25%, 48% { opacity: 1; visibility: visible; } 50%, 100% { opacity: 0; visibility: hidden; } }
+@keyframes tcb-detail-withdrawals { 0%, 48% { opacity: 0; visibility: hidden; } 50%, 73% { opacity: 1; visibility: visible; } 75%, 100% { opacity: 0; visibility: hidden; } }
+@keyframes tcb-detail-documents { 0%, 73% { opacity: 0; visibility: hidden; } 75%, 96% { opacity: 1; visibility: visible; } 98%, 100% { opacity: 0; visibility: hidden; } }
+
+.trust-cab-progress {
+  animation: tcb-progress var(--tcb-duration) linear infinite;
+  box-shadow: 0 0 10px rgb(183 245 0 / 0.45);
+}
+
+@keyframes tcb-progress {
+  0% { width: 0%; }
+  4% { width: 0%; }
+  23% { width: 33.33%; }
+  25% { width: 33.33%; }
+  48% { width: 66.66%; }
+  50% { width: 66.66%; }
+  73% { width: 100%; }
+  96% { width: 100%; }
+  100% { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-cab-scene * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .trust-cab-panel--history, .trust-cab-detail--history { opacity: 1 !important; visibility: visible !important; animation: none !important; }
+  .trust-cab-panel--statements, .trust-cab-panel--withdrawals, .trust-cab-panel--documents,
+  .trust-cab-detail--statements, .trust-cab-detail--withdrawals, .trust-cab-detail--documents,
+  .trust-cab-spinner { display: none !important; }
+}

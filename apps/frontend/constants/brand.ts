@@ -1,4 +1,4 @@
 export const BRAND = {
-  name: "RevShare",
+  name: "Spliton",
   tagline: "Долевое участие в доходе музыкальных треков",
 } as const;

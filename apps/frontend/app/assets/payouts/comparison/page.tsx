@@ -1,26 +1,17 @@
-import type { Metadata } from "next";
-
+import { LocalizedSubpageHero } from "@/components/dashboard/assets/localized-subpage-hero";
 import { PayoutsBalanceScale } from "@/components/dashboard/assets/payouts-balance-scale";
-import { PayoutsSectionHeader } from "@/components/dashboard/assets/payouts-section-header";
-import { PayoutsSubpageHero } from "@/components/dashboard/assets/payouts-subpage-hero";
+import { pageMeta } from "@/lib/i18n/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Сравнение выплат",
-  description: "Сравнение периодов: начисления и выводы USDT.",
-};
+export const metadata = pageMeta("meta.payouts.comparison.title", "meta.payouts.comparison.description");
 
 export default function AssetsPayoutsComparisonPage() {
   return (
-    <div className="space-y-10 pb-8 sm:space-y-12">
-      <PayoutsSectionHeader />
+    <div className="space-y-8 pb-8 sm:space-y-10">
+      <LocalizedSubpageHero eyebrowKey="meta.payouts.comparisonEyebrow" titleKey="meta.payouts.comparison.hero" />
 
-      <div className="space-y-8 sm:space-y-10">
-        <PayoutsSubpageHero eyebrow="USDT · TRC20 · Compare" title="Сравнение периодов" />
-
-        <section className="scroll-mt-24">
-          <PayoutsBalanceScale />
-        </section>
-      </div>
+      <section className="scroll-mt-24">
+        <PayoutsBalanceScale />
+      </section>
     </div>
   );
 }

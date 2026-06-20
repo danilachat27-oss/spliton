@@ -1,0 +1,915 @@
+/* Центр доверия — анимированный путь операции */
+
+.trust-op-flow-scene {
+  --top-duration: 16s;
+}
+
+.trust-op-cursor,
+.trust-op-ring,
+.trust-op-tip,
+.trust-op-toast,
+.trust-op-spinner,
+.trust-op-balance-from,
+.trust-op-balance-to,
+.trust-op-wallet-status,
+.trust-op-wallet-card,
+.trust-op-ledger-amount,
+.trust-op-trade-done,
+.trust-op-accrual-badge,
+.trust-op-accrual-card,
+.trust-op-withdraw-pending,
+.trust-op-withdraw-approved,
+.trust-op-withdraw-toast,
+.trust-op-badge-dot {
+  animation-duration: var(--top-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.trust-op-cursor,
+.trust-op-ring,
+.trust-op-tip,
+.trust-op-toast,
+.trust-op-spinner,
+.trust-op-balance-to,
+.trust-op-wallet-status,
+.trust-op-trade-done,
+.trust-op-accrual-badge,
+.trust-op-withdraw-pending,
+.trust-op-withdraw-approved,
+.trust-op-withdraw-toast {
+  opacity: 0;
+}
+
+.trust-op-spin-icon {
+  animation: top-spin 0.9s linear infinite;
+}
+
+@keyframes top-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ——— Курсор: движение к цели и клик ——— */
+.trust-op-cursor {
+  will-change: transform, opacity;
+}
+
+.trust-op-cursor--deposit { animation-name: top-cursor-deposit; }
+.trust-op-cursor--ledger { animation-name: top-cursor-ledger; }
+.trust-op-cursor--trade { animation-name: top-cursor-trade; }
+.trust-op-cursor--accrual { animation-name: top-cursor-accrual; }
+.trust-op-cursor--withdraw { animation-name: top-cursor-withdraw; }
+
+.trust-op-tip--deposit { animation-name: top-tip-deposit; }
+.trust-op-tip--ledger { animation-name: top-tip-ledger; }
+.trust-op-tip--trade { animation-name: top-tip-trade; }
+.trust-op-tip--accrual { animation-name: top-tip-accrual; }
+.trust-op-tip--withdraw { animation-name: top-tip-withdraw; }
+
+.trust-op-ring--deposit { animation-name: top-ring-deposit; }
+.trust-op-ring--ledger { animation-name: top-ring-ledger; }
+.trust-op-ring--trade { animation-name: top-ring-trade; }
+.trust-op-ring--accrual { animation-name: top-ring-accrual; }
+.trust-op-ring--withdraw { animation-name: top-ring-withdraw; }
+
+@keyframes top-cursor-deposit {
+  0%, 7% { opacity: 0; transform: translate(18px, -14px); }
+  8%, 10% { opacity: 1; transform: translate(6px, -4px); }
+  11%, 16% { opacity: 1; transform: translate(0, 0); }
+  18%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes top-cursor-ledger {
+  0%, 22% { opacity: 0; transform: translate(16px, -12px); }
+  23%, 26% { opacity: 1; transform: translate(5px, -3px); }
+  27%, 34% { opacity: 1; transform: translate(0, 0); }
+  36%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes top-cursor-trade {
+  0%, 40% { opacity: 0; transform: translate(18px, -14px); }
+  41%, 44% { opacity: 1; transform: translate(6px, -4px); }
+  45%, 52% { opacity: 1; transform: translate(0, 0); }
+  54%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes top-cursor-accrual {
+  0%, 58% { opacity: 0; transform: translate(14px, -10px); }
+  59%, 62% { opacity: 1; transform: translate(4px, -2px); }
+  63%, 70% { opacity: 1; transform: translate(0, 0); }
+  72%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes top-cursor-withdraw {
+  0%, 76% { opacity: 0; transform: translate(16px, -12px); }
+  77%, 80% { opacity: 1; transform: translate(5px, -3px); }
+  81%, 88% { opacity: 1; transform: translate(0, 0); }
+  90%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+@keyframes top-tip-deposit { 0%, 7% { opacity: 0; } 8%, 16% { opacity: 1; } 18%, 100% { opacity: 0; } }
+@keyframes top-tip-ledger { 0%, 22% { opacity: 0; } 23%, 34% { opacity: 1; } 36%, 100% { opacity: 0; } }
+@keyframes top-tip-trade { 0%, 40% { opacity: 0; } 41%, 52% { opacity: 1; } 54%, 100% { opacity: 0; } }
+@keyframes top-tip-accrual { 0%, 58% { opacity: 0; } 59%, 70% { opacity: 1; } 72%, 100% { opacity: 0; } }
+@keyframes top-tip-withdraw { 0%, 76% { opacity: 0; } 77%, 88% { opacity: 1; } 90%, 100% { opacity: 0; } }
+
+@keyframes top-ring-deposit { 0%, 10% { opacity: 0; transform: scale(0.5); } 11%, 14% { opacity: 1; transform: scale(1.45); } 16%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes top-ring-ledger { 0%, 28% { opacity: 0; transform: scale(0.5); } 29%, 32% { opacity: 1; transform: scale(1.45); } 34%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes top-ring-trade { 0%, 46% { opacity: 0; transform: scale(0.5); } 47%, 50% { opacity: 1; transform: scale(1.45); } 52%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes top-ring-accrual { 0%, 64% { opacity: 0; transform: scale(0.5); } 65%, 68% { opacity: 1; transform: scale(1.45); } 70%, 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes top-ring-withdraw { 0%, 82% { opacity: 0; transform: scale(0.5); } 83%, 86% { opacity: 1; transform: scale(1.45); } 88%, 100% { opacity: 0; transform: scale(1.8); } }
+
+/* ——— Панели: только одна видима, остальные полностью скрыты ——— */
+[class*="trust-op-panel--"] {
+  animation-duration: var(--top-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.trust-op-panel--deposit { animation-name: top-panel-deposit; }
+.trust-op-panel--ledger { animation-name: top-panel-ledger; }
+.trust-op-panel--trade { animation-name: top-panel-trade; }
+.trust-op-panel--accrual { animation-name: top-panel-accrual; }
+.trust-op-panel--withdraw { animation-name: top-panel-withdraw; }
+
+@keyframes top-panel-deposit {
+  0%, 2% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  4%, 19% { opacity: 1; visibility: visible; transform: translateY(0); }
+  21%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-panel-ledger {
+  0%, 19% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  21%, 37% { opacity: 1; visibility: visible; transform: translateY(0); }
+  39%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-panel-trade {
+  0%, 37% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  39%, 55% { opacity: 1; visibility: visible; transform: translateY(0); }
+  57%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-panel-accrual {
+  0%, 55% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  57%, 73% { opacity: 1; visibility: visible; transform: translateY(0); }
+  75%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-panel-withdraw {
+  0%, 73% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  75%, 91% { opacity: 1; visibility: visible; transform: translateY(0); }
+  93%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+/* ——— Спиннеры проверки ——— */
+.trust-op-spinner--deposit { animation-name: top-spinner-deposit; }
+.trust-op-spinner--ledger { animation-name: top-spinner-ledger; }
+.trust-op-spinner--trade { animation-name: top-spinner-trade; }
+.trust-op-spinner--withdraw { animation-name: top-spinner-withdraw; }
+
+@keyframes top-spinner-deposit {
+  0%, 4% { opacity: 0; transform: translateY(-4px); }
+  6%, 11% { opacity: 1; transform: translateY(0); }
+  13%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-spinner-ledger {
+  0%, 20% { opacity: 0; transform: translateY(-4px); }
+  22%, 27% { opacity: 1; transform: translateY(0); }
+  29%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-spinner-trade {
+  0%, 38% { opacity: 0; transform: translateY(-4px); }
+  40%, 45% { opacity: 1; transform: translateY(0); }
+  47%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-spinner-withdraw {
+  0%, 74% { opacity: 0; transform: translateY(-4px); }
+  76%, 82% { opacity: 1; transform: translateY(0); }
+  84%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ——— Уведомления ——— */
+.trust-op-toast--deposit { animation-name: top-toast-deposit; }
+.trust-op-toast--ledger { animation-name: top-toast-ledger; }
+.trust-op-toast--trade { animation-name: top-toast-trade; }
+.trust-op-toast--accrual { animation-name: top-toast-accrual; }
+.trust-op-withdraw-toast { animation-name: top-toast-withdraw; }
+
+@keyframes top-toast-slide-in {
+  from { opacity: 0; transform: translateX(12px) translateY(-4px); }
+  to { opacity: 1; transform: translateX(0) translateY(0); }
+}
+
+@keyframes top-toast-deposit {
+  0%, 10% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+  12%, 18% { opacity: 1; transform: translateX(0) translateY(0); }
+  20%, 100% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+}
+
+@keyframes top-toast-ledger {
+  0%, 26% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+  28%, 36% { opacity: 1; transform: translateX(0) translateY(0); }
+  38%, 100% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+}
+
+@keyframes top-toast-trade {
+  0%, 44% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+  46%, 54% { opacity: 1; transform: translateX(0) translateY(0); }
+  56%, 100% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+}
+
+@keyframes top-toast-accrual {
+  0%, 60% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+  62%, 72% { opacity: 1; transform: translateX(0) translateY(0); }
+  74%, 100% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+}
+
+@keyframes top-toast-withdraw {
+  0%, 84% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+  86%, 92% { opacity: 1; transform: translateX(0) translateY(0); }
+  94%, 100% { opacity: 0; transform: translateX(14px) translateY(-6px); }
+}
+
+/* ——— Пополнение: баланс и статус ——— */
+.trust-op-balance-from { animation-name: top-balance-from; }
+.trust-op-balance-to { animation-name: top-balance-to; }
+.trust-op-wallet-status { animation-name: top-wallet-status; }
+.trust-op-wallet-card { animation-name: top-wallet-card; }
+
+@keyframes top-balance-from {
+  0%, 11% { opacity: 1; }
+  13%, 100% { opacity: 0; }
+}
+
+@keyframes top-balance-to {
+  0%, 11% { opacity: 0; transform: scale(0.92); }
+  13%, 18% { opacity: 1; transform: scale(1.04); }
+  20%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+@keyframes top-wallet-status {
+  0%, 13% { opacity: 0; transform: translateY(4px); }
+  15%, 19% { opacity: 1; transform: translateY(0); }
+  21%, 100% { opacity: 0; transform: translateY(4px); }
+}
+
+@keyframes top-wallet-card {
+  0%, 12% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); background: rgb(250 250 250); }
+  14%, 18% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.35); background: rgb(236 253 245 / 0.65); }
+  20%, 100% { box-shadow: none; background: rgb(250 250 250); }
+}
+
+/* ——— Ledger ——— */
+.trust-op-ledger-row { animation: top-ledger-row var(--top-duration) ease-in-out infinite; }
+.trust-op-ledger-amount { animation-name: top-ledger-amount; }
+
+@keyframes top-ledger-row {
+  0%, 26% { background: rgb(250 250 250); box-shadow: none; }
+  28%, 36% { background: rgb(236 253 245); box-shadow: 0 0 0 2px rgb(183 245 0 / 0.4); }
+  38%, 100% { background: rgb(250 250 250); box-shadow: none; }
+}
+
+@keyframes top-ledger-amount {
+  0%, 28% { color: rgb(21 128 61); transform: scale(1); }
+  30%, 34% { color: rgb(5 150 105); transform: scale(1.08); }
+  36%, 100% { color: rgb(21 128 61); transform: scale(1); }
+}
+
+/* ——— Сделка ——— */
+.trust-op-trade-done { animation-name: top-trade-done; }
+.trust-op-trade-btn { animation: top-trade-btn var(--top-duration) ease-in-out infinite; }
+
+@keyframes top-trade-done {
+  0%, 45% { opacity: 0; transform: translateY(3px); }
+  47%, 55% { opacity: 1; transform: translateY(0); }
+  57%, 100% { opacity: 0; transform: translateY(3px); }
+}
+
+@keyframes top-trade-btn {
+  0%, 44% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  46%, 52% { box-shadow: 0 0 0 4px rgb(183 245 0 / 0.5); }
+  54%, 100% { box-shadow: none; }
+}
+
+.trust-op-deposit-btn { animation: top-deposit-btn var(--top-duration) ease-in-out infinite; }
+
+@keyframes top-deposit-btn {
+  0%, 8% { box-shadow: 0 0 0 0 rgb(183 245 0 / 0); }
+  10%, 15% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.45); }
+  17%, 100% { box-shadow: none; }
+}
+
+/* ——— Начисления ——— */
+.trust-op-accrual-val { animation: top-accrual-val var(--top-duration) ease-in-out infinite; }
+.trust-op-accrual-badge { animation-name: top-accrual-badge; }
+.trust-op-accrual-card { animation-name: top-accrual-card; }
+
+@keyframes top-accrual-val {
+  0%, 56% { opacity: 0; transform: scale(0.94); }
+  57%, 62% { opacity: 1; transform: scale(1); }
+  63%, 71% { opacity: 1; transform: scale(1.06); color: rgb(5 150 105); }
+  73%, 100% { opacity: 0; transform: scale(0.94); }
+}
+
+@keyframes top-accrual-badge {
+  0%, 64% { opacity: 0; transform: scale(0.9); }
+  66%, 72% { opacity: 1; transform: scale(1); }
+  74%, 100% { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes top-accrual-card {
+  0%, 62% { box-shadow: none; background: rgb(250 250 250); }
+  64%, 72% { box-shadow: 0 0 0 3px rgb(183 245 0 / 0.35); background: rgb(236 253 245 / 0.55); }
+  74%, 100% { box-shadow: none; background: rgb(250 250 250); }
+}
+
+/* ——— Вывод ——— */
+.trust-op-withdraw-pending { animation-name: top-withdraw-pending; }
+.trust-op-withdraw-approved { animation-name: top-withdraw-approved; }
+
+@keyframes top-withdraw-pending {
+  0%, 78% { opacity: 0; }
+  80%, 84% { opacity: 1; }
+  86%, 100% { opacity: 0; }
+}
+
+@keyframes top-withdraw-approved {
+  0%, 84% { opacity: 0; transform: translateY(4px); }
+  86%, 92% { opacity: 1; transform: translateY(0); }
+  94%, 100% { opacity: 0; transform: translateY(4px); }
+}
+
+/* ——— Таймлайн ——— */
+.trust-op-step-label--deposit { animation: top-label-deposit var(--top-duration) ease-in-out infinite; }
+.trust-op-step-label--ledger { animation: top-label-ledger var(--top-duration) ease-in-out infinite; }
+.trust-op-step-label--trade { animation: top-label-trade var(--top-duration) ease-in-out infinite; }
+.trust-op-step-label--accrual { animation: top-label-accrual var(--top-duration) ease-in-out infinite; }
+.trust-op-step-label--withdraw { animation: top-label-withdraw var(--top-duration) ease-in-out infinite; }
+
+.trust-op-step-dot {
+  background: white;
+  color: rgb(115 115 115);
+  outline: 1px solid rgb(23 23 23);
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.trust-op-timeline-step {
+  overflow: visible;
+}
+
+.trust-op-step-dot--deposit { animation: top-dot-deposit var(--top-duration) ease-in-out infinite; }
+.trust-op-step-dot--ledger { animation: top-dot-ledger var(--top-duration) ease-in-out infinite; }
+.trust-op-step-dot--trade { animation: top-dot-trade var(--top-duration) ease-in-out infinite; }
+.trust-op-step-dot--accrual { animation: top-dot-accrual var(--top-duration) ease-in-out infinite; }
+.trust-op-step-dot--withdraw { animation: top-dot-withdraw var(--top-duration) ease-in-out infinite; }
+
+[class*="trust-op-detail--"] {
+  animation-duration: var(--top-duration);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.trust-op-detail--deposit { animation-name: top-detail-deposit; }
+.trust-op-detail--ledger { animation-name: top-detail-ledger; }
+.trust-op-detail--trade { animation-name: top-detail-trade; }
+.trust-op-detail--accrual { animation-name: top-detail-accrual; }
+.trust-op-detail--withdraw { animation-name: top-detail-withdraw; }
+
+.trust-op-underline--deposit { animation: top-underline-deposit var(--top-duration) ease-in-out infinite; }
+.trust-op-underline--ledger { animation: top-underline-ledger var(--top-duration) ease-in-out infinite; }
+.trust-op-underline--trade { animation: top-underline-trade var(--top-duration) ease-in-out infinite; }
+.trust-op-underline--accrual { animation: top-underline-accrual var(--top-duration) ease-in-out infinite; }
+.trust-op-underline--withdraw { animation: top-underline-withdraw var(--top-duration) ease-in-out infinite; }
+
+@keyframes top-label-deposit { 0%, 3% { color: rgb(115 115 115); font-weight: 500; } 4%, 19% { color: rgb(23 23 23); font-weight: 600; } 21%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes top-label-ledger { 0%, 19% { color: rgb(115 115 115); font-weight: 500; } 21%, 37% { color: rgb(23 23 23); font-weight: 600; } 39%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes top-label-trade { 0%, 37% { color: rgb(115 115 115); font-weight: 500; } 39%, 55% { color: rgb(23 23 23); font-weight: 600; } 57%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes top-label-accrual { 0%, 55% { color: rgb(115 115 115); font-weight: 500; } 57%, 73% { color: rgb(23 23 23); font-weight: 600; } 75%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+@keyframes top-label-withdraw { 0%, 73% { color: rgb(115 115 115); font-weight: 500; } 75%, 91% { color: rgb(23 23 23); font-weight: 600; } 93%, 100% { color: rgb(115 115 115); font-weight: 500; } }
+
+@keyframes top-dot-deposit { 0%, 3% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } 4%, 19% { background: rgb(23 23 23); outline: none; transform: scale(1.08); } 21%, 100% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } }
+@keyframes top-dot-ledger { 0%, 19% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } 21%, 37% { background: rgb(23 23 23); outline: none; transform: scale(1.08); } 39%, 100% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } }
+@keyframes top-dot-trade { 0%, 37% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } 39%, 55% { background: rgb(23 23 23); outline: none; transform: scale(1.08); } 57%, 100% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } }
+@keyframes top-dot-accrual { 0%, 55% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } 57%, 73% { background: rgb(23 23 23); outline: none; transform: scale(1.08); } 75%, 100% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } }
+@keyframes top-dot-withdraw { 0%, 73% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } 75%, 91% { background: rgb(23 23 23); outline: none; transform: scale(1.08); } 93%, 100% { background: white; outline: 1px solid rgb(23 23 23); transform: scale(1); } }
+
+@keyframes top-detail-deposit {
+  0%, 3% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  4%, 19% { opacity: 1; visibility: visible; transform: translateY(0); }
+  21%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-detail-ledger {
+  0%, 19% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  21%, 37% { opacity: 1; visibility: visible; transform: translateY(0); }
+  39%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-detail-trade {
+  0%, 37% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  39%, 55% { opacity: 1; visibility: visible; transform: translateY(0); }
+  57%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-detail-accrual {
+  0%, 55% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  57%, 73% { opacity: 1; visibility: visible; transform: translateY(0); }
+  75%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+@keyframes top-detail-withdraw {
+  0%, 73% { opacity: 0; visibility: hidden; transform: translateY(8px); }
+  75%, 91% { opacity: 1; visibility: visible; transform: translateY(0); }
+  93%, 100% { opacity: 0; visibility: hidden; transform: translateY(-6px); }
+}
+
+@keyframes top-underline-deposit { 0%, 3% { transform: scaleX(0); opacity: 0; } 4%, 19% { transform: scaleX(1); opacity: 1; } 21%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes top-underline-ledger { 0%, 19% { transform: scaleX(0); opacity: 0; } 21%, 37% { transform: scaleX(1); opacity: 1; } 39%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes top-underline-trade { 0%, 37% { transform: scaleX(0); opacity: 0; } 39%, 55% { transform: scaleX(1); opacity: 1; } 57%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes top-underline-accrual { 0%, 55% { transform: scaleX(0); opacity: 0; } 57%, 73% { transform: scaleX(1); opacity: 1; } 75%, 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes top-underline-withdraw { 0%, 73% { transform: scaleX(0); opacity: 0; } 75%, 91% { transform: scaleX(1); opacity: 1; } 93%, 100% { transform: scaleX(0); opacity: 0; } }
+
+.trust-op-progress { animation: top-progress var(--top-duration) linear infinite; }
+
+@keyframes top-progress {
+  0% { width: 0%; }
+  19% { width: 20%; }
+  37% { width: 40%; }
+  55% { width: 60%; }
+  73% { width: 80%; }
+  91% { width: 100%; }
+  100% { width: 100%; }
+}
+
+.trust-op-badge-dot { animation-name: top-badge-pulse; }
+
+@keyframes top-badge-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+
+/* ——— Галочка: круг рисуется, затем штрих ——— */
+.trust-op-check-circle {
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  transform-origin: 26px 26px;
+}
+
+.trust-op-check-path {
+  stroke-dasharray: 42;
+  stroke-dashoffset: 42;
+}
+
+.trust-op-check-wrap,
+.trust-op-check-toast,
+.trust-op-check-inline,
+.trust-op-check-burst,
+.trust-op-check-circle,
+.trust-op-check-path,
+.trust-op-step-success,
+.trust-op-step-success-text {
+  animation-duration: var(--top-duration);
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-iteration-count: infinite;
+}
+
+.trust-op-check-wrap--deposit { animation-name: top-check-wrap-deposit; }
+.trust-op-check-wrap--ledger { animation-name: top-check-wrap-ledger; }
+.trust-op-check-wrap--trade { animation-name: top-check-wrap-trade; }
+.trust-op-check-wrap--accrual { animation-name: top-check-wrap-accrual; }
+.trust-op-check-wrap--withdraw { animation-name: top-check-wrap-withdraw; }
+
+.trust-op-check-circle--deposit { animation-name: top-check-circle-deposit; }
+.trust-op-check-circle--ledger { animation-name: top-check-circle-ledger; }
+.trust-op-check-circle--trade { animation-name: top-check-circle-trade; }
+.trust-op-check-circle--accrual { animation-name: top-check-circle-accrual; }
+.trust-op-check-circle--withdraw { animation-name: top-check-circle-withdraw; }
+
+.trust-op-check-path--deposit { animation-name: top-check-path-deposit; }
+.trust-op-check-path--ledger { animation-name: top-check-path-ledger; }
+.trust-op-check-path--trade { animation-name: top-check-path-trade; }
+.trust-op-check-path--accrual { animation-name: top-check-path-accrual; }
+.trust-op-check-path--withdraw { animation-name: top-check-path-withdraw; }
+
+.trust-op-check-burst--deposit { animation-name: top-check-burst-deposit; }
+.trust-op-check-burst--ledger { animation-name: top-check-burst-ledger; }
+.trust-op-check-burst--trade { animation-name: top-check-burst-trade; }
+.trust-op-check-burst--accrual { animation-name: top-check-burst-accrual; }
+.trust-op-check-burst--withdraw { animation-name: top-check-burst-withdraw; }
+
+.trust-op-check-burst {
+  inset: -35%;
+  opacity: 0;
+}
+
+.trust-op-check-burst--delay {
+  animation-delay: calc(var(--top-duration) * 0.003);
+}
+
+.trust-op-step-success { opacity: 0; }
+.trust-op-step-success-text { opacity: 0; }
+
+.trust-op-step-success--deposit { animation-name: top-step-success-deposit; }
+.trust-op-step-success-text--deposit { animation-name: top-step-success-text-deposit; }
+.trust-op-step-success--ledger { animation-name: top-step-success-ledger; }
+.trust-op-step-success-text--ledger { animation-name: top-step-success-text-ledger; }
+.trust-op-step-success--trade { animation-name: top-step-success-trade; }
+.trust-op-step-success-text--trade { animation-name: top-step-success-text-trade; }
+.trust-op-step-success--accrual { animation-name: top-step-success-accrual; }
+.trust-op-step-success-text--accrual { animation-name: top-step-success-text-accrual; }
+.trust-op-step-success--withdraw { animation-name: top-step-success-withdraw; }
+.trust-op-step-success-text--withdraw { animation-name: top-step-success-text-withdraw; }
+
+@keyframes top-check-wrap-deposit {
+  0%, 3% { opacity: 0; transform: scale(0.55); }
+  4%, 18% { opacity: 1; transform: scale(1); }
+  20%, 100% { opacity: 0; transform: scale(0.92); }
+}
+
+@keyframes top-check-circle-deposit {
+  0%, 4% { stroke-dashoffset: 145; transform: scale(0.88); }
+  5%, 7% { stroke-dashoffset: 0; transform: scale(1); }
+  8%, 18% { stroke-dashoffset: 0; transform: scale(1); }
+  20%, 100% { stroke-dashoffset: 145; transform: scale(0.88); }
+}
+
+@keyframes top-check-path-deposit {
+  0%, 6% { stroke-dashoffset: 42; opacity: 0; }
+  7%, 9% { stroke-dashoffset: 0; opacity: 1; }
+  10%, 18% { stroke-dashoffset: 0; opacity: 1; }
+  20%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes top-check-burst-deposit {
+  0%, 6% { opacity: 0; transform: scale(0.4); }
+  8%, 11% { opacity: 0.85; transform: scale(1.35); }
+  14%, 100% { opacity: 0; transform: scale(1.8); }
+}
+
+@keyframes top-step-success-deposit {
+  0%, 11% { opacity: 0; }
+  12%, 18.5% { opacity: 1; }
+  20%, 100% { opacity: 0; }
+}
+
+@keyframes top-step-success-text-deposit {
+  0%, 12.5% { opacity: 0; transform: translateY(6px); }
+  13.5%, 18.5% { opacity: 1; transform: translateY(0); }
+  20%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-check-wrap-ledger {
+  0%, 19% { opacity: 0; transform: scale(0.7); }
+  21%, 36% { opacity: 1; transform: scale(1); }
+  38%, 100% { opacity: 0; transform: scale(0.85); }
+}
+
+@keyframes top-check-circle-ledger {
+  0%, 21% { stroke-dashoffset: 145; }
+  22%, 24% { stroke-dashoffset: 0; }
+  25%, 36% { stroke-dashoffset: 0; }
+  38%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-ledger {
+  0%, 23% { stroke-dashoffset: 42; opacity: 0; }
+  24%, 26% { stroke-dashoffset: 0; opacity: 1; }
+  27%, 36% { stroke-dashoffset: 0; opacity: 1; }
+  38%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes top-check-burst-ledger {
+  0%, 23% { opacity: 0; transform: scale(0.5); }
+  25%, 28% { opacity: 0.7; transform: scale(1.25); }
+  32%, 100% { opacity: 0; transform: scale(1.6); }
+}
+
+@keyframes top-step-success-ledger {
+  0%, 27% { opacity: 0; }
+  28%, 36% { opacity: 1; }
+  38%, 100% { opacity: 0; }
+}
+
+@keyframes top-step-success-text-ledger {
+  0%, 28.5% { opacity: 0; transform: translateY(6px); }
+  29.5%, 36% { opacity: 1; transform: translateY(0); }
+  38%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-check-wrap-trade {
+  0%, 37% { opacity: 0; transform: scale(0.7); }
+  39%, 54% { opacity: 1; transform: scale(1); }
+  56%, 100% { opacity: 0; transform: scale(0.85); }
+}
+
+@keyframes top-check-circle-trade {
+  0%, 39% { stroke-dashoffset: 145; }
+  40%, 42% { stroke-dashoffset: 0; }
+  43%, 54% { stroke-dashoffset: 0; }
+  56%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-trade {
+  0%, 41% { stroke-dashoffset: 42; opacity: 0; }
+  42%, 44% { stroke-dashoffset: 0; opacity: 1; }
+  45%, 54% { stroke-dashoffset: 0; opacity: 1; }
+  56%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes top-check-burst-trade {
+  0%, 41% { opacity: 0; transform: scale(0.5); }
+  43%, 46% { opacity: 0.7; transform: scale(1.25); }
+  50%, 100% { opacity: 0; transform: scale(1.6); }
+}
+
+@keyframes top-step-success-trade {
+  0%, 45% { opacity: 0; }
+  46%, 54% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+
+@keyframes top-step-success-text-trade {
+  0%, 46.5% { opacity: 0; transform: translateY(6px); }
+  47.5%, 54% { opacity: 1; transform: translateY(0); }
+  56%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-check-wrap-accrual {
+  0%, 55% { opacity: 0; transform: scale(0.6); }
+  57%, 72% { opacity: 1; transform: scale(1); }
+  74%, 100% { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes top-check-circle-accrual {
+  0%, 57% { stroke-dashoffset: 145; }
+  58%, 60% { stroke-dashoffset: 0; }
+  61%, 72% { stroke-dashoffset: 0; }
+  74%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-accrual {
+  0%, 59% { stroke-dashoffset: 42; opacity: 0; }
+  60%, 62% { stroke-dashoffset: 0; opacity: 1; }
+  63%, 72% { stroke-dashoffset: 0; opacity: 1; }
+  74%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes top-check-burst-accrual {
+  0%, 59% { opacity: 0; transform: scale(0.5); }
+  61%, 64% { opacity: 0.8; transform: scale(1.4); }
+  68%, 100% { opacity: 0; transform: scale(1.75); }
+}
+
+@keyframes top-step-success-accrual {
+  0%, 61% { opacity: 0; }
+  62%, 72% { opacity: 1; }
+  74%, 100% { opacity: 0; }
+}
+
+@keyframes top-step-success-text-accrual {
+  0%, 62.5% { opacity: 0; transform: translateY(6px); }
+  63.5%, 72% { opacity: 1; transform: translateY(0); }
+  74%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes top-check-wrap-withdraw {
+  0%, 73% { opacity: 0; transform: scale(0.65); }
+  75%, 90% { opacity: 1; transform: scale(1); }
+  92%, 100% { opacity: 0; transform: scale(0.88); }
+}
+
+@keyframes top-check-circle-withdraw {
+  0%, 75% { stroke-dashoffset: 145; }
+  76%, 78% { stroke-dashoffset: 0; }
+  79%, 90% { stroke-dashoffset: 0; }
+  92%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-withdraw {
+  0%, 77% { stroke-dashoffset: 42; opacity: 0; }
+  78%, 80% { stroke-dashoffset: 0; opacity: 1; }
+  81%, 90% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+@keyframes top-check-burst-withdraw {
+  0%, 77% { opacity: 0; transform: scale(0.5); }
+  79%, 82% { opacity: 0.75; transform: scale(1.3); }
+  86%, 100% { opacity: 0; transform: scale(1.65); }
+}
+
+@keyframes top-step-success-withdraw {
+  0%, 84% { opacity: 0; }
+  85%, 91% { opacity: 1; }
+  93%, 100% { opacity: 0; }
+}
+
+@keyframes top-step-success-text-withdraw {
+  0%, 85.5% { opacity: 0; transform: translateY(6px); }
+  86.5%, 91% { opacity: 1; transform: translateY(0); }
+  93%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* inline / toast — только штрих галочки внутри видимого блока */
+.trust-op-check-inline--deposit .trust-op-check-circle--deposit,
+.trust-op-check-toast--deposit .trust-op-check-circle--deposit {
+  animation-name: top-check-circle-deposit-inline;
+}
+
+.trust-op-check-inline--deposit .trust-op-check-path--deposit,
+.trust-op-check-toast--deposit .trust-op-check-path--deposit {
+  animation-name: top-check-path-deposit-inline;
+}
+
+@keyframes top-check-circle-deposit-inline {
+  0%, 4% { stroke-dashoffset: 145; }
+  5%, 7% { stroke-dashoffset: 0; }
+  8%, 18% { stroke-dashoffset: 0; }
+  20%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-deposit-inline {
+  0%, 6% { stroke-dashoffset: 42; opacity: 0; }
+  7%, 9% { stroke-dashoffset: 0; opacity: 1; }
+  10%, 18% { stroke-dashoffset: 0; opacity: 1; }
+  20%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+.trust-op-check-inline--ledger .trust-op-check-circle--ledger { animation-name: top-check-circle-ledger-inline; }
+.trust-op-check-inline--ledger .trust-op-check-path--ledger { animation-name: top-check-path-ledger-inline; }
+
+@keyframes top-check-circle-ledger-inline {
+  0%, 21% { stroke-dashoffset: 145; }
+  22%, 24% { stroke-dashoffset: 0; }
+  25%, 36% { stroke-dashoffset: 0; }
+  38%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-ledger-inline {
+  0%, 23% { stroke-dashoffset: 42; opacity: 0; }
+  24%, 26% { stroke-dashoffset: 0; opacity: 1; }
+  27%, 36% { stroke-dashoffset: 0; opacity: 1; }
+  38%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+.trust-op-check-inline--trade .trust-op-check-circle--trade { animation-name: top-check-circle-trade-inline; }
+.trust-op-check-inline--trade .trust-op-check-path--trade { animation-name: top-check-path-trade-inline; }
+.trust-op-check-toast--trade .trust-op-check-circle--trade { animation-name: top-check-circle-trade-inline; }
+.trust-op-check-toast--trade .trust-op-check-path--trade { animation-name: top-check-path-trade-inline; }
+
+@keyframes top-check-circle-trade-inline {
+  0%, 39% { stroke-dashoffset: 145; }
+  40%, 42% { stroke-dashoffset: 0; }
+  43%, 54% { stroke-dashoffset: 0; }
+  56%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-trade-inline {
+  0%, 41% { stroke-dashoffset: 42; opacity: 0; }
+  42%, 44% { stroke-dashoffset: 0; opacity: 1; }
+  45%, 54% { stroke-dashoffset: 0; opacity: 1; }
+  56%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+.trust-op-check-inline--accrual .trust-op-check-circle--accrual,
+.trust-op-check-toast--accrual .trust-op-check-circle--accrual { animation-name: top-check-circle-accrual-inline; }
+.trust-op-check-inline--accrual .trust-op-check-path--accrual,
+.trust-op-check-toast--accrual .trust-op-check-path--accrual { animation-name: top-check-path-accrual-inline; }
+
+@keyframes top-check-circle-accrual-inline {
+  0%, 57% { stroke-dashoffset: 145; }
+  58%, 60% { stroke-dashoffset: 0; }
+  61%, 72% { stroke-dashoffset: 0; }
+  74%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-accrual-inline {
+  0%, 59% { stroke-dashoffset: 42; opacity: 0; }
+  60%, 62% { stroke-dashoffset: 0; opacity: 1; }
+  63%, 72% { stroke-dashoffset: 0; opacity: 1; }
+  74%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+.trust-op-check-toast--ledger .trust-op-check-circle--ledger { animation-name: top-check-circle-ledger-inline; }
+.trust-op-check-toast--ledger .trust-op-check-path--ledger { animation-name: top-check-path-ledger-inline; }
+.trust-op-check-toast--withdraw .trust-op-check-circle--withdraw { animation-name: top-check-circle-withdraw-inline; }
+.trust-op-check-toast--withdraw .trust-op-check-path--withdraw { animation-name: top-check-path-withdraw-inline; }
+
+@keyframes top-check-circle-withdraw-inline {
+  0%, 75% { stroke-dashoffset: 145; }
+  76%, 78% { stroke-dashoffset: 0; }
+  79%, 90% { stroke-dashoffset: 0; }
+  92%, 100% { stroke-dashoffset: 145; }
+}
+
+@keyframes top-check-path-withdraw-inline {
+  0%, 77% { stroke-dashoffset: 42; opacity: 0; }
+  78%, 80% { stroke-dashoffset: 0; opacity: 1; }
+  81%, 90% { stroke-dashoffset: 0; opacity: 1; }
+  92%, 100% { stroke-dashoffset: 42; opacity: 0; }
+}
+
+.trust-op-step-check {
+  opacity: 0;
+}
+
+.trust-op-scene-viewport {
+  isolation: isolate;
+}
+
+.trust-op-timeline-step {
+  overflow: visible;
+}
+
+/* ——— Мобильная вёрстка: без наложений ——— */
+@media (max-width: 639px) {
+  .trust-op-toast {
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    top: 0.5rem !important;
+    width: auto !important;
+    max-width: none;
+  }
+
+  .trust-op-spinner,
+  .trust-op-cursor {
+    display: none !important;
+  }
+
+  .trust-op-tip {
+    max-width: 7.5rem;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .trust-op-step-success {
+    padding: 0.5rem;
+  }
+
+  .trust-op-step-success-text {
+    font-size: 0.65rem;
+    line-height: 1.3;
+    max-width: 12rem;
+    text-align: center;
+  }
+
+  .trust-op-check-burst {
+    inset: -15%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trust-op-flow-scene *,
+  .trust-op-flow-scene *::before,
+  .trust-op-flow-scene *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .trust-op-panel--deposit,
+  .trust-op-detail--deposit,
+  [class*="trust-op-panel--"],
+  [class*="trust-op-detail--"],
+  .trust-op-step-dot--deposit,
+  .trust-op-step-label--deposit,
+  .trust-op-toast--deposit,
+  .trust-op-balance-to,
+  .trust-op-wallet-status,
+  .trust-op-step-success--deposit,
+  .trust-op-step-success-text--deposit {
+    opacity: 1 !important;
+    visibility: visible !important;
+    animation: none !important;
+  }
+
+  .trust-op-check-path--deposit,
+  .trust-op-check-circle--deposit {
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+
+  .trust-op-balance-from,
+  .trust-op-spinner,
+  .trust-op-panel--ledger,
+  .trust-op-panel--trade,
+  .trust-op-panel--accrual,
+  .trust-op-panel--withdraw,
+  .trust-op-detail--ledger,
+  .trust-op-detail--trade,
+  .trust-op-detail--accrual,
+  .trust-op-detail--withdraw,
+  .trust-op-toast--ledger,
+  .trust-op-toast--trade,
+  .trust-op-toast--accrual,
+  .trust-op-withdraw-toast,
+  .trust-op-withdraw-pending,
+  .trust-op-withdraw-approved,
+  .trust-op-accrual-badge,
+  .trust-op-trade-done,
+  .trust-op-cursor {
+    display: none !important;
+  }
+}

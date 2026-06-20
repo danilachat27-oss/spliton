@@ -1,10 +1,11 @@
 import { ROUTES } from "@/constants/routes";
 
 export const PROFILE_PAGE_TABS = [
-  { id: "overview", label: "Мой профиль" },
-  { id: "verification", label: "Верификация" },
-  { id: "security", label: "Безопасность" },
-  { id: "settings", label: "Настройки" },
+  { id: "overview" },
+  { id: "verification" },
+  { id: "legal" },
+  { id: "security" },
+  { id: "settings" },
 ] as const;
 
 export type ProfilePageTabId = (typeof PROFILE_PAGE_TABS)[number]["id"];

@@ -1,11 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Minus, Plus } from "lucide-react";
+import Link from "next/link";
+import { Minus, Plus } from "@/lib/lucide";
 
+import { useI18n } from "@/components/providers/i18n-provider";
+import { messageForApiError } from "@/lib/i18n/dictionaries";
+import { tf } from "@/lib/i18n/financial-messages";
 import { cn } from "@/lib/utils";
 
+import { smExchange } from "./secondary-market-exchange-styles";
 import { walkBuyAgainstAsks, walkSellAgainstBids } from "./secondary-market-book-math";
+import { fetchOrderPreview } from "@/services/secondary-market.service";
+
+type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 const FEE_RATE = 0.002;
 
@@ -42,6 +50,14 @@ export type SecondaryMarketOrderEntryPanelProps = {
   usdtBalance: number;
   lockedUnits: number;
   isSubmitting: boolean;
+  /** Live: блокировка submit из-за consent/eligibility gate */
+  consentBlocked?: boolean;
+  /** Live: preview с backend orders/preview */
+  liveTrading?: {
+    releaseUuid: string;
+    marketId: string;
+    authorizedFetch: AuthorizedFetch;
+  };
   onSubmit: (payload: {
     orderMode: "limit" | "market";
     side: "buy" | "sell";
@@ -60,8 +76,20 @@ export function SecondaryMarketOrderEntryPanel({
   usdtBalance,
   lockedUnits,
   isSubmitting,
+  consentBlocked = false,
+  liveTrading,
   onSubmit,
 }: SecondaryMarketOrderEntryPanelProps) {
+  const { t, locale } = useI18n();
+  const feePctLabel = (FEE_RATE * 100).toFixed(1);
+
+  const [livePreviewBlocked, setLivePreviewBlocked] = React.useState<string | null>(null);
+  const [liveFeeLoading, setLiveFeeLoading] = React.useState(false);
+  const [liveFeeError, setLiveFeeError] = React.useState<string | null>(null);
+  const [liveFeeGross, setLiveFeeGross] = React.useState<number | null>(null);
+  const [liveFeeAmount, setLiveFeeAmount] = React.useState<number | null>(null);
+  const [liveBuyerTotal, setLiveBuyerTotal] = React.useState<number | null>(null);
+  const [liveSellerNet, setLiveSellerNet] = React.useState<number | null>(null);
   const [orderMode, setOrderMode] = React.useState<"limit" | "market">("limit");
   const [side, setSide] = React.useState<"buy" | "sell">(limitSeed?.side ?? "buy");
   const [price, setPrice] = React.useState(() =>
@@ -109,9 +137,87 @@ export function SecondaryMarketOrderEntryPanel({
         : (marketSellWalk?.totalUsdt ?? 0)
       : priceNum * unitsNum;
 
-  const feeUsdt = subtotalUsdt * FEE_RATE;
-  const buyDebit = subtotalUsdt + feeUsdt;
-  const sellNet = Math.max(0, subtotalUsdt - feeUsdt);
+  React.useEffect(() => {
+    if (!liveTrading || !unitsNum || unitsNum <= 0) {
+      setLiveFeeGross(null);
+      setLiveFeeAmount(null);
+      setLiveBuyerTotal(null);
+      setLiveSellerNet(null);
+      setLiveFeeError(null);
+      setLivePreviewBlocked(null);
+      return;
+    }
+    const px =
+      orderMode === "limit" && priceNum > 0
+        ? priceNum
+        : side === "buy"
+          ? bestAsk || marketBuyWalk?.avgPrice || 0
+          : bestBid || marketSellWalk?.avgPrice || 0;
+    if (orderMode === "limit" && (!px || px <= 0)) return;
+
+    let cancelled = false;
+    setLiveFeeLoading(true);
+    setLiveFeeError(null);
+    setLivePreviewBlocked(null);
+    void fetchOrderPreview(liveTrading.authorizedFetch, {
+      marketId: liveTrading.marketId,
+      side,
+      type: orderMode,
+      price: orderMode === "limit" ? px : undefined,
+      units: unitsNum,
+      tickSize: tick,
+    })
+      .then((p) => {
+        if (cancelled) return;
+        setLiveFeeGross(Number(p.subtotal));
+        setLiveFeeAmount(Number(p.feeAmount));
+        setLiveBuyerTotal(Number(p.totalAmount));
+        setLiveSellerNet(Number(p.subtotal) - Number(p.feeAmount));
+        if (!p.canSubmit && p.blockingReason) {
+          setLivePreviewBlocked(p.blockingReason);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLiveFeeError(t("secondaryMarket.errors.feeCalcFailed"));
+        setLiveFeeGross(null);
+        setLiveFeeAmount(null);
+        setLiveBuyerTotal(null);
+        setLiveSellerNet(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLiveFeeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    liveTrading,
+    unitsNum,
+    priceNum,
+    orderMode,
+    side,
+    bestAsk,
+    bestBid,
+    marketBuyWalk,
+    marketSellWalk,
+    tick,
+    t,
+  ]);
+
+  const useLiveFee =
+    Boolean(liveTrading) &&
+    liveFeeGross != null &&
+    liveFeeAmount != null &&
+    !liveFeeError;
+
+  const feeUsdt = useLiveFee ? liveFeeAmount! : subtotalUsdt * FEE_RATE;
+  const buyDebit = useLiveFee
+    ? liveBuyerTotal ?? subtotalUsdt
+    : subtotalUsdt + feeUsdt;
+  const sellNet = useLiveFee
+    ? (liveSellerNet ?? Math.max(0, subtotalUsdt - feeUsdt))
+    : Math.max(0, subtotalUsdt - feeUsdt);
   const avgExec =
     orderMode === "market"
       ? side === "buy"
@@ -148,15 +254,21 @@ export function SecondaryMarketOrderEntryPanel({
   };
 
   const validate = (): string | null => {
-    if (!unitsNum || unitsNum <= 0) return "Укажите количество UNT.";
-    if (orderMode === "limit" && (!priceNum || priceNum <= 0)) return "Укажите цену за UNT.";
+    if (!unitsNum || unitsNum <= 0) return t("secondaryMarket.errors.unitsRequired");
+    if (orderMode === "limit" && (!priceNum || priceNum <= 0)) return t("secondaryMarket.errors.priceRequired");
     if (side === "buy") {
-      if (unitsNum % 1 !== 0) return "Units должны быть целым числом.";
-        if (buyDebit > usdtBalance + 1e-6)
-        return `Недостаточно USDT. Нужно ~${formatUsdt(buyDebit)} USDT с комиссией, доступно ${formatUsdt(usdtBalance)}.`;
+      if (unitsNum % 1 !== 0) return t("secondaryMarket.errors.unitsInteger");
+      if (buyDebit > usdtBalance + 1e-6)
+        return tf(t("secondaryMarket.errors.insufficientUsdt"), {
+          need: formatUsdt(buyDebit),
+          available: formatUsdt(usdtBalance),
+        });
     } else {
       if (unitsNum > unitsAvailable + 1e-6)
-        return `Недостаточно свободных units (доступно ${unitsAvailable}, в заявках ${lockedUnits}).`;
+        return tf(t("secondaryMarket.errors.insufficientUnits"), {
+          available: String(unitsAvailable),
+          locked: String(lockedUnits),
+        });
     }
     return null;
   };
@@ -172,56 +284,55 @@ export function SecondaryMarketOrderEntryPanel({
     try {
       await onSubmit({ orderMode, side, price: px || 0, units: unitsNum });
     } catch {
-      setLocalError("Не удалось отправить заявку. Повторите.");
+      setLocalError(t("secondaryMarket.errors.submitFailed"));
     }
   };
 
   const caption =
     orderMode === "limit"
-      ? "Заявка будет размещена в стакане или исполнится сразу, если пересечёт рынок."
-      : "Заявка исполнится по лучшим доступным ценам рынка (возможен проскальзывание).";
+      ? t("secondaryMarket.forms.limitOrderCaption")
+      : t("secondaryMarket.forms.marketOrderCaption");
+
+  const dash = "—";
+  const paramsDescParts = t("secondaryMarket.listingDetail.paramsDesc").split("{link}");
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-[#111111] p-3 ring-1 ring-white/6">
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Заявка</p>
-        <span className="text-right font-mono text-[9px] leading-snug text-zinc-600">
-          Limit — по вашей цене · Market — по лучшим уровням
-        </span>
+    <div className="flex flex-col gap-3 bg-black">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex rounded-lg bg-[#161616] p-0.5 font-mono text-[12px] ring-1 ring-white/8">
+          <button
+            type="button"
+            onClick={() => {
+              setOrderMode("limit");
+              setLocalError(null);
+              setPrice(side === "buy" ? (bestAsk ? String(bestAsk) : "") : bestBid ? String(bestBid) : "");
+            }}
+            className={cn(
+              "rounded-md px-3 py-1.5 font-semibold transition-colors",
+              orderMode === "limit" ? "bg-[#2a2a2a] text-white" : "text-zinc-500",
+            )}
+          >
+            {t("secondaryMarket.forms.limit")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOrderMode("market");
+              setLocalError(null);
+              setPrice("");
+            }}
+            className={cn(
+              "rounded-md px-3 py-1.5 font-semibold transition-colors",
+              orderMode === "market" ? "bg-[#2a2a2a] text-white" : "text-zinc-500",
+            )}
+          >
+            {t("secondaryMarket.forms.market")}
+          </button>
+        </div>
+        <span className="font-mono text-[10px] text-zinc-600">{m.symbol}/USDT</span>
       </div>
 
-      <div className="flex rounded-full bg-black/55 p-0.5 font-mono text-[10px]">
-        <button
-          type="button"
-          onClick={() => {
-            setOrderMode("limit");
-            setLocalError(null);
-            setPrice(side === "buy" ? (bestAsk ? String(bestAsk) : "") : bestBid ? String(bestBid) : "");
-          }}
-          className={cn(
-            "flex-1 rounded-full py-1.5 font-semibold",
-            orderMode === "limit" ? "bg-white text-black" : "text-zinc-500 hover:text-zinc-300",
-          )}
-        >
-          Лимит
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setOrderMode("market");
-            setLocalError(null);
-            setPrice("");
-          }}
-          className={cn(
-            "flex-1 rounded-full py-1.5 font-semibold",
-            orderMode === "market" ? "bg-white text-black" : "text-zinc-500 hover:text-zinc-300",
-          )}
-        >
-          Рынок
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-black/45 p-0.5 font-mono text-[11px]">
+      <div className={smExchange.sideToggle}>
         <button
           type="button"
           onClick={() => {
@@ -230,11 +341,11 @@ export function SecondaryMarketOrderEntryPanel({
             if (orderMode === "limit") setPrice(bestAsk ? String(bestAsk) : "");
           }}
           className={cn(
-            "rounded-md py-2 font-bold transition-colors",
-            side === "buy" ? "bg-[#B7F500]/22 text-[#d4f570]" : "text-zinc-500 hover:text-zinc-400",
+            "rounded-md py-2.5 transition-colors",
+            side === "buy" ? smExchange.buySideActive : smExchange.buySideIdle,
           )}
         >
-          Купить
+          {t("secondaryMarket.forms.buy")}
         </button>
         <button
           type="button"
@@ -244,49 +355,68 @@ export function SecondaryMarketOrderEntryPanel({
             if (orderMode === "limit") setPrice(bestBid ? String(bestBid) : "");
           }}
           className={cn(
-            "rounded-md py-2 font-bold transition-colors",
-            side === "sell" ? "bg-fuchsia-500/18 text-fuchsia-200" : "text-zinc-500 hover:text-zinc-400",
+            "rounded-md py-2.5 transition-colors",
+            side === "sell" ? smExchange.sellSideActive : smExchange.sellSideIdle,
           )}
         >
-          Продать
+          {t("secondaryMarket.forms.sell")}
         </button>
       </div>
 
-      <div className="flex items-center justify-between border-b border-white/10 pb-2 font-mono text-[10px]">
-        <span className="text-zinc-600">{side === "buy" ? "Доступно USDT" : "Доступно UNT (free)"}</span>
+      <div className="flex items-center justify-between font-mono text-[11px]">
+        <span className="text-zinc-600">
+          {side === "buy" ? t("secondaryMarket.forms.availableLabel") : t("secondaryMarket.forms.availableUnt")}
+        </span>
         <span className="font-semibold text-zinc-200">
-          {side === "buy" ? `${formatUsdt(usdtBalance)} USDT` : `${unitsAvailable} u`}
+          {side === "buy" ? `${formatUsdt(usdtBalance)} USDT` : `${unitsAvailable} UNT`}
+          {side === "buy" ? (
+            <Link href="/assets/payouts/deposit" className="ml-1.5 text-[#B7F500] hover:underline" aria-label={t("secondaryMarket.forms.topUpAria")}>
+              +
+            </Link>
+          ) : null}
         </span>
       </div>
       {lockedUnits > 0 ? (
-        <p className="font-mono text-[9px] text-zinc-600">В заявках заблокировано: {lockedUnits} u</p>
+        <p className="font-mono text-[9px] text-zinc-600">
+          {tf(t("secondaryMarket.forms.lockedInOrders"), { locked: String(lockedUnits) })}
+        </p>
       ) : null}
 
       {orderMode === "limit" ? (
         <div>
-          <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-600">Цена · USDT за 1 unit</span>
-          <div className="mt-1 flex items-stretch gap-0.5">
+          <span className="font-mono text-[11px] text-zinc-500">{t("secondaryMarket.forms.priceUsdt")}</span>
+          <div className="mt-1.5 flex items-stretch gap-1">
             <button
               type="button"
               onClick={() => bumpPrice(-1)}
-              className="flex w-9 shrink-0 items-center justify-center rounded-l-lg bg-black text-zinc-400 ring-1 ring-white/10 hover:bg-white/5 hover:text-white"
-              aria-label="Минус шаг"
+              className="flex w-10 shrink-0 items-center justify-center rounded-lg bg-[#161616] text-zinc-400 ring-1 ring-white/8"
+              aria-label={t("secondaryMarket.forms.ariaStepMinus")}
             >
-              <Minus className="size-3.5" />
+              <Minus className="size-4" />
             </button>
             <input
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="min-w-0 flex-1 bg-black px-2 py-2 text-center font-mono text-sm text-white ring-1 ring-white/10 outline-none focus:ring-[#B7F500]/35"
+              className={cn(smExchange.input, "text-center")}
               inputMode="decimal"
             />
             <button
               type="button"
-              onClick={() => bumpPrice(1)}
-              className="flex w-9 shrink-0 items-center justify-center rounded-r-lg bg-black text-zinc-400 ring-1 ring-white/10 hover:bg-white/5 hover:text-white"
-              aria-label="Плюс шаг"
+              onClick={() => {
+                if (side === "buy" && bestAsk) setPrice(String(bestAsk));
+                if (side === "sell" && bestBid) setPrice(String(bestBid));
+              }}
+              className="shrink-0 rounded-lg bg-[#161616] px-2.5 font-mono text-[10px] font-semibold text-zinc-400 ring-1 ring-white/8"
             >
-              <Plus className="size-3.5" />
+              BBO
+            </button>
+            <button
+              type="button"
+              onClick={() => bumpPrice(1)}
+              className="flex w-10 shrink-0 items-center justify-center rounded-lg bg-[#161616] text-zinc-400 ring-1 ring-white/8"
+              aria-label={t("secondaryMarket.forms.ariaStepPlus")}
+            >
+              <Plus className="size-4" />
             </button>
           </div>
         </div>
@@ -294,19 +424,25 @@ export function SecondaryMarketOrderEntryPanel({
         <div className="rounded-lg bg-black/40 px-2 py-2 font-mono text-[10px] text-zinc-400">
           {side === "buy" ? (
             <>
-              <p className="text-zinc-500">Оценка по ask (макет)</p>
+              <p className="text-zinc-500">{t("secondaryMarket.forms.marketAskEstimate")}</p>
               <p className="mt-1 text-zinc-200">
-                Ср. цена: {marketBuyWalk && unitsNum ? formatUsdt(marketBuyWalk.avgPrice) : "—"} · исполнит до{" "}
-                {marketBuyWalk?.filledUnits ?? 0} / {unitsNum || 0} u
+                {tf(t("secondaryMarket.forms.marketAvgPriceLine"), {
+                  avg: marketBuyWalk && unitsNum ? formatUsdt(marketBuyWalk.avgPrice) : dash,
+                  filled: String(marketBuyWalk?.filledUnits ?? 0),
+                  total: String(unitsNum || 0),
+                })}
               </p>
-              <p className="mt-1 text-amber-200/85">Проскальзывание: до ~0,3% от лучшего ask (учебный текст).</p>
+              <p className="mt-1 text-amber-200/85">{t("secondaryMarket.forms.marketSlippageHint")}</p>
             </>
           ) : (
             <>
-              <p className="text-zinc-500">Оценка по bid (макет)</p>
+              <p className="text-zinc-500">{t("secondaryMarket.forms.marketBidEstimate")}</p>
               <p className="mt-1 text-zinc-200">
-                Ср. цена: {marketSellWalk && unitsNum ? formatUsdt(marketSellWalk.avgPrice) : "—"} · исполнит до{" "}
-                {marketSellWalk?.filledUnits ?? 0} / {unitsNum || 0} u
+                {tf(t("secondaryMarket.forms.marketAvgPriceLine"), {
+                  avg: marketSellWalk && unitsNum ? formatUsdt(marketSellWalk.avgPrice) : dash,
+                  filled: String(marketSellWalk?.filledUnits ?? 0),
+                  total: String(unitsNum || 0),
+                })}
               </p>
             </>
           )}
@@ -315,13 +451,18 @@ export function SecondaryMarketOrderEntryPanel({
 
       {orderMode === "limit" && side === "buy" && limitBuyCross && unitsNum ? (
         <p className="rounded-md bg-amber-500/10 px-2 py-1.5 font-mono text-[9px] text-amber-200/95">
-          Лимит ≥ ask: сразу исполнится до {limitBuyCross.filledUnits} u по уровням ≤ {formatUsdt(priceNum)}, остаток
-          уйдёт в стакан.
+          {tf(t("secondaryMarket.forms.limitBuyCrossHint"), {
+            filled: String(limitBuyCross.filledUnits),
+            price: formatUsdt(priceNum),
+          })}
         </p>
       ) : null}
       {orderMode === "limit" && side === "sell" && limitSellCross && unitsNum ? (
         <p className="rounded-md bg-amber-500/10 px-2 py-1.5 font-mono text-[9px] text-amber-200/95">
-          Лимит ≤ bid: сразу исполнится до {limitSellCross.filledUnits} u по уровням ≥ {formatUsdt(priceNum)}.
+          {tf(t("secondaryMarket.forms.limitSellCrossHint"), {
+            filled: String(limitSellCross.filledUnits),
+            price: formatUsdt(priceNum),
+          })}
         </p>
       ) : null}
 
@@ -337,7 +478,7 @@ export function SecondaryMarketOrderEntryPanel({
           }}
           className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
         >
-          Best ask {bestAsk ? formatUsdt(bestAsk) : "—"}
+          {tf(t("secondaryMarket.forms.bestAskBtn"), { price: bestAsk ? formatUsdt(bestAsk) : dash })}
         </button>
         <button
           type="button"
@@ -350,105 +491,124 @@ export function SecondaryMarketOrderEntryPanel({
           }}
           className="rounded-full border border-white/10 px-2.5 py-1 font-mono text-[10px] text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
         >
-          Best bid {bestBid ? formatUsdt(bestBid) : "—"}
+          {tf(t("secondaryMarket.forms.bestBidBtn"), { price: bestBid ? formatUsdt(bestBid) : dash })}
         </button>
       </div>
 
       <div>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-600">Units</span>
-        <div className="mt-1 flex items-stretch gap-0.5">
+        <span className="font-mono text-[11px] text-zinc-500">{t("secondaryMarket.forms.amountUnt")}</span>
+        <div className="mt-1.5 flex items-stretch gap-1">
           <button
             type="button"
             onClick={() => bumpUnits(-1)}
-            className="flex w-9 shrink-0 items-center justify-center rounded-l-lg bg-black text-zinc-400 ring-1 ring-white/10 hover:bg-white/5 hover:text-white"
-            aria-label="Минус unit"
+            className="flex w-10 shrink-0 items-center justify-center rounded-lg bg-[#161616] text-zinc-400 ring-1 ring-white/8"
+            aria-label={t("secondaryMarket.forms.ariaUnitMinus")}
           >
-            <Minus className="size-3.5" />
+            <Minus className="size-4" />
           </button>
           <input
             value={units}
             onChange={(e) => setUnits(e.target.value)}
-            className="min-w-0 flex-1 bg-black px-2 py-2 text-center font-mono text-sm text-white ring-1 ring-white/10 outline-none focus:ring-[#B7F500]/35"
+            className={cn(smExchange.input, "text-center")}
             inputMode="decimal"
-            placeholder="0"
+            placeholder={t("secondaryMarket.forms.unitsMinPlaceholder")}
           />
           <button
             type="button"
             onClick={() => bumpUnits(1)}
-            className="flex w-9 shrink-0 items-center justify-center rounded-r-lg bg-black text-zinc-400 ring-1 ring-white/10 hover:bg-white/5 hover:text-white"
-            aria-label="Плюс unit"
+            className="flex w-10 shrink-0 items-center justify-center rounded-lg bg-[#161616] text-zinc-400 ring-1 ring-white/8"
+            aria-label={t("secondaryMarket.forms.ariaUnitPlus")}
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
           </button>
         </div>
       </div>
 
-      <div className="flex overflow-hidden rounded-md font-mono text-[10px] ring-1 ring-white/10">
-        {([0, 25, 50, 75, 100] as const).map((pct) => (
-          <button
-            key={pct}
-            type="button"
-            onClick={() => applyPct(pct)}
-            className={cn(
-              "flex-1 border-r border-black/40 py-1.5 font-medium last:border-r-0",
-              side === "buy" ? "hover:bg-[#B7F500]/10" : "hover:bg-fuchsia-500/10",
-              "text-zinc-500 hover:text-zinc-200",
-            )}
-          >
-            {pct === 0 ? "0" : `${pct}%`}
-          </button>
-        ))}
+      <div className="relative px-1 pt-1">
+        <div className="h-px bg-white/10" aria-hidden />
+        <div className="mt-2 flex justify-between">
+          {([0, 25, 50, 75, 100] as const).map((pct) => (
+            <button
+              key={pct}
+              type="button"
+              onClick={() => applyPct(pct)}
+              className="flex flex-col items-center gap-1"
+              aria-label={`${pct}%`}
+            >
+              <span className="size-2 rounded-full bg-zinc-600 transition-colors hover:bg-[#B7F500]" />
+              <span className="font-mono text-[10px] text-zinc-600">{pct === 0 ? "0" : `${pct}%`}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-1.5 rounded-lg bg-black/40 px-2.5 py-2 font-mono text-[10px]">
+      <div>
+        <span className="font-mono text-[11px] text-zinc-500">{t("secondaryMarket.forms.totalUsdt")}</span>
+        <div className={cn(smExchange.input, "mt-1.5 flex items-center text-zinc-300")}>
+          {subtotalUsdt > 0 ? formatUsdt(subtotalUsdt) : dash}
+        </div>
+      </div>
+
+      <div className="space-y-1 font-mono text-[11px]">
         <div className="flex items-center justify-between text-zinc-500">
-          <span>{orderMode === "market" ? "Оценка оборота" : "Субтотал"}</span>
-          <span className="text-zinc-200">{subtotalUsdt > 0 ? `${formatUsdt(subtotalUsdt)} USDT` : "—"}</span>
+          <span>{orderMode === "market" ? t("secondaryMarket.forms.turnoverEstimate") : t("secondaryMarket.forms.subtotal")}</span>
+          <span className="text-zinc-200">{subtotalUsdt > 0 ? `${formatUsdt(subtotalUsdt)} USDT` : dash}</span>
         </div>
         <div className="flex items-center justify-between text-zinc-500">
-          <span>Комиссия ({(FEE_RATE * 100).toFixed(1)}%)</span>
-          <span className="text-zinc-300">{subtotalUsdt > 0 ? `${formatUsdt(feeUsdt)} USDT` : "—"}</span>
+          <span>{tf(t("secondaryMarket.forms.fee"), { pct: feePctLabel })}</span>
+          <span className="text-zinc-300">{subtotalUsdt > 0 ? `${formatUsdt(feeUsdt)} USDT` : dash}</span>
         </div>
         {side === "buy" ? (
           <div className="flex items-center justify-between text-zinc-500">
-            <span>К списанию (всего)</span>
-            <span className="font-semibold text-white">{subtotalUsdt > 0 ? `${formatUsdt(buyDebit)} USDT` : "—"}</span>
+            <span>{t("secondaryMarket.forms.totalDebit")}</span>
+            <span className="font-semibold text-white">{subtotalUsdt > 0 ? `${formatUsdt(buyDebit)} USDT` : dash}</span>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between text-zinc-500">
-              <span>К получению (брутто)</span>
-              <span className="text-zinc-200">{subtotalUsdt > 0 ? `${formatUsdt(subtotalUsdt)} USDT` : "—"}</span>
+              <span>{t("secondaryMarket.forms.receiveGross")}</span>
+              <span className="text-zinc-200">{subtotalUsdt > 0 ? `${formatUsdt(subtotalUsdt)} USDT` : dash}</span>
             </div>
             <div className="flex items-center justify-between text-zinc-500">
-              <span>К получению (нетто)</span>
-              <span className="font-semibold text-white">{subtotalUsdt > 0 ? `${formatUsdt(sellNet)} USDT` : "—"}</span>
+              <span>{t("secondaryMarket.forms.receiveNet")}</span>
+              <span className="font-semibold text-white">{subtotalUsdt > 0 ? `${formatUsdt(sellNet)} USDT` : dash}</span>
             </div>
           </>
         )}
         {orderMode === "market" && unitsNum > 0 ? (
           <div className="flex items-center justify-between text-zinc-600">
-            <span>Ср. цена (оценка)</span>
-            <span>{avgExec > 0 ? `${formatUsdt(avgExec)} USDT` : "—"}</span>
+            <span>{t("secondaryMarket.forms.avgPriceEstimate")}</span>
+            <span>{avgExec > 0 ? `${formatUsdt(avgExec)} USDT` : dash}</span>
           </div>
         ) : null}
       </div>
 
+      {liveFeeError ? (
+        <p className="rounded-md bg-rose-500/12 px-2 py-1.5 font-mono text-[10px] text-rose-200">{liveFeeError}</p>
+      ) : null}
+      {livePreviewBlocked ? (
+        <p className="rounded-md bg-amber-500/12 px-2 py-1.5 font-mono text-[10px] text-amber-100" role="alert">
+          {messageForApiError(livePreviewBlocked, locale)}
+        </p>
+      ) : null}
       {localError ? <p className="rounded-md bg-rose-500/12 px-2 py-1.5 font-mono text-[10px] text-rose-200">{localError}</p> : null}
 
       <button
         type="button"
-        disabled={isSubmitting}
+        disabled={isSubmitting || consentBlocked || Boolean(livePreviewBlocked) || (Boolean(liveTrading) && orderMode === "market")}
         onClick={() => void submit()}
         className={cn(
-          "flex h-11 w-full items-center justify-center rounded-full font-mono text-xs font-bold transition-opacity",
-          side === "buy" ? "bg-[#B7F500] text-black hover:opacity-95" : "bg-fuchsia-500 text-white hover:opacity-95",
+          side === "buy" ? smExchange.submitBuy : smExchange.submitSell,
           isSubmitting && "cursor-wait opacity-70",
         )}
       >
-        {isSubmitting ? "Отправка…" : side === "buy" ? "Купить UNT" : "Продать UNT"}
+        {isSubmitting
+          ? t("secondaryMarket.forms.submitting")
+          : side === "buy"
+            ? tf(t("secondaryMarket.forms.submitBuySymbol"), { symbol: m.symbol })
+            : tf(t("secondaryMarket.forms.submitSellSymbol"), { symbol: m.symbol })}
       </button>
-      <p className="text-center font-mono text-[9px] leading-relaxed text-zinc-600">{caption}</p>
+      <p className="text-center font-mono text-[10px] leading-relaxed text-zinc-600">{caption}</p>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 type PayoutsSubpageHeroProps = {
   eyebrow: string;
   title: string;
-  /** Дополнительный абзац под заголовком; если не передан — не рендерится. */
+  /** Optional paragraph below the title; omitted when not provided. */
   description?: string;
   align?: "left" | "center";
   tone?: "dark" | "light";

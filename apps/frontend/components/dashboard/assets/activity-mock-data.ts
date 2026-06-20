@@ -12,6 +12,8 @@ export type ActivityRecord = {
   id: string;
   date: string;
   type: string;
+  /** i18n key suffix used when building labels dynamically (live). */
+  typeKey?: string;
   kind: ActivityKind;
   release: string;
   units: string;
@@ -19,7 +21,11 @@ export type ActivityRecord = {
   status: ActivityStatus;
   txId: string;
   details: string;
+  /** i18n key suffix used when building details labels dynamically (live). */
+  detailsKey?: string;
   relative: string;
+  /** i18n key suffix for relative time labels (live). */
+  relativeKey?: string;
 };
 
 export const activityRecords: ActivityRecord[] = [

@@ -1,0 +1,74 @@
+﻿
+> frontend@0.1.0 i18n:gate D:\Projects\revshare-platform\apps\frontend
+> node scripts/i18n-release-gate.mjs
+
+# Spliton i18n release gate
+
+тЭМ FAIL тАФ 521 critical issue(s)
+
+- hardcoded-ui: 514
+- raw-enum: 7
+
+[hardcoded-ui] app/admin/users/page.tsx:9 тАФ Hardcoded prop: <Suspense fallback={<AdminLoadingState label="╨Ч╨░╨│╤А╤Г╨╖╨║╨░тАж" />}>
+[hardcoded-ui] app/admin/users/[id]/page.tsx:10 тАФ Hardcoded prop: <Suspense fallback={<AdminLoadingState label="╨Ч╨░╨│╤А╤Г╨╖╨║╨░тАж" />}>
+[hardcoded-ui] components/dashboard/profile/profile-two-factor-panel.tsx:144 тАФ Hardcoded prop: aria-label="╨Ъ╨╛╨┤ ╨╕╨╖ ╨┐╤А╨╕╨╗╨╛╨╢╨╡╨╜╨╕╤П"
+[hardcoded-ui] components/dashboard/profile/profile-two-factor-panel.tsx:189 тАФ Hardcoded prop: placeholder="╨Я╨░╤А╨╛╨╗╤М"
+[hardcoded-ui] components/dashboard/profile/profile-two-factor-panel.tsx:198 тАФ Hardcoded prop: placeholder="╨Ъ╨╛╨┤ 2FA"
+[hardcoded-ui] components/fees/fees-page-tabs.tsx:34 тАФ Hardcoded prop: aria-label="╨а╨░╨╖╨┤╨╡╨╗╤Л ╨║╨╛╨╝╨╕╤Б╤Б╨╕╨╣"
+[hardcoded-ui] components/market-overview/ui/market-top-card-interactive-chart.tsx:178 тАФ Hardcoded prop: aria-label="╨Ф╨╕╨╜╨░╨╝╨╕╨║╨░ ╨┐╨╛╨║╨░╨╖╨░╤В╨╡╨╗╤П"
+[hardcoded-ui] components/my-assets/overview/activity-feed.tsx:11 тАФ JSX text: ╨Ф╨░╤В╨░
+[hardcoded-ui] components/my-assets/overview/activity-feed.tsx:12 тАФ JSX text: ╨Ю╨┐╨╡╤А╨░╤Ж╨╕╤П
+[hardcoded-ui] components/my-assets/overview/activity-feed.tsx:13 тАФ JSX text: ╨Э╨░╨┐╤А╨░╨▓╨╗╨╡╨╜╨╕╨╡
+[hardcoded-ui] components/my-assets/overview/activity-feed.tsx:14 тАФ JSX text: ╨б╤Г╨╝╨╝╨░
+[hardcoded-ui] components/my-assets/overview/activity-feed.tsx:15 тАФ JSX text: ╨б╤В╨░╤В╤Г╤Б
+[hardcoded-ui] components/my-assets/overview/positions-table.tsx:31 тАФ JSX text: ╨а╨╡╨╗╨╕╨╖
+[hardcoded-ui] components/my-assets/overview/positions-table.tsx:33 тАФ JSX text: ╨Ф╨╛╨╗╤П
+[hardcoded-ui] components/my-assets/overview/positions-table.tsx:34 тАФ JSX text: ╨Э╨░╤З╨╕╤Б╨╗╨╡╨╜╨╛
+[hardcoded-ui] components/my-assets/overview/positions-table.tsx:35 тАФ JSX text: ╨▓╤Л╨▓╨╛╨┤╤Г
+[hardcoded-ui] components/shared/unt-explainer-scenes.tsx:65 тАФ JSX text: ╨а╨░╤Г╨╜╨┤
+[hardcoded-ui] components/shared/unt-explainer-scenes.tsx:102 тАФ JSX text: ╨Т╤Б╨╡╨│╨╛
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:120 тАФ Hardcoded prop: <Row label="╨б╤В╨░╤В╤Г╤Б" value={partner.statusLabel ?? partner.status} />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:121 тАФ Hardcoded prop: <Row label="╨в╨╕╨┐" value={partner.partnerType} />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:126 тАФ Hardcoded prop: label="╨Ъ╨╛╨╝╨╕╤Б╤Б╨╕╤П"
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:133 тАФ Hardcoded prop: <Row label="╨б╨┐╨╛╤Б╨╛╨▒ ╨▓╤Л╨┐╨╗╨░╤В" value={partner.payoutMethod ?? "тАФ"} />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:134 тАФ Hardcoded prop: <Row label="╨Ч╨░╤П╨▓╨║╨░" value={partner.applicationNote ?? "тАФ"} multiline />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:135 тАФ Hardcoded prop: <Row label="╨Я╤А╨╕╤З╨╕╨╜╨░ ╨╛╤В╨║╨╗╨╛╨╜╨╡╨╜╨╕╤П" value={partner.rejectedReason ?? "тАФ"} multiline 
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:136 тАФ Hardcoded prop: <Row label="╨б╨╛╨╖╨┤╨░╨╜╨╛" value={formatAdminDate(partner.createdAt)} />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:137 тАФ Hardcoded prop: <Row label="╨Ю╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╛" value={formatAdminDate(partner.updatedAt)} />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:139 тАФ Hardcoded prop: <Row label="╨Ю╨┤╨╛╨▒╤А╨╡╨╜╨╛" value={formatAdminDate(partner.approvedAt)} />
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:149 тАФ Hardcoded prop: title="╨Ю╨┤╨╛╨▒╤А╨╕╤В╤М ╨┐╨░╤А╤В╨╜╤С╤А╨░?"
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:164 тАФ Hardcoded prop: title="╨Ю╤В╨║╨╗╨╛╨╜╨╕╤В╤М ╨╖╨░╤П╨▓╨║╤Г ╨┐╨░╤А╤В╨╜╤С╤А╨░"
+[hardcoded-ui] features/admin/components/admin-partner-drawer.tsx:177 тАФ Hardcoded prop: title="╨Я╤А╨╕╨╛╤Б╤В╨░╨╜╨╛╨▓╨╕╤В╤М ╨┐╨░╤А╤В╨╜╤С╤А╨░"
+[hardcoded-ui] features/admin/components/admin-platform-revenue-drawer.tsx:75 тАФ Hardcoded prop: <Field label="╨Ш╤Б╤В╨╛╤З╨╜╨╕╨║" value={platformRevenueSourceLabel(tx.source)} />
+[hardcoded-ui] features/admin/components/admin-platform-revenue-drawer.tsx:82 тАФ Hardcoded prop: <Field label="╨б╨╛╨╖╨┤╨░╨╜╨╛" value={formatAdminDate(tx.createdAt)} />
+[hardcoded-ui] features/admin/components/admin-platform-revenue-drawer.tsx:85 тАФ Hardcoded prop: label="╨Я╨╛╨╗╤М╨╖╨╛╨▓╨░╤В╨╡╨╗╤М"
+[hardcoded-ui] features/admin/components/admin-platform-revenue-drawer.tsx:106 тАФ Hardcoded prop: <Field label="╨в╨╕╨┐" value={platformRevenueSubjectLabel(tx.subjectType)} />
+[hardcoded-ui] features/admin/components/admin-platform-revenue-drawer.tsx:110 тАФ Hardcoded prop: label="╨а╨╡╨╗╨╕╨╖"
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:64 тАФ Hardcoded prop: label="╨Р╤Б╤Б╨╡╤В"
+[raw-enum] features/admin/components/admin-release-catalog-card.tsx:74 тАФ Possible raw status/role in JSX
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:110 тАФ Hardcoded prop: <StatRow label="╨б╤В╨░╤В╤Г╤Б CRM">
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:120 тАФ Hardcoded prop: <StatRow label="╨д╨░╨╖╨░ ╨┐╤А╨╛╨┤╤Г╨║╤В╨░">{RELEASE_PHASE_RU[r.phase]}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:121 тАФ Hardcoded prop: <StatRow label="╨Ю╨▒╨╗╨╛╨╢╨║╨░">{r.coverDataUrl ? "╨Ч╨░╨│╤А╤Г╨╢╨╡╨╜╨░" : "╨Э╨╡╤В ╤Д╨░╨╣╨╗╨░"}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:122 тАФ Hardcoded prop: <StatRow label="╨Ф╨╛╨┐. ╨╕╨╖╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╤П">{String(r.galleryDataUrls?.length ?? 0)}</Stat
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:123 тАФ Hardcoded prop: <StatRow label="╨ж╨╡╨╗╤М ╤Б╨▒╨╛╤А╨░, USDT">{r.goalUsdt}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:124 тАФ Hardcoded prop: <StatRow label="╨б╨╛╨▒╤А╨░╨╜╨╛, USDT">{r.raisedUsdt}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:125 тАФ Hardcoded prop: <StatRow label="UNT ╨▓ ╨╛╨▒╤А╨░╤Й╨╡╨╜╨╕╨╕">{r.unitsOutstanding}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:126 тАФ Hardcoded prop: <StatRow label="╨ж╨╡╨╜╨░ 1 UNT, USDT">{r.unitPriceUsdt}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:127 тАФ Hardcoded prop: <StatRow label="╨Я╤А╨╛╨│╨╜╨╛╨╖ ╨┤╨╛╤Е╨╛╨┤╨╜╨╛╤Б╤В╨╕, %">{r.forecastYieldPct}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:128 тАФ Hardcoded prop: <StatRow label="╨Ф╨╛╨╗╤П ╨┐╤Г╨╗╨░ ╨╜╨░ ╨┐╨╡╤А╨▓╨╕╤З╨║╨╡, %">{r.investorPoolRemainingPct}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-catalog-card.tsx:129 тАФ Hardcoded prop: <StatRow label="╨Ю╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╛">{r.updatedAt}</StatRow>
+[hardcoded-ui] features/admin/components/admin-release-drawer.tsx:405 тАФ Hardcoded prop: <MediaPlaceholder label="╨Ю╨▒╨╗╨╛╨╢╨║╨░" frameless aspectClassName="absolute inset-0 h-
+[hardcoded-ui] features/admin/components/admin-release-drawer.tsx:454 тАФ Hardcoded prop: aria-label="╨г╨┤╨░╨╗╨╕╤В╤М ╤Д╨╛╤В╨╛"
+[hardcoded-ui] features/admin/components/admin-release-drawer.tsx:465 тАФ Hardcoded prop: aria-label="╨Ф╨╛╨▒╨░╨▓╨╕╤В╤М ╨╕╨╖╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡"
+[hardcoded-ui] features/admin/components/admin-release-drawer.tsx:483 тАФ Hardcoded prop: label="╨б╤В╨░╤В╤Г╤Б CRM"
+[hardcoded-ui] features/admin/components/admin-release-drawer.tsx:495 тАФ Hardcoded prop: label="╨д╨░╨╖╨░ ╨┐╤А╨╛╨┤╤Г╨║╤В╨░"
+[hardcoded-ui] features/admin/components/admin-report-create-drawer.tsx:138 тАФ Hardcoded prop: title="╨Э╨╛╨▓╤Л╨╣ ╨╛╤В╤З╤С╤В"
+[hardcoded-ui] features/admin/components/admin-report-create-drawer.tsx:248 тАФ JSX text: ╨Ф╨░╤В╨░
+[hardcoded-ui] features/admin/components/admin-report-create-drawer.tsx:261 тАФ JSX text: ╨Ф╨░╤В╨░
+[hardcoded-ui] features/admin/components/admin-report-job-drawer.tsx:91 тАФ Hardcoded prop: {loading ? <AdminLoadingState label="╨Ч╨░╨│╤А╤Г╨╖╨║╨░ ╨╖╨░╨┤╨░╤З╨╕тАж" /> : null}
+[hardcoded-ui] features/admin/components/admin-revenue-create-drawer.tsx:183 тАФ Hardcoded prop: title="╨б╨╛╨╖╨┤╨░╤В╤М ╨┤╨╛╤Е╨╛╨┤ ╤А╨╡╨╗╨╕╨╖╨░"
+[hardcoded-ui] features/admin/components/admin-revenue-create-drawer.tsx:200 тАФ JSX text: ╨Я╨╛╨╕╤Б╨║
+[hardcoded-ui] features/admin/components/admin-revenue-create-drawer.tsx:205 тАФ Hardcoded prop: placeholder="╨Э╨░╨╖╨▓╨░╨╜╨╕╨╡ ╨╕╨╗╨╕ ╨░╤А╤В╨╕╤Б╤ВтАж"
+
+тАж and 461 more
+тАЙELIFECYCLEтАЙ Command failed with exit code 1.

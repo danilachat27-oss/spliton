@@ -1,7 +1,9 @@
-/**
+﻿/**
  * Демо-данные страницы статуса. Смените сценарий, чтобы проверить UI.
  * Подключение API заменит этот модуль.
  */
+import { buildMockOperationalServices } from "@/constants/system-status-components";
+
 export type SystemStatusScenario = "operational" | "partial" | "maintenance" | "incident";
 
 /** Активный сценарий для макета страницы. */
@@ -56,72 +58,7 @@ export type SystemStatusPageData = {
 
 const baseLast = "Обновлено: 19.04.2026, 15:04 UTC";
 
-const servicesAllOperational: ServiceStatusRow[] = [
-  {
-    id: "dep",
-    name: "Пополнение USDT (TRC20)",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Входящие переводы обрабатываются в обычном режиме.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "wd",
-    name: "Вывод средств",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Заявки на вывод проходят стандартную проверку и очередь.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "pay",
-    name: "Начисления и выплаты revenue share",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Зачисления на внутренний баланс без задержек сверх SLA.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "sec",
-    name: "Вторичный рынок (secondary)",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Стакан и сделки доступны.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "ord",
-    name: "Исполнение ордеров",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Сопоставление заявок и проведение сделок в норме.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "bal",
-    name: "Обновление баланса",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Отображение доступного баланса синхронизируется без очереди.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "kyc",
-    name: "Верификация аккаунта",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Приём документов и проверки выполняются штатно.",
-    lastUpdatedLabel: baseLast,
-  },
-  {
-    id: "ntf",
-    name: "Уведомления и обращения в поддержку",
-    status: "operational",
-    statusLabel: "Работает штатно",
-    note: "Доставка уведомлений и канал поддержки доступны.",
-    lastUpdatedLabel: baseLast,
-  },
-];
+const servicesAllOperational = buildMockOperationalServices(baseLast);
 
 const resolvedIncidents: IncidentRow[] = [
   {
@@ -146,7 +83,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
   operational: {
     overall: {
       headline: "Все системы работают штатно",
-      subline: "Ключевые сервисы RevShare доступны. Наблюдаем штатные задержки в пределах SLA.",
+      subline: "Ключевые сервисы Spliton доступны. Наблюдаем штатные задержки в пределах SLA.",
       tone: "success",
       lastUpdatedLabel: baseLast,
       explanation:
@@ -167,7 +104,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
         "Задержки не означают блокировку средств: заявки остаются в очереди и обрабатываются. Итоговые сроки видны в интерфейсе операции.",
     },
     services: servicesAllOperational.map((s) =>
-      s.id === "pay"
+      s.id === "revenue_payouts"
         ? {
             ...s,
             status: "delayed" as const,
@@ -175,7 +112,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
             note: "Очередь начислений длиннее обычного на 15–30 минут.",
             lastUpdatedLabel: baseLast,
           }
-        : s.id === "bal"
+        : s.id === "balance_sync"
           ? {
               ...s,
               status: "degraded" as const,
@@ -208,7 +145,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
         "В окне работ возможны отклонения заявок на вывод и задержки подтверждений депозита. Торговля на secondary может быть ограничена объявлением внутри продукта.",
     },
     services: servicesAllOperational.map((s) =>
-      s.id === "dep" || s.id === "wd"
+      s.id === "deposits" || s.id === "withdrawals"
         ? {
             ...s,
             status: "maintenance" as const,
@@ -216,7 +153,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
             note: "Приём/обработка заявок приостановлена на время окна обслуживания.",
             lastUpdatedLabel: baseLast,
           }
-        : s.id === "sec"
+        : s.id === "secondary_market"
           ? {
               ...s,
               status: "degraded" as const,
@@ -246,7 +183,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
         "Пользователям рекомендуется временно воздержаться от крупных сделок на вторичном рынке до разрешения инцидента. Статус обновляется каждые несколько минут.",
     },
     services: servicesAllOperational.map((s) =>
-      s.id === "sec" || s.id === "ord"
+      s.id === "secondary_market" || s.id === "order_matching"
         ? {
             ...s,
             status: "incident" as const,
@@ -254,7 +191,7 @@ const scenarios: Record<SystemStatusScenario, SystemStatusPageData> = {
             note: "Расследование: возможны отмены части заявок на исполнении.",
             lastUpdatedLabel: baseLast,
           }
-        : s.id === "bal"
+        : s.id === "balance_sync"
           ? {
               ...s,
               status: "degraded" as const,

@@ -1,15 +1,18 @@
-import { ROUTES, secondaryMarketBookPath } from "@/constants/routes";
+﻿import { ROUTES, secondaryMarketBookPath } from "@/constants/routes";
 
-export const SECONDARY_MARKET_TABS = [
-  { id: "market", label: "Рынок" },
-  { id: "analytics", label: "Аналитика" },
-  { id: "orders", label: "Мои ордера" },
-  { id: "history", label: "История сделок" },
-  { id: "watchlist", label: "Избранное" },
-  { id: "rules", label: "Правила рынка" },
+export const SECONDARY_MARKET_TAB_IDS = [
+  "market",
+  "analytics",
+  "orders",
+  "history",
+  "watchlist",
+  "rules",
 ] as const;
 
-export type SecondaryMarketTabId = (typeof SECONDARY_MARKET_TABS)[number]["id"];
+export type SecondaryMarketTabId = (typeof SECONDARY_MARKET_TAB_IDS)[number];
+
+/** @deprecated Use `useSecondaryMarketTabs()` for localized labels */
+export const SECONDARY_MARKET_TABS = SECONDARY_MARKET_TAB_IDS.map((id) => ({ id }));
 
 /** Тип «страницы» внутри workspace — для бейджа и тона шапки. */
 export type SecondaryMarketTabZone = "trading" | "operations" | "ledger" | "research" | "reference";
@@ -25,62 +28,27 @@ export type SecondaryMarketTabPageMeta = {
   surfaceSubtitle: string;
 };
 
-export const SECONDARY_MARKET_TAB_META: Record<SecondaryMarketTabId, SecondaryMarketTabPageMeta> = {
-  market: {
-    documentTitle: "Рынок",
-    zone: "trading",
-    zoneLabel: "Торговый зал",
-    surfaceTitle: "Рынок листингов",
-    surfaceSubtitle:
-      "Каталог лотов: «Стакан» открывает отдельную страницу терминала по инструменту (mnr / sgn / vlt в макете). Данные — демо.",
-  },
-  analytics: {
-    documentTitle: "Торговая аналитика",
-    zone: "trading",
-    zoneLabel: "Вторичный рынок",
-    surfaceTitle: "Торговая аналитика",
-    surfaceSubtitle:
-      "Котировки, ликвидность, спред и сделки по инструменту на вторичке. Доходность и выплаты — на странице «Аналитика релиза».",
-  },
-  orders: {
-    documentTitle: "Мои ордера",
-    zone: "operations",
-    zoneLabel: "Операции",
-    surfaceTitle: "Активные и завершённые заявки",
-    surfaceSubtitle:
-      "Статусы лимитных и рыночных ордеров, частичное исполнение и действия по заявке — в одном операционном экране.",
-  },
-  history: {
-    documentTitle: "История сделок",
-    zone: "ledger",
-    zoneLabel: "Журнал",
-    surfaceTitle: "История сделок",
-    surfaceSubtitle:
-      "Хронология исполненных сделок на вторичном рынке RevShare. Здесь отображаются покупки и продажи units, сумма расчёта, комиссия и статус зачисления.",
-  },
-  watchlist: {
-    documentTitle: "Избранное",
-    zone: "research",
-    zoneLabel: "Наблюдение",
-    surfaceTitle: "Watchlist релизов",
-    surfaceSubtitle:
-      "Закреплённые релизы: стакан — отдельная страница терминала; торговая аналитика — вкладка «Аналитика» с параметром release; performance актива — в `/analytics/releases/[id]`.",
-  },
-  rules: {
-    documentTitle: "Правила рынка",
-    zone: "reference",
-    zoneLabel: "Справочник",
-    surfaceTitle: "Правила и политика исполнения",
-    surfaceSubtitle:
-      "Комиссии, лимиты, матчинг, settlement и ограничения — без юридической простыни; полные условия — в оферте платформы.",
-  },
+const TAB_ZONE: Record<SecondaryMarketTabId, SecondaryMarketTabZone> = {
+  market: "trading",
+  analytics: "trading",
+  orders: "operations",
+  history: "ledger",
+  watchlist: "research",
+  rules: "reference",
 };
+
+/** Zone mapping only — localized copy via `useSecondaryMarketPageMeta()`. */
+export const SECONDARY_MARKET_TAB_META: Record<SecondaryMarketTabId, Pick<SecondaryMarketTabPageMeta, "zone">> =
+  Object.fromEntries(SECONDARY_MARKET_TAB_IDS.map((id) => [id, { zone: TAB_ZONE[id] }])) as Record<
+    SecondaryMarketTabId,
+    Pick<SecondaryMarketTabPageMeta, "zone">
+  >;
 
 /** Валидный `tab` из query для `/dashboard/secondary-market`. Раньше был отдельный `book` — считаем как «Рынок». */
 export function parseSecondaryMarketTabParam(raw: string | null): SecondaryMarketTabId | null {
   if (!raw) return null;
   if (raw === "book") return "market";
-  return SECONDARY_MARKET_TABS.some((t) => t.id === raw) ? (raw as SecondaryMarketTabId) : null;
+  return (SECONDARY_MARKET_TAB_IDS as readonly string[]).includes(raw) ? (raw as SecondaryMarketTabId) : null;
 }
 
 /** Mock id стакана (совпадает с `BOOK_MARKETS` в компоненте стакана). */
