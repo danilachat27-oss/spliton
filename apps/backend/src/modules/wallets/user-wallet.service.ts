@@ -163,15 +163,17 @@ export class UserWalletService {
   }
 
   async getBalance(userId: string) {
-    const summary = await this.getSummary(userId);
+    const wallet = await this.getOrCreateWallet(userId);
+    const bal = wallet.balance!;
     return {
-      walletId: summary.walletId,
-      availableBalance: summary.availableBalance,
-      lockedBalance: summary.lockedBalance,
-      pendingBalance: summary.pendingBalance,
-      asset: summary.asset,
-      network: summary.network,
-      updatedAt: summary.updatedAt,
+      walletId: wallet.id,
+      availableBalance: bal.available.toString(),
+      lockedBalance: bal.locked.toString(),
+      pendingBalance: bal.pending.toString(),
+      asset: wallet.assetCode,
+      network: wallet.network,
+      currency: wallet.assetCode,
+      updatedAt: bal.updatedAt.toISOString(),
     };
   }
 

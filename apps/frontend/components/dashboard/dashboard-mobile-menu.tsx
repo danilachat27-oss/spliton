@@ -10,7 +10,7 @@ import { LanguageSelector } from "@/components/i18n/language-selector";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
-const SUPPORT_ICON_SRC = "/images/catalogbuy/2.png";
+const SUPPORT_ICON_SRC = "/images/catalogbuy/2-128.webp";
 
 /** OKX-style mobile drawer rows */
 const mobileRowClass =
@@ -195,7 +195,6 @@ export function DashboardMobileMenu({
           width={56}
           height={56}
           className="size-full object-cover"
-          unoptimized
         />
       </Link>
     </div>

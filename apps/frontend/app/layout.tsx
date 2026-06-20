@@ -7,6 +7,7 @@ import { ConditionalSiteFooter } from "@/components/layout/conditional-site-foot
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { AppProviders } from "@/components/providers/app-providers";
 import { rootLayoutMetaAsync } from "@/lib/i18n/page-metadata";
+import { getPublicApiBaseUrl } from "@/lib/public-env";
 import { resolveServerLocale } from "@/lib/i18n/server-locale";
 
 const inter = Inter({
@@ -31,12 +32,17 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const initialLocale = await resolveServerLocale();
+  const apiOrigin = getPublicApiBaseUrl();
 
   return (
     <html
       lang={initialLocale}
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="dns-prefetch" href={apiOrigin} />
+        <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
+      </head>
       <body
         className="flex min-h-dvh flex-col bg-background text-foreground"
         suppressHydrationWarning

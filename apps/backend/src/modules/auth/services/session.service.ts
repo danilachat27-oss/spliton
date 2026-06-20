@@ -145,6 +145,27 @@ export class SessionService {
     });
   }
 
+  private sessionTouchMinIntervalMs(): number {
+    const raw = process.env.JWT_SESSION_TOUCH_MIN_INTERVAL_MS;
+    const parsed = raw ? Number(raw) : 60_000;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 60_000;
+  }
+
+  /** Updates lastActiveAt at most once per interval — avoids write on every JWT request. */
+  async touchSessionIfStale(session: UserSession): Promise<void> {
+    const minIntervalMs = this.sessionTouchMinIntervalMs();
+    const elapsedMs = Date.now() - session.lastActiveAt.getTime();
+    if (elapsedMs < minIntervalMs) {
+      return;
+    }
+    await this.prisma.userSession.update({
+      where: { id: session.id },
+      data: {
+        lastActiveAt: new Date(),
+      },
+    });
+  }
+
   isSessionExpired(session: UserSession): boolean {
     return Boolean(
       session.expiresAt && session.expiresAt.getTime() <= Date.now(),

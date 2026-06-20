@@ -409,7 +409,7 @@ export function CatalogGuideScene() {
         <div className="relative shrink-0 overflow-visible rounded-lg ring-1 ring-white/10">
           <div className="relative h-12 overflow-hidden rounded-lg">
             <PreviewCover
-              src="/images/catalogbuy/2.png"
+              src="/images/catalogbuy/2-128.webp"
               className="absolute inset-0"
               imageClassName="object-[center_35%]"
               overlayClassName="bg-gradient-to-b from-black/35 via-black/55 to-black/75"
@@ -523,7 +523,7 @@ export function CatalogReleaseParamsScene() {
         <div className="relative shrink-0 overflow-visible rounded-lg ring-1 ring-white/10">
           <div className="relative h-11 overflow-hidden rounded-lg">
             <PreviewCover
-              src="/images/catalogbuy/2.png"
+              src="/images/catalogbuy/2-128.webp"
               className="absolute inset-0"
               imageClassName="object-[center_35%]"
               overlayClassName="bg-gradient-to-b from-black/35 via-black/55 to-black/75"

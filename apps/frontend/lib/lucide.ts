@@ -124,6 +124,7 @@ export { default as Star } from "lucide-react/dist/esm/icons/star.js";
 export { default as Store } from "lucide-react/dist/esm/icons/store.js";
 export { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
 export { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+export { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
 export { default as User } from "lucide-react/dist/esm/icons/user.js";
 export { default as UserCheck } from "lucide-react/dist/esm/icons/user-check.js";
 export { default as UserPlus } from "lucide-react/dist/esm/icons/user-plus.js";

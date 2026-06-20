@@ -7,7 +7,8 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { formatApiError } from "@/lib/i18n/format-api-error";
 import { formatUsdtAmount } from "@/lib/i18n/formatters";
 import { getWalletDataSource } from "@/lib/public-env";
-import { fetchWalletSummary } from "@/services/wallet.service";
+import { fetchWalletBalanceCached, invalidateWalletBalanceCache } from "@/lib/wallet-balance-cache";
+import { fetchWalletBalance } from "@/services/wallet.service";
 
 export function useHeaderWalletBalance() {
   const { authorizedFetch, isAuthenticated, user } = useAuth();
@@ -26,7 +27,7 @@ export function useHeaderWalletBalance() {
     setLoading(true);
     setError(null);
     try {
-      const s = await fetchWalletSummary(authorizedFetch);
+      const s = await fetchWalletBalanceCached(() => fetchWalletBalance(authorizedFetch));
       setDisplay(formatUsdtAmount(Number(s.availableBalance), locale));
     } catch (e) {
       setDisplay(null);

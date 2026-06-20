@@ -14,6 +14,7 @@ import {
   rekeyAdminAccessVerified,
 } from "@/features/admin/lib/admin-access-cache";
 import { invalidateAdminDataCache } from "@/features/admin/lib/admin-data-cache";
+import { invalidateWalletBalanceCache } from "@/lib/wallet-balance-cache";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import {
   ApiError,
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearAuth = React.useCallback(() => {
     clearAdminAccessVerified();
     invalidateAdminDataCache();
+    invalidateWalletBalanceCache();
     clearSessionHintCookie();
     setUser(null);
     setAccessToken(null);

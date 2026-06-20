@@ -17,6 +17,15 @@ const isProd = process.env.NODE_ENV === "production";
 const nextConfig: NextConfig = {
   // React Compiler заметно замедляет первую компиляцию в dev.
   reactCompiler: isProd,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/**",
+      },
+    ],
+  },
   // Playwright e2e uses 127.0.0.1; without this Next dev blocks HMR/chunks cross-origin.
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {

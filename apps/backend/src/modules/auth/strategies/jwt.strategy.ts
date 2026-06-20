@@ -60,7 +60,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Session is not active');
     }
 
-    await this.sessionService.touchSession(session.id);
+    await this.sessionService.touchSessionIfStale(session);
 
     return {
       id: user.id,

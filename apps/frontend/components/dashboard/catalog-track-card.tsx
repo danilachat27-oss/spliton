@@ -216,7 +216,6 @@ function CatalogCover({
           fill
           className={imageClassName}
           sizes="(max-width: 768px) 100vw, 33vw"
-          unoptimized
         />
       ) : (
         <MediaPlaceholder label="Spliton" aspectClassName="absolute inset-0 h-full w-full min-h-0" />
