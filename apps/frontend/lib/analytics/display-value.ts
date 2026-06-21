@@ -1,10 +1,10 @@
-import { DICTIONARIES } from "../i18n/dictionaries";
+import { CRITICAL_MESSAGES } from "../i18n/critical-messages";
 import type { AppLocale } from "../i18n/types";
 
 const PLACEHOLDER_MARKERS = new Set(["\u2014", "\u2013", "-", ""]);
 
 function msg(locale: AppLocale, key: string): string {
-  return DICTIONARIES[locale][key] ?? DICTIONARIES.ru[key] ?? key;
+  return CRITICAL_MESSAGES[locale][key] ?? CRITICAL_MESSAGES.ru[key] ?? key;
 }
 
 /** Универсальная подпись вместо «—» / «-» для пустых значений. */
