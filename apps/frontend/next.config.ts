@@ -45,6 +45,14 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: "/calculator", destination: "/assets/calculator", permanent: true }];
   },
+  async rewrites() {
+    return [
+      {
+        source: "/favicon.ico",
+        destination: "/images/LOGO/mini-logo.png",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

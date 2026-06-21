@@ -3,6 +3,9 @@ import type { AppLocale } from "./types";
 const RU: Record<string, string> = {
   "common.loading": "Загрузка…",
   "common.empty": "Нет данных",
+  "common.emptyDate": "Дата не указана",
+  "common.emptyAmount": "Сумма недоступна",
+  "common.emptyBalance": "Баланс пока недоступен",
   "common.error": "Не удалось загрузить данные",
   "common.retry": "Повторить",
   "common.back": "Назад",
@@ -186,6 +189,9 @@ const RU: Record<string, string> = {
 const EN: Record<string, string> = {
   "common.loading": "Loading…",
   "common.empty": "No data",
+  "common.emptyDate": "Date not specified",
+  "common.emptyAmount": "Amount unavailable",
+  "common.emptyBalance": "Balance not available yet",
   "common.error": "Failed to load data",
   "common.retry": "Retry",
   "common.back": "Back",
@@ -369,6 +375,9 @@ const EN: Record<string, string> = {
 const ES: Record<string, string> = {
   "common.loading": "Cargando…",
   "common.empty": "Sin datos",
+  "common.emptyDate": "Fecha no indicada",
+  "common.emptyAmount": "Importe no disponible",
+  "common.emptyBalance": "Saldo aún no disponible",
   "common.error": "No se pudieron cargar los datos",
   "common.retry": "Reintentar",
   "common.back": "Atrás",
@@ -552,6 +561,9 @@ const ES: Record<string, string> = {
 const PT: Record<string, string> = {
   "common.loading": "A carregar…",
   "common.empty": "Sem dados",
+  "common.emptyDate": "Data não indicada",
+  "common.emptyAmount": "Montante indisponível",
+  "common.emptyBalance": "Saldo ainda indisponível",
   "common.error": "Não foi possível carregar os dados",
   "common.retry": "Tentar novamente",
   "common.back": "Voltar",

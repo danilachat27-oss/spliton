@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { DashboardHeroJourneyPreview } from "@/components/dashboard/dashboard-hero-journey-preview";
 import { DashboardHeroMacShowcase } from "@/components/dashboard/dashboard-hero-mac-showcase";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { ROUTES } from "@/constants/routes";
@@ -14,7 +15,7 @@ export function DashboardHero({ className }: { className?: string }) {
     <section
       id="deposit"
       className={cn(
-        "scroll-mt-[5.5rem] relative z-1 w-full bg-black py-8 sm:scroll-mt-24 sm:py-14 lg:py-16",
+        "scroll-mt-[5.5rem] relative z-1 w-full bg-black px-4 py-8 sm:scroll-mt-24 sm:px-0 sm:py-14 lg:py-16",
         className,
       )}
     >
@@ -43,9 +44,19 @@ export function DashboardHero({ className }: { className?: string }) {
             </Link>
           </div>
 
-          <div className="relative mt-8 w-full overflow-hidden rounded-2xl bg-black p-2 sm:mt-12 sm:rounded-3xl sm:p-3">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-black sm:aspect-16/10 sm:rounded-2xl">
-              <DashboardHeroMacShowcase className="relative z-1 h-full w-full" />
+          <div className="relative mt-8 w-full sm:mt-12">
+            {/* Мобилка: анимация на всю ширину без рамки MacBook */}
+            <div className="relative -mx-4 w-[calc(100%+2rem)] sm:hidden">
+              <div className="relative min-h-[min(72vh,680px)] w-full overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/10">
+                <DashboardHeroJourneyPreview layout="mobile" className="absolute inset-0 h-full w-full" />
+              </div>
+            </div>
+
+            {/* Планшет и desktop: как было */}
+            <div className="relative hidden w-full overflow-hidden rounded-2xl bg-black p-2 sm:block sm:rounded-3xl sm:p-3">
+              <div className="relative aspect-16/10 w-full overflow-hidden rounded-xl bg-black sm:rounded-2xl">
+                <DashboardHeroMacShowcase className="relative z-1 h-full w-full" />
+              </div>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { assetsMutedCardClass } from "@/components/dashboard/assets/assets-ui";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { EmptyState } from "@/components/shared/data-states/empty-state";
 import { formatUsdtAmount } from "@/lib/i18n/formatters";
+import { emptyAmountLabel, emptyValueLabel } from "@/lib/analytics/display-value";
 import type { WalletSummary } from "@/services/wallet.service";
 
 function parseMoney(raw: string | undefined): number | null {
@@ -14,7 +15,7 @@ function parseMoney(raw: string | undefined): number | null {
 
 function formatOrDash(value: string | undefined, locale: Parameters<typeof formatUsdtAmount>[1]): string {
   const n = parseMoney(value);
-  if (n == null) return "—";
+  if (n == null) return emptyAmountLabel(locale);
   return formatUsdtAmount(n, locale);
 }
 
@@ -74,7 +75,7 @@ export function PortfolioOverviewWalletKpi({
   const cards = [
     {
       label: t("assets.overview.walletTotal"),
-      value: total != null ? formatUsdtAmount(total, locale) : "—",
+      value: total != null ? formatUsdtAmount(total, locale) : emptyAmountLabel(locale),
       hint: t("assets.overview.walletTotalHint"),
     },
     {
@@ -109,7 +110,7 @@ export function PortfolioOverviewWalletKpi({
     },
     {
       label: t("assets.overview.walletPendingWithdrawals"),
-      value: String(summary.pendingWithdrawalsCount ?? "—"),
+      value: String(summary.pendingWithdrawalsCount ?? emptyValueLabel(locale)),
       hint: t("assets.overview.walletPendingWithdrawalsHint"),
     },
   ];

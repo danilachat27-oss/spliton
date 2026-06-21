@@ -4,6 +4,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { assetsCardClass } from "@/components/dashboard/assets/assets-ui";
 import { EmptyState } from "@/components/shared/data-states/empty-state";
 import { formatUsdtAmount } from "@/lib/i18n/formatters";
+import { emptyAmountLabel } from "@/lib/analytics/display-value";
 import type { PortfolioMetricsOverviewApi } from "@/services/portfolio.service";
 import type { WalletSummary } from "@/services/wallet.service";
 
@@ -15,7 +16,7 @@ function parseMoney(raw: string | undefined | null): number | null {
 
 function fmt(value: string | null | undefined, locale: Parameters<typeof formatUsdtAmount>[1]): string {
   const n = parseMoney(value ?? undefined);
-  if (n == null) return "—";
+  if (n == null) return emptyAmountLabel(locale);
   return formatUsdtAmount(n, locale);
 }
 

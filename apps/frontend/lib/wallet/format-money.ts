@@ -1,5 +1,6 @@
 import type { AppLocale } from "@/lib/i18n/types";
 import { formatDateTime, formatUsdtAmount } from "@/lib/i18n/formatters";
+import { emptyAmountLabel } from "@/lib/analytics/display-value";
 
 /** Format decimal string/number as localized USDT amount. */
 export function formatUsdtRu(
@@ -9,7 +10,7 @@ export function formatUsdtRu(
 ): string {
   const n =
     typeof amount === "string" ? Number(amount.replace(/\s/g, "").replace(",", ".")) : amount;
-  if (!Number.isFinite(n)) return `— ${asset}`;
+  if (!Number.isFinite(n)) return emptyAmountLabel(locale);
   if (asset === "USDT") return formatUsdtAmount(n, locale);
   return `${formatUsdtAmount(n, locale).replace(" USDT", "")} ${asset}`;
 }

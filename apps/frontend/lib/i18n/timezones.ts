@@ -1,4 +1,5 @@
 import type { AppLocale } from "./types";
+import { emptyValueLabel } from "../analytics/display-value";
 import { intlLocaleFor } from "./formatters";
 
 export type TimezoneOption = {
@@ -106,7 +107,7 @@ export function resolveTimezoneLabel(
   timeZone: string | null | undefined,
   locale: AppLocale,
 ): string {
-  if (!timeZone?.trim()) return "—";
+  if (!timeZone?.trim()) return emptyValueLabel(locale);
   const options = listTimezoneOptions(locale);
   const hit = options.find((o) => o.value === timeZone);
   if (hit) return hit.label;

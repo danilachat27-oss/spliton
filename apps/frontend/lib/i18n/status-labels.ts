@@ -1,5 +1,6 @@
 import type { AppLocale } from "./types";
 import { DICTIONARIES } from "./dictionaries";
+import { emptyValueLabel } from "../analytics/display-value";
 
 const WITHDRAWAL_STATUS: Record<string, string> = {
   pending: "status.withdrawal.pending",
@@ -105,7 +106,7 @@ export function statusLabel(
   locale: AppLocale,
   fallback?: string,
 ): string {
-  if (!value) return fallback ?? "—";
+  if (!value) return fallback ?? emptyValueLabel(locale);
   const normalized = value.toLowerCase();
   const key =
     domain === "withdrawal"

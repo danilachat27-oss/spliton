@@ -52,7 +52,7 @@ export function AssetsOverviewContent() {
     live && activity.records
       ? activity.records.slice(0, 6).map((row) => ({
           id: row.id,
-          type: row.typeKey ? t(`activity.widgets.type.${row.typeKey}`) : (row.type ?? "—"),
+          type: row.typeKey ? t(`activity.widgets.type.${row.typeKey}`) : (row.type ?? t("common.empty")),
           detail: row.detailsKey ? t(`activity.widgets.details.${row.detailsKey}`) : (row.details ?? ""),
           amount: row.amount,
           date: row.relativeKey

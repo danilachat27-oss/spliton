@@ -34,21 +34,21 @@ function PositionRow({
       <td className="px-3 py-3 align-top">
         <p className="font-medium text-neutral-900">{row.release}</p>
         <p className="text-xs text-neutral-500">
-          {row.artist} · {raw?.symbol ?? "—"}
+          {row.artist} · {raw?.symbol ?? t("common.empty")}
         </p>
       </td>
       <td className="px-3 py-3 align-top text-neutral-600">{row.genre}</td>
       <td className="px-3 py-3 align-top font-mono tabular-nums">{row.units}</td>
       <td className="px-3 py-3 align-top font-mono tabular-nums text-neutral-600">
-        {raw?.unitsLocked ?? "—"}
+        {raw?.unitsLocked ?? t("common.empty")}
       </td>
       <td className="px-3 py-3 align-top font-mono tabular-nums">{marketPrice}</td>
       <td className="px-3 py-3 align-top font-mono font-semibold tabular-nums">{row.value}</td>
       <td className="px-3 py-3 align-top font-mono tabular-nums text-neutral-600">
-        {raw?.totalAccruedUsdt ? `${raw.totalAccruedUsdt} USDT` : "—"}
+        {raw?.totalAccruedUsdt ? `${raw.totalAccruedUsdt} USDT` : t("common.emptyAmount")}
       </td>
       <td className="px-3 py-3 align-top font-mono tabular-nums text-neutral-600">
-        {raw?.totalPaidUsdt ? `${raw.totalPaidUsdt} USDT` : "—"}
+        {raw?.totalPaidUsdt ? `${raw.totalPaidUsdt} USDT` : t("common.emptyAmount")}
       </td>
       <td className="px-3 py-3 align-top font-mono tabular-nums">{row.share}</td>
       <td className="px-3 py-3 align-top">

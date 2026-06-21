@@ -5,6 +5,7 @@ import { MoreHorizontal } from "@/lib/lucide";
 import { assetsPanelClass } from "@/components/dashboard/assets/assets-ui";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { formatUsdtAmount } from "@/lib/i18n/formatters";
+import { emptyAmountLabel } from "@/lib/analytics/display-value";
 import { cn } from "@/lib/utils";
 import type { WalletSummary } from "@/services/wallet.service";
 
@@ -21,7 +22,7 @@ function formatWalletMetric(
 ): string {
   if (hidden) return "••••";
   const n = parseMoney(raw);
-  if (n == null) return "—";
+  if (n == null) return emptyAmountLabel(locale);
   return formatUsdtAmount(n, locale);
 }
 

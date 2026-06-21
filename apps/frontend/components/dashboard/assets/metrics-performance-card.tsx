@@ -5,6 +5,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/data-states/empty-state";
 import { formatUsdtAmount } from "@/lib/i18n/formatters";
+import { emptyAmountLabel } from "@/lib/analytics/display-value";
 import type { PortfolioMetricsApi } from "@/services/portfolio.service";
 
 function parseMoney(raw: string | null | undefined): number | null {
@@ -54,15 +55,15 @@ export function MetricsPerformanceCard({
           {[
             {
               label: t("assets.metrics.kpiTotalAccrued"),
-              value: accrued != null ? formatUsdtAmount(accrued, locale) : "—",
+              value: accrued != null ? formatUsdtAmount(accrued, locale) : emptyAmountLabel(locale),
             },
             {
               label: t("assets.metrics.kpiTotalPaid"),
-              value: paid != null ? formatUsdtAmount(paid, locale) : "—",
+              value: paid != null ? formatUsdtAmount(paid, locale) : emptyAmountLabel(locale),
             },
             {
               label: t("assets.metrics.kpiPendingPayouts"),
-              value: pending != null ? formatUsdtAmount(pending, locale) : "—",
+              value: pending != null ? formatUsdtAmount(pending, locale) : emptyAmountLabel(locale),
             },
           ].map((item) => (
             <article

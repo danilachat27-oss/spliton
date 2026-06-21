@@ -1,4 +1,5 @@
 import type { AppLocale } from "./types";
+import { emptyDateLabel } from "../analytics/display-value";
 
 const INTL_LOCALE: Record<AppLocale, string> = {
   ru: "ru-RU",
@@ -67,9 +68,9 @@ export function formatDate(
   locale: AppLocale,
   options?: Intl.DateTimeFormatOptions,
 ): string {
-  if (!value) return "—";
+  if (!value) return emptyDateLabel(locale);
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return emptyDateLabel(locale);
   return date.toLocaleDateString(intlLocale(locale), options);
 }
 
@@ -78,9 +79,9 @@ export function formatDateTime(
   locale: AppLocale,
   options?: Intl.DateTimeFormatOptions,
 ): string {
-  if (!value) return "—";
+  if (!value) return emptyDateLabel(locale);
   const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return emptyDateLabel(locale);
   return date.toLocaleString(intlLocale(locale), options);
 }
 

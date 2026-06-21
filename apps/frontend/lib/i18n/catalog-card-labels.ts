@@ -1,6 +1,7 @@
 import type { AppLocale } from "./types";
 import { DICTIONARIES } from "./dictionaries";
 import { statusLabel } from "./status-labels";
+import { isEmptyDisplayValue } from "@/lib/analytics/display-value";
 
 function dict(locale: AppLocale, key: string): string {
   return DICTIONARIES[locale][key] ?? DICTIONARIES.ru[key] ?? key;
@@ -26,12 +27,12 @@ export function catalogCardStatusLabel(input: {
   if (fromPurchase) return fromPurchase;
   if (input.roundStatus) {
     const fromRound = statusLabel("round", input.roundStatus, input.locale);
-    if (fromRound !== "—") return fromRound;
+    if (!isEmptyDisplayValue(fromRound)) return fromRound;
   }
   if (input.releaseStatus) {
     const normalized = input.releaseStatus.toLowerCase();
     const fromRelease = statusLabel("release", normalized, input.locale);
-    if (fromRelease !== "—") return fromRelease;
+    if (!isEmptyDisplayValue(fromRelease)) return fromRelease;
   }
   return dict(input.locale, "catalog.cards.noData");
 }

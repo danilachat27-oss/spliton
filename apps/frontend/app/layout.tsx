@@ -40,6 +40,14 @@ export default async function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        <link
+          rel="icon"
+          href="/images/LOGO/mini-logo.png"
+          type="image/png"
+          sizes="any"
+        />
+        <link rel="shortcut icon" href="/images/LOGO/mini-logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/LOGO/mini-logo.png" />
         <link rel="dns-prefetch" href={apiOrigin} />
         <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
       </head>

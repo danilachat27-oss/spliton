@@ -19,6 +19,7 @@ import type {
 } from "@/services/portfolio.service";
 
 import type { AppLocale } from "@/lib/i18n/types";
+import { emptyDateLabel, emptyValueLabel } from "@/lib/analytics/display-value";
 
 export const UPCOMING_EXPECTED_RELEASE_ID = "expected-payouts";
 
@@ -52,9 +53,9 @@ function formatUnitsDisplay(raw: string, locale: AppLocale): string {
 }
 
 function formatDateByLocale(iso: string, locale: AppLocale): string {
-  if (!iso) return "—";
+  if (!iso) return emptyDateLabel(locale);
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return emptyDateLabel(locale);
   return d.toLocaleDateString(localeToIntl(locale), {
     day: "2-digit",
     month: "short",
@@ -63,9 +64,9 @@ function formatDateByLocale(iso: string, locale: AppLocale): string {
 }
 
 function formatDateTimeByLocale(iso: string, locale: AppLocale): string {
-  if (!iso) return "—";
+  if (!iso) return emptyDateLabel(locale);
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return emptyDateLabel(locale);
   return d.toLocaleString(localeToIntl(locale), {
     year: "numeric",
     month: "2-digit",
@@ -131,13 +132,14 @@ export function adaptStructureItems(
 
 export function adaptUpcomingFromOverview(
   overview: PortfolioOverviewApi,
+  locale: AppLocale,
 ): UpcomingDistribution[] {
   if (Number.parseFloat(overview.expectedPayouts) <= 0) return [];
   return [
     {
       id: "expected-total",
       release: UPCOMING_EXPECTED_RELEASE_ID,
-      eta: "—",
+      eta: emptyValueLabel(locale),
       amount: `${overview.expectedPayouts} USDT`,
     },
   ];

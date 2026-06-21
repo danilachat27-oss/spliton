@@ -450,7 +450,7 @@ export function MetricsAssetDynamicsChart({
                 <span className="text-base font-sans font-medium text-neutral-400">USDT</span>
               </>
             ) : (
-              <span className="text-base font-sans font-medium text-neutral-400">—</span>
+              <span className="text-base font-sans font-medium text-neutral-500">{t("common.emptyBalance")}</span>
             )}
           </p>
         </div>
@@ -498,11 +498,11 @@ export function MetricsAssetDynamicsChart({
             ) : cashflowLoading ? (
               "…"
             ) : cashflowError ? (
-              "—"
+              t("common.emptyAmount")
             ) : cashflowTotals ? (
               <>+{formatUsdtAmount(cashflowTotals.deposits30d, locale).replace(" USDT", "")} USDT</>
             ) : (
-              "—"
+              t("common.emptyAmount")
             )}
           </p>
           {showMock ? <p className="mt-1 text-[10px] text-neutral-400">{t("assets.demoLabel")}</p> : null}
@@ -518,11 +518,11 @@ export function MetricsAssetDynamicsChart({
             ) : cashflowLoading ? (
               "…"
             ) : cashflowError ? (
-              "—"
+              t("common.emptyAmount")
             ) : cashflowTotals ? (
               <>−{formatUsdtAmount(cashflowTotals.withdrawals30d, locale).replace(" USDT", "")} USDT</>
             ) : (
-              "—"
+              t("common.emptyAmount")
             )}
           </p>
           {showMock ? <p className="mt-1 text-[10px] text-neutral-400">{t("assets.demoLabel")}</p> : null}

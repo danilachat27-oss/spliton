@@ -93,7 +93,7 @@ export function I18nProvider({
         console.warn(`[i18n] missing key: ${key} (${locale})`);
       }
       if (key.startsWith("admin.")) return key;
-      return CLIENT_DICTIONARIES[DEFAULT_LOCALE].UNKNOWN_ERROR ?? "—";
+      return CLIENT_DICTIONARIES[DEFAULT_LOCALE].UNKNOWN_ERROR ?? CLIENT_DICTIONARIES[DEFAULT_LOCALE]["common.empty"] ?? "No data";
     },
     [adminMessages, locale],
   );

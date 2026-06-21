@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { emptyDateLabel } from "../analytics/display-value";
 import {
   formatCurrency,
   formatDate,
@@ -39,10 +40,10 @@ describe("formatters", () => {
     }
   });
 
-  it("formatDate and formatDateTime return em dash for invalid input", () => {
+  it("formatDate and formatDateTime return empty date label for invalid input", () => {
     for (const locale of LOCALES) {
-      expect(formatDate(null, locale)).toBe("—");
-      expect(formatDateTime("not-a-date", locale)).toBe("—");
+      expect(formatDate(null, locale)).toBe(emptyDateLabel(locale));
+      expect(formatDateTime("not-a-date", locale)).toBe(emptyDateLabel(locale));
     }
   });
 

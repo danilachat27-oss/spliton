@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppLocale } from "@/lib/i18n/types";
 import type {
+import { emptyValueLabel } from "@/lib/analytics/display-value";
   PortfolioActivityItemApi,
   PortfolioOverviewApi,
   PortfolioPositionApi,
@@ -87,7 +88,7 @@ describe("portfolio-adapter locale", () => {
 
     for (const item of formatted) {
       expect(item.dateEntered).toBeTruthy();
-      expect(item.dateEntered).not.toBe("—");
+      expect(item.dateEntered).not.toBe(emptyValueLabel(locale));
       expect(item.units).toMatch(/1[\s.,]?250/);
       expect(item.heldUnits).toBe(1250);
       expect(item.value).toMatch(/USDT/);
@@ -128,13 +129,13 @@ describe("portfolio-adapter locale", () => {
     expect(out.units).toBe("not-a-number");
     expect(out.heldUnits).toBeUndefined();
     expect(out.value).toBe("bad USDT");
-    expect(out.dateEntered).toBe("—");
+    expect(out.dateEntered).toBe(emptyValueLabel(locale));
 
     const badActivity = adaptActivityRow(
       { ...sampleActivity(), occurredAt: "invalid" },
       "en",
     );
-    expect(badActivity.date).toBe("—");
+    expect(badActivity.date).toBe(emptyValueLabel(locale));
     expect(badActivity.relative).toBe("");
   });
 
@@ -156,7 +157,7 @@ describe("portfolio-adapter locale", () => {
     const overview = {
       expectedPayouts: "500",
     } as PortfolioOverviewApi;
-    const items = adaptUpcomingFromOverview(overview);
+    const items = adaptUpcomingFromOverview(overview, "en");
     expect(items[0]?.release).toBe(UPCOMING_EXPECTED_RELEASE_ID);
     expect(items[0]?.release).not.toMatch(CYRILLIC);
   });

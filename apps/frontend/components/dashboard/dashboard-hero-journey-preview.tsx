@@ -23,10 +23,16 @@ import { cn } from "@/lib/utils";
 
 const STAGE_W = 1280;
 const STAGE_H = 720;
+/** Портретный stage под телефон — отдельно от desktop 1280×720 */
+const MOBILE_STAGE_W = 393;
+const MOBILE_STAGE_H = 680;
 const CURSOR_RING_OFFSET = 15;
+
+type JourneyPreviewLayout = "default" | "embedded" | "mobile";
 
 function useStageScale(
   viewportRef: RefObject<HTMLDivElement | null>,
+  layout: JourneyPreviewLayout,
   { capAtOne = false, fitMultiplier = 1 }: { capAtOne?: boolean; fitMultiplier?: number } = {},
 ) {
   const [scale, setScale] = useState(1);
@@ -37,6 +43,13 @@ function useStageScale(
 
     const update = () => {
       const { width, height } = node.getBoundingClientRect();
+
+      if (layout === "mobile") {
+        if (width <= 0 || height <= 0) return;
+        setScale(Math.min(width / MOBILE_STAGE_W, height / MOBILE_STAGE_H));
+        return;
+      }
+
       const fit = Math.min(width / STAGE_W, height / STAGE_H) * fitMultiplier;
       setScale(capAtOne ? Math.min(fit, 1) : fit);
     };
@@ -45,7 +58,7 @@ function useStageScale(
     const observer = new ResizeObserver(update);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [viewportRef, capAtOne, fitMultiplier]);
+  }, [viewportRef, layout, capAtOne, fitMultiplier]);
 
   return scale;
 }
@@ -456,14 +469,30 @@ function BookScene() {
 export function DashboardHeroJourneyPreview({
   className,
   embedded = false,
+  layout,
 }: {
   className?: string;
   embedded?: boolean;
+  layout?: JourneyPreviewLayout;
 }) {
   const { t } = useI18n();
   const mounted = useClientMounted();
+  const resolvedLayout: JourneyPreviewLayout = layout ?? (embedded ? "embedded" : "default");
 
   if (!mounted) {
+    if (resolvedLayout === "mobile") {
+      return (
+        <div
+          className={cn(
+            "hero-journey-preview hero-journey-preview--mobile relative h-full w-full overflow-hidden rounded-2xl bg-zinc-950",
+            className,
+          )}
+          role="img"
+          aria-label={t("dashboard.heroJourney.ariaLabel")}
+        />
+      );
+    }
+
     return (
       <div
         className={cn(
@@ -477,7 +506,61 @@ export function DashboardHeroJourneyPreview({
     );
   }
 
-  return <DashboardHeroJourneyPreviewAnimated className={className} embedded={embedded} />;
+  if (resolvedLayout === "mobile") {
+    return <DashboardHeroJourneyPreviewMobile className={className} />;
+  }
+
+  return (
+    <DashboardHeroJourneyPreviewAnimated className={className} embedded={embedded || resolvedLayout === "embedded"} />
+  );
+}
+
+function DashboardHeroJourneyPreviewMobile({ className }: { className?: string }) {
+  const { t } = useI18n();
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const scale = useStageScale(viewportRef, "mobile");
+  useJourneyAnimationVars(stageRef);
+
+  return (
+    <div
+      className={cn(
+        "hero-journey-preview hero-journey-preview--mobile relative h-full w-full overflow-hidden rounded-2xl bg-zinc-950",
+        className,
+      )}
+      role="img"
+      aria-label={t("dashboard.heroJourney.ariaLabel")}
+    >
+      <div
+        ref={viewportRef}
+        className="absolute inset-0 flex items-center justify-center overflow-hidden"
+      >
+        <div
+          className="relative shrink-0 overflow-hidden rounded-xl ring-1 ring-white/10"
+          style={{
+            width: MOBILE_STAGE_W * scale,
+            height: MOBILE_STAGE_H * scale,
+          }}
+        >
+          <div
+            ref={stageRef}
+            className="hero-journey-stage absolute top-0 left-0 overflow-hidden rounded-xl bg-black"
+            style={{
+              width: MOBILE_STAGE_W,
+              height: MOBILE_STAGE_H,
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+            }}
+          >
+            <CatalogScene />
+            <BuyScene />
+            <SellScene />
+            <BookScene />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function DashboardHeroJourneyPreviewAnimated({
@@ -490,7 +573,10 @@ function DashboardHeroJourneyPreviewAnimated({
   const { t } = useI18n();
   const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const scale = useStageScale(viewportRef, { capAtOne: embedded, fitMultiplier: embedded ? 0.78 : 1 });
+  const scale = useStageScale(viewportRef, embedded ? "embedded" : "default", {
+    capAtOne: embedded,
+    fitMultiplier: embedded ? 0.78 : 1,
+  });
   useJourneyAnimationVars(stageRef);
 
   return (

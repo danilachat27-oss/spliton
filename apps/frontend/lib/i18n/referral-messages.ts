@@ -45,7 +45,7 @@ const RU: Record<string, string> = {
   "referral.summary.pendingRewards": "Награды в ожидании",
   "referral.summary.paid": "Выплачено",
   "referral.summary.earnedTotal": "Всего заработано",
-  "referral.summary.empty": "—",
+  "referral.summary.empty": "Нет данных",
 
   "referral.invites.summary.title": "Сводка по приглашениям",
   "referral.invites.summary.subtitle":
@@ -231,7 +231,7 @@ const EN: Record<string, string> = {
   "referral.summary.pendingRewards": "Pending rewards",
   "referral.summary.paid": "Paid out",
   "referral.summary.earnedTotal": "Total earned",
-  "referral.summary.empty": "—",
+  "referral.summary.empty": "No data",
 
   "referral.invites.summary.title": "Invite summary",
   "referral.invites.summary.subtitle":
@@ -417,7 +417,7 @@ const ES: Record<string, string> = {
   "referral.summary.pendingRewards": "Recompensas pendientes",
   "referral.summary.paid": "Pagado",
   "referral.summary.earnedTotal": "Total ganado",
-  "referral.summary.empty": "—",
+  "referral.summary.empty": "Sin datos",
 
   "referral.invites.summary.title": "Resumen de invitaciones",
   "referral.invites.summary.subtitle":
@@ -603,7 +603,7 @@ const PT: Record<string, string> = {
   "referral.summary.pendingRewards": "Recompensas pendentes",
   "referral.summary.paid": "Pago",
   "referral.summary.earnedTotal": "Total ganho",
-  "referral.summary.empty": "—",
+  "referral.summary.empty": "Sem dados",
 
   "referral.invites.summary.title": "Resumo de convites",
   "referral.invites.summary.subtitle":
