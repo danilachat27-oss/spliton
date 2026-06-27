@@ -49,7 +49,6 @@ import {
   ShieldCheck,
 
   Shield,
-  Sparkles,
   Store,
 
   List,
@@ -878,7 +877,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 
         href: ROUTES.adminUpdates,
 
-        icon: Sparkles,
+        icon: ScrollText,
 
       },
 

@@ -17,8 +17,10 @@ import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
-import { adminBtnOutline, adminSectionCreateButton } from "@/features/admin/lib/admin-ui";
-import { AdminReadOnlyBanner } from "@/features/admin/ui";
+import { adminBtnOutline, adminFieldInput, adminSectionCreateButton } from "@/features/admin/lib/admin-ui";
+import { ADMIN_UPDATE_TYPES, adminUpdateTypeBadgeClassName } from "@/features/admin/lib/admin-update-ui";
+import { AdminLocalizedStatusBadge, AdminReadOnlyBanner } from "@/features/admin/ui";
+import { AdminStyledSelect } from "@/features/admin/ui/admin-styled-select";
 import { useAuth } from "@/components/providers/auth-provider";
 import { ROUTES } from "@/constants/routes";
 import {
@@ -44,15 +46,7 @@ const STAFF_ROLES = [
   "SUPPORT",
 ] as const;
 
-const UPDATE_TYPES: AdminUpdateType[] = [
-  "FEATURE",
-  "LEGAL",
-  "BILLING",
-  "SECURITY",
-  "MAINTENANCE",
-  "UX",
-  "SYSTEM",
-];
+const UPDATE_TYPES = ADMIN_UPDATE_TYPES;
 
 const emptyForm = {
   title: "",
@@ -168,36 +162,31 @@ export function AdminUpdatesManageSection() {
               {editingId ? a.t("admin.updates.edit") : a.t("admin.updates.create")}
             </h3>
             <input
-              className="w-full rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Title"
+              className={cn(adminFieldInput, "w-full")}
+              placeholder={a.t("admin.updates.fieldTitle")}
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
             />
             <textarea
-              className="min-h-16 w-full rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Summary"
+              className={cn(adminFieldInput, "min-h-16 w-full resize-y")}
+              placeholder={a.t("admin.updates.fieldSummary")}
               value={form.summary}
               onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
             />
             <textarea
-              className="min-h-32 w-full rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
-              placeholder="Content"
+              className={cn(adminFieldInput, "min-h-32 w-full resize-y")}
+              placeholder={a.t("admin.updates.fieldContent")}
               value={form.content}
               onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
             />
-            <select
-              className="rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
+            <AdminStyledSelect
               value={form.type}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, type: e.target.value as AdminUpdateType }))
-              }
-            >
-              {UPDATE_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {a.t(`admin.updates.type.${type}`)}
-                </option>
-              ))}
-            </select>
+              onChange={(value: string) => setForm((f) => ({ ...f, type: value as AdminUpdateType }))}
+              options={UPDATE_TYPES.map((type) => ({
+                value: type,
+                label: a.t(`admin.updates.type.${type}`),
+              }))}
+            />
             <div className="flex flex-wrap gap-2">
               {STAFF_ROLES.map((role) => {
                 const checked = form.audienceRoles.includes(role);
@@ -222,7 +211,7 @@ export function AdminUpdatesManageSection() {
             </div>
             <Button type="button" className={adminSectionCreateButton} disabled={saving} onClick={() => void onSave()}>
               <Plus className="size-4" aria-hidden />
-              {a.t("admin.actions.save")}
+              {a.t("admin.updates.save")}
             </Button>
           </div>
         ) : null}
@@ -232,11 +221,14 @@ export function AdminUpdatesManageSection() {
             {items.map((row) => (
               <li key={row.id} className={cn(ADMIN_SECTION_TILE, "space-y-2")}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                  <div className="space-y-1">
                     <p className="text-sm font-semibold text-zinc-100">{row.title}</p>
-                    <p className="text-xs text-zinc-500">
-                      {row.type} · {row.status}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={adminUpdateTypeBadgeClassName(row.type)}>
+                        {a.t(`admin.updates.type.${row.type}`)}
+                      </span>
+                      <AdminLocalizedStatusBadge status={row.status} domain="generic" />
+                    </div>
                   </div>
                   {canMutate && row.status === "DRAFT" ? (
                     <div className="flex gap-2">

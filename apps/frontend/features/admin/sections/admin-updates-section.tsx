@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { Sparkles } from "@/lib/lucide";
+import { ArrowRight, ScrollText } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
+import { AdminUpdateDetailPanel } from "@/features/admin/components/admin-update-detail-panel";
 import { AdminSectionGuard } from "@/features/admin/components/admin-section-guard";
 import {
   AdminSectionDataArea,
@@ -18,9 +19,15 @@ import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { formatAdminDate } from "@/features/admin/lib/admin-format";
 import { ADMIN_SECTION_NOTICE, ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { adminUpdateTypeBadgeClassName, ADMIN_UPDATE_TYPES } from "@/features/admin/lib/admin-update-ui";
 import { adminBtnOutline } from "@/features/admin/lib/admin-ui";
 import { useAuth } from "@/components/providers/auth-provider";
 import { ROUTES } from "@/constants/routes";
+import {
+  AdminFilterPills,
+  AdminFilterResultCount,
+  AdminLocalizedStatusBadge,
+} from "@/features/admin/ui";
 import {
   fetchAdminUpdatesHistory,
   markAdminUpdateRead,
@@ -28,16 +35,6 @@ import {
   type AdminUpdateType,
 } from "@/services/admin/adminUpdates.service";
 import { cn } from "@/lib/utils";
-
-const UPDATE_TYPES: AdminUpdateType[] = [
-  "FEATURE",
-  "LEGAL",
-  "BILLING",
-  "SECURITY",
-  "MAINTENANCE",
-  "UX",
-  "SYSTEM",
-];
 
 function UpdateHistoryCard({
   item,
@@ -54,29 +51,50 @@ function UpdateHistoryCard({
   unreadLabel: string;
   onOpen: () => void;
 }) {
+  const unread = !item.isRead;
+
   return (
-    <article className={cn(ADMIN_SECTION_TILE, "space-y-2")}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-zinc-400">
-          {typeLabel}
-        </span>
-        <span className="text-xs text-zinc-500">
-          {item.publishedAt ? formatAdminDate(item.publishedAt) : "—"}
-        </span>
-        <span className="text-xs text-zinc-600">{item.status}</span>
-        <span className="text-xs text-zinc-600">
-          {item.isRead ? readLabel : unreadLabel}
-        </span>
+    <article
+      className={cn(
+        ADMIN_SECTION_TILE,
+        "relative transition-colors",
+        unread && "bg-zinc-900/55",
+      )}
+    >
+      {unread ? (
+        <span
+          className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full bg-[#B7F500]"
+          aria-hidden
+        />
+      ) : null}
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={adminUpdateTypeBadgeClassName(item.type)}>{typeLabel}</span>
+            <AdminLocalizedStatusBadge status={item.status} domain="generic" />
+            <span className="text-xs text-zinc-500">
+              {item.publishedAt ? formatAdminDate(item.publishedAt) : "—"}
+            </span>
+            <span className="text-xs text-zinc-600">{unread ? unreadLabel : readLabel}</span>
+          </div>
+          <h2 className={cn("text-sm font-semibold text-zinc-100", unread && "text-zinc-50")}>
+            {item.title}
+          </h2>
+          <p className="text-sm leading-relaxed text-zinc-400">{item.summary}</p>
+        </div>
       </div>
-      <h2 className="text-sm font-semibold text-zinc-100">{item.title}</h2>
-      <p className="text-sm text-zinc-400">{item.summary}</p>
-      <button
-        type="button"
-        className="text-xs font-medium text-[#B7F500] hover:text-[#c8ff33]"
-        onClick={onOpen}
-      >
-        {detailsLabel}
-      </button>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-3">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#B7F500] transition-colors hover:text-[#c8ff33]"
+          onClick={onOpen}
+        >
+          {detailsLabel}
+          <ArrowRight className="size-3.5" aria-hidden />
+        </button>
+      </div>
     </article>
   );
 }
@@ -87,10 +105,22 @@ export function AdminUpdatesSection() {
   const { user } = useAuth();
   const canManage = canMatrixAction(user?.roles, "updates", "mutate");
   const [items, setItems] = React.useState<AdminUpdateRow[]>([]);
-  const [typeFilter, setTypeFilter] = React.useState<AdminUpdateType | "">("");
+  const [typeFilter, setTypeFilter] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<AdminUpdateRow | null>(null);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+
+  const typeOptions = React.useMemo(
+    () => [
+      { value: "", label: a.t("admin.updates.filterAll") },
+      ...ADMIN_UPDATE_TYPES.map((type) => ({
+        value: type,
+        label: a.t(`admin.updates.type.${type}`),
+      })),
+    ],
+    [a],
+  );
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -98,9 +128,9 @@ export function AdminUpdatesSection() {
     try {
       const data = await fetchAdminUpdatesHistory(
         client,
-        typeFilter || undefined,
+        (typeFilter as AdminUpdateType) || undefined,
       );
-      setItems(data);
+      setItems(data.filter((row) => row.status !== "DRAFT"));
     } catch (e) {
       setError(localizedAdminError(e));
       setItems([]);
@@ -115,6 +145,7 @@ export function AdminUpdatesSection() {
 
   const openDetails = async (item: AdminUpdateRow) => {
     setSelected(item);
+    setDetailOpen(true);
     try {
       await markAdminUpdateRead(client, item.id);
       setItems((prev) =>
@@ -148,20 +179,16 @@ export function AdminUpdatesSection() {
       }
     >
       <AdminSectionPanel>
-        <div className="mb-4 flex flex-wrap gap-2">
-          <select
+        <div className="mb-5 space-y-3">
+          <AdminFilterPills
+            label={a.t("admin.updates.filterType")}
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as AdminUpdateType | "")}
-            className="rounded-xl border-0 bg-zinc-900/50 px-3 py-2 text-sm text-zinc-200"
-          >
-            <option value="">{a.t("admin.updates.filterAll")}</option>
-            {UPDATE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {a.t(`admin.updates.type.${type}`)}
-              </option>
-            ))}
-          </select>
+            options={typeOptions}
+            onChange={setTypeFilter}
+          />
+          <AdminFilterResultCount label={a.t("admin.table.total")} value={items.length} />
         </div>
+
         <AdminSectionDataArea
           loading={loading}
           error={error}
@@ -170,7 +197,7 @@ export function AdminUpdatesSection() {
         >
           {items.length === 0 ? (
             <div className={cn(ADMIN_SECTION_NOTICE, "items-center text-sm text-zinc-400")}>
-              <Sparkles className="size-5 shrink-0 text-zinc-600" aria-hidden />
+              <ScrollText className="size-5 shrink-0 text-zinc-600" aria-hidden />
               <p>{a.t("admin.updates.empty")}</p>
             </div>
           ) : (
@@ -192,22 +219,14 @@ export function AdminUpdatesSection() {
         </AdminSectionDataArea>
       </AdminSectionPanel>
 
-      {selected ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-zinc-900 p-6">
-            <h2 className="text-lg font-semibold text-zinc-50">{selected.title}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{selected.summary}</p>
-            <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-zinc-200">
-              {selected.content}
-            </pre>
-            <div className="mt-6 flex justify-end">
-              <Button type="button" onClick={() => setSelected(null)}>
-                {a.t("admin.updates.close")}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AdminUpdateDetailPanel
+        item={selected}
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) setSelected(null);
+        }}
+      />
     </AdminSectionShell>
   );
 }

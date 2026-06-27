@@ -34,7 +34,7 @@ describe("Admin updates module", () => {
     const source = readFileSync(join(__dirname, "admin-updates-section.tsx"), "utf8");
     expect(source).toContain("fetchAdminUpdatesHistory");
     expect(source).toContain('canMatrixAction(user?.roles, "updates", "mutate")');
-    expect(source).toContain("admin.updates.empty");
+    expect(source).toContain("AdminFilterPills");
   });
 
   it("manage section is gated by updates mutate permission", () => {
