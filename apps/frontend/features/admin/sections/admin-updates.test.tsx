@@ -28,7 +28,8 @@ describe("Admin updates module", () => {
     expect(source).toContain("fetchAdminUpdatesActive");
     expect(source).toContain("dismissAdminUpdate");
     expect(source).toContain("admin.updates.dismiss");
-    expect(source).toContain("RefreshCw");
+    expect(source).toContain("Sparkles");
+    expect(source).not.toContain("admin.updates.dismiss\")}\n");
   });
 
   it("history section loads updates and hides manage for read-only matrix", () => {

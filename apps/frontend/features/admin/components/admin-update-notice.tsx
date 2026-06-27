@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { ArrowRight, RefreshCw, X } from "@/lib/lucide";
+import { ArrowRight, Sparkles, X } from "@/lib/lucide";
 
 import { AdminUpdateDetailPanel } from "@/features/admin/components/admin-update-detail-panel";
 import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
 import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { formatAdminDate } from "@/features/admin/lib/admin-format";
-import { adminUpdateTypeBadgeClassName, filterOperatorAdminUpdates } from "@/features/admin/lib/admin-update-ui";
+import {
+  adminUpdateTypeBadgeClassName,
+  filterOperatorAdminUpdates,
+} from "@/features/admin/lib/admin-update-ui";
 import { ROUTES } from "@/constants/routes";
 import {
   dismissAdminUpdate,
@@ -73,62 +76,60 @@ export function AdminUpdateNotice() {
   return (
     <>
       <div
-        className="border-0 bg-zinc-900/25 px-4 py-3 sm:px-6"
+        className="relative border-0 bg-zinc-900/20 px-4 py-3 sm:px-6"
         role="status"
         aria-live="polite"
       >
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <RefreshCw
-              className="mt-0.5 size-4 shrink-0 text-[#B7F500]"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                  {a.t("admin.updates.badge")}
+        <div className="mx-auto flex max-w-6xl items-start gap-3 pr-7 sm:items-center sm:gap-4 sm:pr-8">
+          <Sparkles
+            className="mt-0.5 size-4 shrink-0 text-[#B7F500]/90 sm:mt-0"
+            strokeWidth={1.5}
+            aria-hidden
+          />
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className={adminUpdateTypeBadgeClassName(update.type)}>
+                {a.t(`admin.updates.type.${update.type}`)}
+              </span>
+              {update.publishedAt ? (
+                <span className="text-xs text-zinc-600">
+                  {formatAdminDate(update.publishedAt)}
                 </span>
-                <span className={adminUpdateTypeBadgeClassName(update.type)}>
-                  {a.t(`admin.updates.type.${update.type}`)}
-                </span>
-                {update.publishedAt ? (
-                  <span className="text-xs text-zinc-600">
-                    {formatAdminDate(update.publishedAt)}
-                  </span>
-                ) : null}
-              </div>
-              <h2 className="text-sm font-semibold text-zinc-100">{update.title}</h2>
-              <p className="text-sm leading-relaxed text-zinc-400">{update.summary}</p>
-              {remaining > 0 ? (
-                <Link
-                  href={ROUTES.adminUpdates}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-[#B7F500] hover:text-[#c8ff33]"
-                >
-                  {a.t("admin.updates.moreCount").replace("{count}", String(remaining))}
-                  <ArrowRight className="size-3" aria-hidden />
-                </Link>
               ) : null}
             </div>
+            <p className="mt-0.5 text-sm font-medium text-zinc-100">{update.title}</p>
+            <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-zinc-500">
+              {update.summary}
+            </p>
+            {remaining > 0 ? (
+              <Link
+                href={ROUTES.adminUpdates}
+                className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#B7F500] hover:text-[#c8ff33]"
+              >
+                {a.t("admin.updates.moreCount").replace("{count}", String(remaining))}
+                <ArrowRight className="size-3" aria-hidden />
+              </Link>
+            ) : null}
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-4 sm:pl-2">
-            <button
-              type="button"
-              className="text-sm font-medium text-[#B7F500] transition-colors hover:text-[#c8ff33]"
-              onClick={() => void onDetails()}
-            >
-              {a.t("admin.updates.details")}
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-200"
-              onClick={() => void onDismiss()}
-            >
-              {a.t("admin.updates.dismiss")}
-              <X className="size-3.5" strokeWidth={1.75} aria-hidden />
-            </button>
-          </div>
+
+          <button
+            type="button"
+            className="shrink-0 text-sm font-medium text-[#B7F500] transition-colors hover:text-[#c8ff33]"
+            onClick={() => void onDetails()}
+          >
+            {a.t("admin.updates.details")}
+          </button>
         </div>
+
+        <button
+          type="button"
+          className="absolute right-3 top-3 text-zinc-500 transition-colors hover:text-zinc-300 sm:right-5 sm:top-1/2 sm:-translate-y-1/2"
+          aria-label={a.t("admin.updates.dismiss")}
+          onClick={() => void onDismiss()}
+        >
+          <X className="size-4" strokeWidth={1.5} />
+        </button>
       </div>
 
       <AdminUpdateDetailPanel
