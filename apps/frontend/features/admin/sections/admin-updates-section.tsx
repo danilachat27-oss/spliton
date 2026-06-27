@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import * as React from "react";
-import { ArrowRight, ScrollText } from "@/lib/lucide";
+import { ArrowRight } from "@/lib/lucide";
 
 import { Button } from "@/components/ui/button";
 import { AdminUpdateDetailPanel } from "@/features/admin/components/admin-update-detail-panel";
@@ -36,6 +36,15 @@ import {
 } from "@/services/admin/adminUpdates.service";
 import { cn } from "@/lib/utils";
 
+function updateTypeDotClass(type: string): string {
+  if (type === "LEGAL") return "bg-violet-400";
+  if (type === "SECURITY") return "bg-rose-400";
+  if (type === "BILLING") return "bg-amber-400";
+  if (type === "FEATURE") return "bg-[#B7F500]";
+  if (type === "UX") return "bg-sky-400";
+  return "bg-zinc-600";
+}
+
 function UpdateHistoryCard({
   item,
   typeLabel,
@@ -58,7 +67,7 @@ function UpdateHistoryCard({
       className={cn(
         ADMIN_SECTION_TILE,
         "relative transition-colors",
-        unread && "bg-zinc-900/55",
+        unread && "ring-1 ring-[#B7F500]/20",
       )}
     >
       {unread ? (
@@ -69,23 +78,31 @@ function UpdateHistoryCard({
       ) : null}
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={adminUpdateTypeBadgeClassName(item.type)}>{typeLabel}</span>
-            <AdminLocalizedStatusBadge status={item.status} domain="generic" />
-            <span className="text-xs text-zinc-500">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span
+            className={cn("mt-1.5 size-2 shrink-0 rounded-full", updateTypeDotClass(item.type))}
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <h2 className={cn("text-sm font-semibold text-zinc-100", unread && "text-zinc-50")}>
+              {item.title}
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-400">{item.summary}</p>
+            <p className="mt-2 text-xs text-zinc-500">
               {item.publishedAt ? formatAdminDate(item.publishedAt) : "—"}
-            </span>
-            <span className="text-xs text-zinc-600">{unread ? unreadLabel : readLabel}</span>
+              {" · "}
+              {unread ? unreadLabel : readLabel}
+            </p>
           </div>
-          <h2 className={cn("text-sm font-semibold text-zinc-100", unread && "text-zinc-50")}>
-            {item.title}
-          </h2>
-          <p className="text-sm leading-relaxed text-zinc-400">{item.summary}</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className={adminUpdateTypeBadgeClassName(item.type)}>{typeLabel}</span>
+          <AdminLocalizedStatusBadge status={item.status} domain="generic" />
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-800/80 pt-3">
         <button
           type="button"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-[#B7F500] transition-colors hover:text-[#c8ff33]"
@@ -197,7 +214,6 @@ export function AdminUpdatesSection() {
         >
           {items.length === 0 ? (
             <div className={cn(ADMIN_SECTION_NOTICE, "items-center text-sm text-zinc-400")}>
-              <ScrollText className="size-5 shrink-0 text-zinc-600" aria-hidden />
               <p>{a.t("admin.updates.empty")}</p>
             </div>
           ) : (

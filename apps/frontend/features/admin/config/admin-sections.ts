@@ -40,6 +40,8 @@ import {
 
   PieChart,
 
+  RefreshCw,
+
   Scale,
 
   ScrollText,
@@ -877,7 +879,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 
         href: ROUTES.adminUpdates,
 
-        icon: ScrollText,
+        icon: RefreshCw,
 
       },
 

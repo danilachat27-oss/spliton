@@ -36,6 +36,11 @@ export type AdminUpdateActiveResponse = {
   items: AdminUpdatePublicRow[];
 };
 
+function isSmokeUpdateTitle(title: string): boolean {
+  const t = title.trim();
+  return /^\[smoke\]/i.test(t) || /^SMOKE /i.test(t) || /^QA /i.test(t);
+}
+
 @Injectable()
 export class AdminUpdatesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -88,6 +93,7 @@ export class AdminUpdatesService {
 
     const visible = rows
       .filter((r) => audienceMatchesUser(r.audienceRoles, roles))
+      .filter((r) => !isSmokeUpdateTitle(r.title))
       .filter((r) => !r.reads[0]?.dismissedAt)
       .map((r) => this.mapRow(r, r.reads[0]));
 
@@ -117,6 +123,7 @@ export class AdminUpdatesService {
 
     return rows
       .filter((r) => audienceMatchesUser(r.audienceRoles, roles))
+      .filter((r) => !isSmokeUpdateTitle(r.title))
       .map((r) => this.mapRow(r, r.reads[0]));
   }
 
