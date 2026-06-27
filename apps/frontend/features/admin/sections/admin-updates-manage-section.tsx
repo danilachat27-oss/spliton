@@ -18,7 +18,7 @@ import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
 import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
 import { adminBtnOutline, adminFieldInput, adminSectionCreateButton } from "@/features/admin/lib/admin-ui";
-import { ADMIN_UPDATE_TYPES, adminUpdateTypeBadgeClassName } from "@/features/admin/lib/admin-update-ui";
+import { ADMIN_UPDATE_TYPES, adminUpdateTypeBadgeClassName, filterOperatorAdminUpdates } from "@/features/admin/lib/admin-update-ui";
 import { AdminLocalizedStatusBadge, AdminReadOnlyBanner } from "@/features/admin/ui";
 import { AdminStyledSelect } from "@/features/admin/ui/admin-styled-select";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -72,7 +72,7 @@ export function AdminUpdatesManageSection() {
     setLoading(true);
     setError(null);
     try {
-      setItems(await listAdminUpdatesManage(client));
+      setItems(filterOperatorAdminUpdates(await listAdminUpdatesManage(client)));
     } catch (e) {
       setError(localizedAdminError(e));
     } finally {

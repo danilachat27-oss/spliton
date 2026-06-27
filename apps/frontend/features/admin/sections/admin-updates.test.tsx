@@ -28,13 +28,15 @@ describe("Admin updates module", () => {
     expect(source).toContain("fetchAdminUpdatesActive");
     expect(source).toContain("dismissAdminUpdate");
     expect(source).toContain("admin.updates.dismiss");
+    expect(source).toContain("RefreshCw");
   });
 
   it("history section loads updates and hides manage for read-only matrix", () => {
     const source = readFileSync(join(__dirname, "admin-updates-section.tsx"), "utf8");
     expect(source).toContain("fetchAdminUpdatesHistory");
     expect(source).toContain('canMatrixAction(user?.roles, "updates", "mutate")');
-    expect(source).toContain("AdminFilterPills");
+    expect(source).toContain("UpdateTypeFilter");
+    expect(source).toContain("filterOperatorAdminUpdates");
   });
 
   it("manage section is gated by updates mutate permission", () => {
