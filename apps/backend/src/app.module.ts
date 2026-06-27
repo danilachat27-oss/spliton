@@ -29,6 +29,7 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
 import { UserAnalyticsModule } from './modules/user-analytics/user-analytics.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LegalModule } from './modules/legal/legal.module';
+import { AdminUpdatesModule } from './modules/admin-updates/admin-updates.module';
 import { TreasuryModule } from './modules/treasury/treasury.module';
 import { ArtistModule } from './modules/artist/artist.module';
 import { ReleaseDataRoomModule } from './modules/release-data-room/release-data-room.module';
@@ -101,6 +102,7 @@ import { RequestLoggingInterceptor } from './common/observability/request-loggin
     UserAnalyticsModule,
     NotificationsModule,
     LegalModule,
+    AdminUpdatesModule,
     TreasuryModule,
     ArtistModule,
     ReleaseDataRoomModule,

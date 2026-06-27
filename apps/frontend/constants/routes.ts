@@ -67,6 +67,8 @@ export const ROUTES = {
   dashboardProfile: "/dashboard/profile",
   dashboardNotifications: "/dashboard/notifications",
   adminNotifications: "/admin/notifications",
+  adminUpdates: "/admin/updates",
+  adminUpdatesManage: "/admin/updates/manage",
   myAssetsOverview: "/assets/overview",
   /** Сегмент продажи UNT из кабинета (динамический `[id]` каталожного релиза). */
   myAssetsSellUnits: "/assets/sell",

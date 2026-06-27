@@ -1,0 +1,375 @@
+import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  AdminUpdateStatus,
+  AdminUpdateType,
+  UserRoleCode,
+} from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { throwAdminError } from '../admin/common/admin-http.util';
+import {
+  assertAdminUpdatesMutate,
+  assertAdminUpdatesView,
+  audienceMatchesUser,
+  canManageAdminUpdates,
+} from './admin-updates-permissions';
+
+export type AdminUpdatePublicRow = {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  type: AdminUpdateType;
+  status: AdminUpdateStatus;
+  audienceRoles: string[];
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  readAt: string | null;
+  dismissedAt: string | null;
+  isRead: boolean;
+  isDismissed: boolean;
+};
+
+export type AdminUpdateActiveResponse = {
+  primary: AdminUpdatePublicRow | null;
+  remainingCount: number;
+  items: AdminUpdatePublicRow[];
+};
+
+@Injectable()
+export class AdminUpdatesService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private mapRow(
+    row: {
+      id: string;
+      title: string;
+      summary: string;
+      content: string;
+      type: AdminUpdateType;
+      status: AdminUpdateStatus;
+      audienceRoles: string[];
+      publishedAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+    read?: { readAt: Date | null; dismissedAt: Date | null } | null,
+  ): AdminUpdatePublicRow {
+    return {
+      id: row.id,
+      title: row.title,
+      summary: row.summary,
+      content: row.content,
+      type: row.type,
+      status: row.status,
+      audienceRoles: row.audienceRoles,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      readAt: read?.readAt?.toISOString() ?? null,
+      dismissedAt: read?.dismissedAt?.toISOString() ?? null,
+      isRead: Boolean(read?.readAt),
+      isDismissed: Boolean(read?.dismissedAt),
+    };
+  }
+
+  async listActive(
+    adminUserId: string,
+    roles: UserRoleCode[],
+  ): Promise<AdminUpdateActiveResponse> {
+    assertAdminUpdatesView(roles);
+    const rows = await this.prisma.adminUpdateAnnouncement.findMany({
+      where: { status: AdminUpdateStatus.PUBLISHED },
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        reads: { where: { adminUserId }, take: 1 },
+      },
+    });
+
+    const visible = rows
+      .filter((r) => audienceMatchesUser(r.audienceRoles, roles))
+      .filter((r) => !r.reads[0]?.dismissedAt)
+      .map((r) => this.mapRow(r, r.reads[0]));
+
+    return {
+      primary: visible[0] ?? null,
+      remainingCount: Math.max(0, visible.length - 1),
+      items: visible,
+    };
+  }
+
+  async listHistory(
+    adminUserId: string,
+    roles: UserRoleCode[],
+    filters?: { type?: AdminUpdateType },
+  ): Promise<AdminUpdatePublicRow[]> {
+    assertAdminUpdatesView(roles);
+    const rows = await this.prisma.adminUpdateAnnouncement.findMany({
+      where: {
+        status: { in: [AdminUpdateStatus.PUBLISHED, AdminUpdateStatus.ARCHIVED] },
+        ...(filters?.type ? { type: filters.type } : {}),
+      },
+      orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+      include: {
+        reads: { where: { adminUserId }, take: 1 },
+      },
+    });
+
+    return rows
+      .filter((r) => audienceMatchesUser(r.audienceRoles, roles))
+      .map((r) => this.mapRow(r, r.reads[0]));
+  }
+
+  async listManage(roles: UserRoleCode[]) {
+    assertAdminUpdatesView(roles);
+    const rows = await this.prisma.adminUpdateAnnouncement.findMany({
+      orderBy: [{ updatedAt: 'desc' }],
+      include: {
+        createdBy: { select: { id: true, email: true } },
+        updatedBy: { select: { id: true, email: true } },
+      },
+    });
+    if (canManageAny(roles)) return rows;
+    return rows.filter(
+      (r) =>
+        r.type === AdminUpdateType.LEGAL &&
+        roles.includes(UserRoleCode.COMPLIANCE),
+    );
+  }
+
+  private canManageRow(roles: UserRoleCode[], type: AdminUpdateType): boolean {
+    return canManageAdminUpdates(roles, type);
+  }
+
+  async getById(id: string, roles: UserRoleCode[]) {
+    assertAdminUpdatesView(roles);
+    const row = await this.prisma.adminUpdateAnnouncement.findUnique({
+      where: { id },
+      include: {
+        createdBy: { select: { id: true, email: true } },
+        updatedBy: { select: { id: true, email: true } },
+      },
+    });
+    if (!row) {
+      throwAdminError('NOT_FOUND', 'Update not found', HttpStatus.NOT_FOUND);
+    }
+    if (
+      row.status === AdminUpdateStatus.DRAFT &&
+      !this.canManageRow(roles, row.type)
+    ) {
+      throwAdminError('FORBIDDEN', 'Draft not accessible', HttpStatus.FORBIDDEN);
+    }
+    return row;
+  }
+
+  async create(
+    roles: UserRoleCode[],
+    adminUserId: string,
+    data: {
+      title: string;
+      summary: string;
+      content: string;
+      type: AdminUpdateType;
+      audienceRoles: string[];
+    },
+  ) {
+    assertAdminUpdatesMutate(roles, data.type);
+    return this.prisma.adminUpdateAnnouncement.create({
+      data: {
+        title: data.title,
+        summary: data.summary,
+        content: data.content,
+        type: data.type,
+        audienceRoles: data.audienceRoles,
+        status: AdminUpdateStatus.DRAFT,
+        createdByAdminId: adminUserId,
+        updatedByAdminId: adminUserId,
+      },
+    });
+  }
+
+  async update(
+    id: string,
+    roles: UserRoleCode[],
+    adminUserId: string,
+    data: Partial<{
+      title: string;
+      summary: string;
+      content: string;
+      type: AdminUpdateType;
+      audienceRoles: string[];
+    }>,
+  ) {
+    const row = await this.getById(id, roles);
+    assertAdminUpdatesMutate(roles, data.type ?? row.type);
+    if (row.status === AdminUpdateStatus.ARCHIVED) {
+      throwAdminError(
+        'INVALID_STATUS',
+        'Archived updates cannot be edited',
+        HttpStatus.CONFLICT,
+      );
+    }
+    if (row.status === AdminUpdateStatus.PUBLISHED) {
+      throwAdminError(
+        'IMMUTABLE',
+        'Published updates cannot be edited directly',
+        HttpStatus.CONFLICT,
+      );
+    }
+    return this.prisma.adminUpdateAnnouncement.update({
+      where: { id },
+      data: {
+        ...(data.title !== undefined ? { title: data.title } : {}),
+        ...(data.summary !== undefined ? { summary: data.summary } : {}),
+        ...(data.content !== undefined ? { content: data.content } : {}),
+        ...(data.type !== undefined ? { type: data.type } : {}),
+        ...(data.audienceRoles !== undefined
+          ? { audienceRoles: data.audienceRoles }
+          : {}),
+        updatedByAdminId: adminUserId,
+      },
+    });
+  }
+
+  async publish(id: string, roles: UserRoleCode[], adminUserId: string) {
+    const row = await this.getById(id, roles);
+    assertAdminUpdatesMutate(roles, row.type);
+    if (row.status !== AdminUpdateStatus.DRAFT) {
+      throwAdminError(
+        'INVALID_STATUS',
+        'Only draft updates can be published',
+        HttpStatus.CONFLICT,
+      );
+    }
+    const now = new Date();
+    return this.prisma.adminUpdateAnnouncement.update({
+      where: { id },
+      data: {
+        status: AdminUpdateStatus.PUBLISHED,
+        publishedAt: now,
+        updatedByAdminId: adminUserId,
+      },
+    });
+  }
+
+  async archive(id: string, roles: UserRoleCode[], adminUserId: string) {
+    const row = await this.getById(id, roles);
+    assertAdminUpdatesMutate(roles, row.type);
+    if (row.status === AdminUpdateStatus.ARCHIVED) return row;
+    return this.prisma.adminUpdateAnnouncement.update({
+      where: { id },
+      data: {
+        status: AdminUpdateStatus.ARCHIVED,
+        updatedByAdminId: adminUserId,
+      },
+    });
+  }
+
+  async markRead(adminUserId: string, roles: UserRoleCode[], id: string) {
+    assertAdminUpdatesView(roles);
+    await this.assertVisiblePublished(id, roles);
+    const now = new Date();
+    return this.prisma.adminUpdateRead.upsert({
+      where: {
+        announcementId_adminUserId: {
+          announcementId: id,
+          adminUserId,
+        },
+      },
+      create: {
+        announcementId: id,
+        adminUserId,
+        readAt: now,
+      },
+      update: {
+        readAt: now,
+      },
+    });
+  }
+
+  async dismiss(adminUserId: string, roles: UserRoleCode[], id: string) {
+    assertAdminUpdatesView(roles);
+    await this.assertVisiblePublished(id, roles);
+    const now = new Date();
+    return this.prisma.adminUpdateRead.upsert({
+      where: {
+        announcementId_adminUserId: {
+          announcementId: id,
+          adminUserId,
+        },
+      },
+      create: {
+        announcementId: id,
+        adminUserId,
+        readAt: now,
+        dismissedAt: now,
+      },
+      update: {
+        readAt: now,
+        dismissedAt: now,
+      },
+    });
+  }
+
+  async seedLegalCmsUpdateIfMissing(): Promise<'created' | 'skipped'> {
+    const title = 'Обновлён раздел юридических документов';
+    const existing = await this.prisma.adminUpdateAnnouncement.findFirst({
+      where: { title, type: AdminUpdateType.LEGAL },
+    });
+    if (existing) return 'skipped';
+
+    const content = `Мы обновили Legal CMS в Spliton.
+
+Что изменилось:
+- добавлено управление юридическими документами через админку;
+- появились версии документов и история изменений;
+- опубликованы обязательные документы Terms, Privacy, AML, Risk Disclosure и другие;
+- согласия пользователей теперь привязаны к конкретной версии документа;
+- добавлен content hash для доказуемости принятого текста;
+- financial actions теперь требуют актуальные согласия;
+- старые черновики были архивированы без удаления.
+
+Статус: READY WITH P1 FIXES.
+Осталось: юридическая вычитка текстов и ручная проверка browser admin UI.`;
+
+    const now = new Date();
+    await this.prisma.adminUpdateAnnouncement.create({
+      data: {
+        title,
+        summary:
+          'В админке появился обновлённый модуль управления юридическими документами, версиями политик и согласием пользователей.',
+        content,
+        type: AdminUpdateType.LEGAL,
+        status: AdminUpdateStatus.PUBLISHED,
+        audienceRoles: [
+          UserRoleCode.SUPER_ADMIN,
+          UserRoleCode.ADMIN,
+          UserRoleCode.COMPLIANCE,
+          UserRoleCode.BUSINESS_ANALYST,
+          UserRoleCode.CONTENT_MANAGER,
+          UserRoleCode.SUPPORT_MANAGER,
+        ],
+        publishedAt: now,
+      },
+    });
+    return 'created';
+  }
+
+  private async assertVisiblePublished(id: string, roles: UserRoleCode[]) {
+    const row = await this.prisma.adminUpdateAnnouncement.findUnique({
+      where: { id },
+    });
+    if (!row || row.status !== AdminUpdateStatus.PUBLISHED) {
+      throwAdminError('NOT_FOUND', 'Update not found', HttpStatus.NOT_FOUND);
+    }
+    if (!audienceMatchesUser(row.audienceRoles, roles)) {
+      throwAdminError('FORBIDDEN', 'Update not visible', HttpStatus.FORBIDDEN);
+    }
+  }
+}
+
+function canManageAny(roles: UserRoleCode[]): boolean {
+  return roles.some(
+    (r) => r === UserRoleCode.SUPER_ADMIN || r === UserRoleCode.ADMIN,
+  );
+}

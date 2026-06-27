@@ -169,6 +169,8 @@ const SECTION_IDS = [
   "reports",
   "settings",
   "systemStatus",
+  "notifications",
+  "updates",
   "docs",
   "analyticsOverview",
   "analyticsFinance",

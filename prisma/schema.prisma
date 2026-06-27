@@ -900,6 +900,9 @@ model User {
   systemAlertsResolved     SystemAlert[]           @relation("system_alert_resolved_by")
   marketWatchlistItems     MarketWatchlistItem[]
   legalConsents            UserLegalConsent[]
+  adminUpdatesCreated      AdminUpdateAnnouncement[]  @relation("admin_update_created_by")
+  adminUpdatesUpdated      AdminUpdateAnnouncement[]  @relation("admin_update_updated_by")
+  adminUpdateReads         AdminUpdateRead[]
   amlProfile               UserAmlProfile?
   legalPoliciesCreated     LegalPolicy[]            @relation("legal_policy_created_by")
   legalPoliciesUpdated     LegalPolicy[]            @relation("legal_policy_updated_by")
@@ -2584,6 +2587,7 @@ model LegalPolicy {
   title               String
   content             String                   @db.Text
   contentFormat       LegalPolicyContentFormat @default(MARKDOWN) @map("content_format")
+  contentHash         String?                  @map("content_hash")
   effectiveAt         DateTime?                @map("effective_at")
   publishedAt         DateTime?                @map("published_at")
   status              LegalPolicyStatus        @default(DRAFT)
@@ -2608,9 +2612,10 @@ model UserLegalConsent {
   userId        String           @map("user_id") @db.Uuid
   policyId      String           @map("policy_id") @db.Uuid
   policyType    LegalPolicyType  @map("policy_type")
-  policyVersion String           @map("policy_version")
-  source        ConsentSource
-  acceptedAt    DateTime         @default(now()) @map("accepted_at")
+  policyVersion         String           @map("policy_version")
+  acceptedContentHash   String?          @map("accepted_content_hash")
+  source                ConsentSource
+  acceptedAt            DateTime         @default(now()) @map("accepted_at")
   ip            String?
   userAgent     String?          @map("user_agent")
   metadata      Json?
@@ -2620,6 +2625,61 @@ model UserLegalConsent {
   @@unique([userId, policyType, policyVersion], map: "user_legal_consents_user_type_version_uidx")
   @@index([userId, policyType], map: "user_legal_consents_user_policy_type_idx")
   @@map("user_legal_consents")
+}
+
+enum AdminUpdateType {
+  FEATURE
+  LEGAL
+  BILLING
+  SECURITY
+  MAINTENANCE
+  UX
+  SYSTEM
+
+  @@map("admin_update_type")
+}
+
+enum AdminUpdateStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+
+  @@map("admin_update_status")
+}
+
+model AdminUpdateAnnouncement {
+  id                String              @id @default(uuid()) @db.Uuid
+  title             String
+  summary           String              @db.Text
+  content           String              @db.Text
+  type              AdminUpdateType
+  status            AdminUpdateStatus   @default(DRAFT)
+  audienceRoles     String[]            @default([]) @map("audience_roles")
+  publishedAt       DateTime?           @map("published_at")
+  createdByAdminId  String?             @map("created_by_admin_id") @db.Uuid
+  updatedByAdminId  String?             @map("updated_by_admin_id") @db.Uuid
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  createdBy         User?               @relation("admin_update_created_by", fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  updatedBy         User?               @relation("admin_update_updated_by", fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+  reads             AdminUpdateRead[]
+
+  @@index([status, publishedAt], map: "admin_update_announcements_status_published_idx")
+  @@map("admin_update_announcements")
+}
+
+model AdminUpdateRead {
+  id             String                  @id @default(uuid()) @db.Uuid
+  announcementId String                  @map("announcement_id") @db.Uuid
+  adminUserId    String                  @map("admin_user_id") @db.Uuid
+  readAt         DateTime?               @map("read_at")
+  dismissedAt    DateTime?               @map("dismissed_at")
+  announcement   AdminUpdateAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  adminUser      User                    @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, adminUserId], map: "admin_update_reads_announcement_admin_uidx")
+  @@index([adminUserId, dismissedAt], map: "admin_update_reads_admin_dismissed_idx")
+  @@map("admin_update_reads")
 }
 
 model UserAmlProfile {

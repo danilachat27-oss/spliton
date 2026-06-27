@@ -132,11 +132,27 @@ export const ADMIN_API_PATHS = {
   kycReviewApprove: (id: string) => `${ADMIN_API_V1_PREFIX}/kyc/reviews/${id}/approve`,
   kycReviewReject: (id: string) => `${ADMIN_API_V1_PREFIX}/kyc/reviews/${id}/reject`,
   legalPolicies: `${ADMIN_API_V1_PREFIX}/legal/policies`,
+  legalPoliciesGrouped: `${ADMIN_API_V1_PREFIX}/legal/policies/grouped`,
+  legalPolicyVersions: (type: string) =>
+    `${ADMIN_API_V1_PREFIX}/legal/policies/by-type/${encodeURIComponent(type)}/versions`,
   treasury: `${ADMIN_API_V1_PREFIX}/treasury`,
   legalPolicy: (id: string) => `${ADMIN_API_V1_PREFIX}/legal/policies/${id}`,
   legalPolicyPublish: (id: string) => `${ADMIN_API_V1_PREFIX}/legal/policies/${id}/publish`,
   legalPolicyArchive: (id: string) => `${ADMIN_API_V1_PREFIX}/legal/policies/${id}/archive`,
-  legalCountryRestrictions: `${ADMIN_API_V1_PREFIX}/legal/country-restrictions`,
+  legalPolicySubmitReview: (id: string) =>
+    `${ADMIN_API_V1_PREFIX}/legal/policies/${id}/submit-review`,
+  legalPolicyConsentsCount: (id: string) =>
+    `${ADMIN_API_V1_PREFIX}/legal/policies/${id}/consents-count`,
+  legalCountryRestrictions: `${ADMIN_API_V1_PREFIX}/legal/countries`,
+  adminUpdatesActive: `${ADMIN_API_V1_PREFIX}/updates/active`,
+  adminUpdatesHistory: `${ADMIN_API_V1_PREFIX}/updates/history`,
+  adminUpdatesManage: `${ADMIN_API_V1_PREFIX}/updates/manage`,
+  adminUpdates: `${ADMIN_API_V1_PREFIX}/updates`,
+  adminUpdate: (id: string) => `${ADMIN_API_V1_PREFIX}/updates/${id}`,
+  adminUpdatePublish: (id: string) => `${ADMIN_API_V1_PREFIX}/updates/${id}/publish`,
+  adminUpdateArchive: (id: string) => `${ADMIN_API_V1_PREFIX}/updates/${id}/archive`,
+  adminUpdateRead: (id: string) => `${ADMIN_API_V1_PREFIX}/updates/${id}/read`,
+  adminUpdateDismiss: (id: string) => `${ADMIN_API_V1_PREFIX}/updates/${id}/dismiss`,
   settings: `${ADMIN_API_V1_PREFIX}/settings`,
   auditLogs: `${ADMIN_API_V1_PREFIX}/audit-logs`,
   /** @deprecated use auditLogs */

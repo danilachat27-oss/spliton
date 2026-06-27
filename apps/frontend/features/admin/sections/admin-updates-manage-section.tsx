@@ -1,0 +1,273 @@
+"use client";
+
+import Link from "next/link";
+import * as React from "react";
+import { Plus } from "@/lib/lucide";
+
+import { Button } from "@/components/ui/button";
+import { AdminSectionGuard } from "@/features/admin/components/admin-section-guard";
+import {
+  AdminSectionDataArea,
+  AdminSectionPanel,
+  AdminSectionRefreshButton,
+  AdminSectionShell,
+} from "@/features/admin/components/admin-section-layout";
+import { canMatrixAction } from "@/features/admin/config/admin-role-matrix";
+import { useAdminApi } from "@/features/admin/hooks/use-admin-api";
+import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
+import { localizedAdminError } from "@/features/admin/lib/localized-admin-error";
+import { ADMIN_SECTION_TILE } from "@/features/admin/lib/admin-section-styles";
+import { adminBtnOutline, adminSectionCreateButton } from "@/features/admin/lib/admin-ui";
+import { AdminReadOnlyBanner } from "@/features/admin/ui";
+import { useAuth } from "@/components/providers/auth-provider";
+import { ROUTES } from "@/constants/routes";
+import {
+  archiveAdminUpdate,
+  createAdminUpdate,
+  listAdminUpdatesManage,
+  publishAdminUpdate,
+  updateAdminUpdate,
+  type AdminUpdateManageRow,
+  type AdminUpdateType,
+} from "@/services/admin/adminUpdates.service";
+import { cn } from "@/lib/utils";
+
+const STAFF_ROLES = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "COMPLIANCE",
+  "BUSINESS_ANALYST",
+  "CONTENT_MANAGER",
+  "SUPPORT_MANAGER",
+  "ACCOUNTANT",
+  "NEWS_MANAGER",
+  "SUPPORT",
+] as const;
+
+const UPDATE_TYPES: AdminUpdateType[] = [
+  "FEATURE",
+  "LEGAL",
+  "BILLING",
+  "SECURITY",
+  "MAINTENANCE",
+  "UX",
+  "SYSTEM",
+];
+
+const emptyForm = {
+  title: "",
+  summary: "",
+  content: "",
+  type: "FEATURE" as AdminUpdateType,
+  audienceRoles: ["SUPER_ADMIN", "ADMIN"] as string[],
+};
+
+export function AdminUpdatesManageSection() {
+  const client = useAdminApi();
+  const a = useAdminI18n();
+  const { user } = useAuth();
+  const canMutate = canMatrixAction(user?.roles, "updates", "mutate");
+  const [items, setItems] = React.useState<AdminUpdateManageRow[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [form, setForm] = React.useState(emptyForm);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await listAdminUpdatesManage(client));
+    } catch (e) {
+      setError(localizedAdminError(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [client]);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const onSave = async () => {
+    if (!canMutate) return;
+    setSaving(true);
+    setError(null);
+    try {
+      if (editingId) {
+        await updateAdminUpdate(client, editingId, form);
+      } else {
+        await createAdminUpdate(client, form);
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setError(localizedAdminError(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onEdit = (row: AdminUpdateManageRow) => {
+    setEditingId(row.id);
+    setForm({
+      title: row.title,
+      summary: row.summary,
+      content: row.content,
+      type: row.type,
+      audienceRoles: row.audienceRoles,
+    });
+  };
+
+  const onPublish = async (id: string) => {
+    setSaving(true);
+    try {
+      await publishAdminUpdate(client, id);
+      await load();
+    } catch (e) {
+      setError(localizedAdminError(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onArchive = async (id: string) => {
+    setSaving(true);
+    try {
+      await archiveAdminUpdate(client, id);
+      await load();
+    } catch (e) {
+      setError(localizedAdminError(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AdminSectionShell
+      sectionId="updates"
+      title={a.t("admin.updates.manage")}
+      actions={
+        <>
+          <Link href={ROUTES.adminUpdates}>
+            <Button type="button" variant="outline" className={adminBtnOutline}>
+              {a.t("admin.updates.viewHistory")}
+            </Button>
+          </Link>
+          <AdminSectionRefreshButton onClick={() => void load()} loading={loading} />
+        </>
+      }
+    >
+      {!canMutate ? <AdminReadOnlyBanner area={a.t("admin.updates.manage")} /> : null}
+      <AdminSectionPanel>
+        {canMutate ? (
+          <div className={cn(ADMIN_SECTION_TILE, "mb-6 space-y-3")}>
+            <h3 className="text-sm font-semibold text-zinc-100">
+              {editingId ? a.t("admin.updates.edit") : a.t("admin.updates.create")}
+            </h3>
+            <input
+              className="w-full rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
+              placeholder="Title"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            />
+            <textarea
+              className="min-h-16 w-full rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
+              placeholder="Summary"
+              value={form.summary}
+              onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+            />
+            <textarea
+              className="min-h-32 w-full rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
+              placeholder="Content"
+              value={form.content}
+              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+            />
+            <select
+              className="rounded-xl bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
+              value={form.type}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, type: e.target.value as AdminUpdateType }))
+              }
+            >
+              {UPDATE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {a.t(`admin.updates.type.${type}`)}
+                </option>
+              ))}
+            </select>
+            <div className="flex flex-wrap gap-2">
+              {STAFF_ROLES.map((role) => {
+                const checked = form.audienceRoles.includes(role);
+                return (
+                  <label key={role} className="flex items-center gap-1 text-xs text-zinc-400">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() =>
+                        setForm((f) => ({
+                          ...f,
+                          audienceRoles: checked
+                            ? f.audienceRoles.filter((r) => r !== role)
+                            : [...f.audienceRoles, role],
+                        }))
+                      }
+                    />
+                    {role}
+                  </label>
+                );
+              })}
+            </div>
+            <Button type="button" className={adminSectionCreateButton} disabled={saving} onClick={() => void onSave()}>
+              <Plus className="size-4" aria-hidden />
+              {a.t("admin.actions.save")}
+            </Button>
+          </div>
+        ) : null}
+
+        <AdminSectionDataArea loading={loading} error={error} onRetry={() => void load()}>
+          <ul className="space-y-3">
+            {items.map((row) => (
+              <li key={row.id} className={cn(ADMIN_SECTION_TILE, "space-y-2")}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-100">{row.title}</p>
+                    <p className="text-xs text-zinc-500">
+                      {row.type} · {row.status}
+                    </p>
+                  </div>
+                  {canMutate && row.status === "DRAFT" ? (
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" className={adminBtnOutline} onClick={() => onEdit(row)}>
+                        {a.t("admin.actions.edit")}
+                      </Button>
+                      <Button type="button" size="sm" onClick={() => void onPublish(row.id)} disabled={saving}>
+                        {a.t("admin.updates.publish")}
+                      </Button>
+                    </div>
+                  ) : null}
+                  {canMutate && row.status !== "ARCHIVED" ? (
+                    <Button type="button" size="sm" variant="outline" className={adminBtnOutline} onClick={() => void onArchive(row.id)} disabled={saving}>
+                      {a.t("admin.updates.archive")}
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-sm text-zinc-400">{row.summary}</p>
+              </li>
+            ))}
+          </ul>
+        </AdminSectionDataArea>
+      </AdminSectionPanel>
+    </AdminSectionShell>
+  );
+}
+
+export default function AdminUpdatesManagePage() {
+  return (
+    <AdminSectionGuard sectionId="updates">
+      <AdminUpdatesManageSection />
+    </AdminSectionGuard>
+  );
+}

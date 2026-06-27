@@ -15,6 +15,7 @@ import { verifyAdminAccess } from "@/services/admin.service";
 import { AdminAccessDenied } from "./admin-access-denied";
 import { AdminHeader } from "./admin-header";
 import { AdminSidebar } from "./admin-sidebar";
+import { AdminUpdateNotice } from "@/features/admin/components/admin-update-notice";
 import { NotificationsUnreadProvider } from "@/components/notifications/notifications-unread-context";
 import { ADMIN_API_PATHS } from "@/features/admin/api/admin-api.config";
 import { adminPageBg } from "@/features/admin/lib/admin-ui";
@@ -114,6 +115,7 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
       <div className="admin-portal flex h-dvh min-h-0 flex-col antialiased">
         <AdminHeader />
         <SystemAnnouncementBanners surface="admin" />
+        <AdminUpdateNotice />
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <AdminSidebar />
           <main

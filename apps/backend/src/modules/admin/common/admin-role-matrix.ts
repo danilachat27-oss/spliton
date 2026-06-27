@@ -30,6 +30,7 @@ export type AdminMatrixSection =
   | 'settings'
   | 'systemStatus'
   | 'notifications'
+  | 'updates'
   | 'helpCenter';
 
 export type AdminMatrixLevel = 'full' | 'read' | 'limited' | 'none';
@@ -246,7 +247,7 @@ export const ADMIN_ROLE_MATRIX: Record<
   }),
   legal: row({
     SUPER_ADMIN: 'full',
-    ADMIN: 'full',
+    ADMIN: 'read',
     COMPLIANCE: 'full',
     CONTENT_MANAGER: 'read',
     BUSINESS_ANALYST: 'read',
@@ -302,6 +303,17 @@ export const ADMIN_ROLE_MATRIX: Record<
     NEWS_MANAGER: 'read',
     SUPPORT: 'read',
   }),
+  updates: row({
+    SUPER_ADMIN: 'full',
+    ADMIN: 'full',
+    COMPLIANCE: 'limited',
+    BUSINESS_ANALYST: 'read',
+    CONTENT_MANAGER: 'read',
+    SUPPORT_MANAGER: 'read',
+    ACCOUNTANT: 'read',
+    NEWS_MANAGER: 'read',
+    SUPPORT: 'read',
+  }),
   helpCenter: row({
     SUPER_ADMIN: 'full',
     ADMIN: 'full',
@@ -328,6 +340,7 @@ export const ADMIN_AREA_TO_SECTION: Record<string, AdminMatrixSection> = {
   legal: 'legal',
   treasury: 'treasury',
   notifications: 'notifications',
+  updates: 'updates',
   help_center: 'helpCenter',
 };
 

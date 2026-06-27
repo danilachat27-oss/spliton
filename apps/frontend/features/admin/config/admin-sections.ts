@@ -49,6 +49,7 @@ import {
   ShieldCheck,
 
   Shield,
+  Sparkles,
   Store,
 
   List,
@@ -140,6 +141,8 @@ export type AdminSectionId =
   | "systemStatus"
 
   | "notifications"
+
+  | "updates"
 
   | "docs"
 
@@ -869,6 +872,16 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 
       },
 
+      {
+
+        id: "updates",
+
+        href: ROUTES.adminUpdates,
+
+        icon: Sparkles,
+
+      },
+
     ],
 
   },
@@ -929,6 +942,7 @@ const SECTION_TO_MATRIX: Partial<Record<AdminSectionId, AdminMatrixSection>> = {
   settings: "settings",
   systemStatus: "systemStatus",
   notifications: "notifications",
+  updates: "updates",
   analyticsOverview: "analytics",
   analyticsFinance: "analytics",
   analyticsUsers: "analytics",

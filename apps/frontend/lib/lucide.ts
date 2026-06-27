@@ -122,6 +122,7 @@ export { default as ShieldOff } from "lucide-react/dist/esm/icons/shield-off.js"
 export { default as Signal } from "lucide-react/dist/esm/icons/signal.js";
 export { default as SlidersHorizontal } from "lucide-react/dist/esm/icons/sliders-horizontal.js";
 export { default as Smartphone } from "lucide-react/dist/esm/icons/smartphone.js";
+export { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 export { default as Star } from "lucide-react/dist/esm/icons/star.js";
 export { default as Store } from "lucide-react/dist/esm/icons/store.js";
 export { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
