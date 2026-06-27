@@ -52,10 +52,17 @@ export function AdminUpdateNotice() {
 
   const onDismiss = async () => {
     if (!update) return;
+    const dismissedId = update.id;
     setHidden(true);
     setDetailOpen(false);
     try {
-      await dismissAdminUpdate(client, update.id);
+      await dismissAdminUpdate(client, dismissedId);
+      const data = await fetchAdminUpdatesActive(client);
+      const visible = filterOperatorAdminUpdates(data.items ?? []);
+      const primary = visible[0] ?? null;
+      setUpdate(primary);
+      setRemaining(Math.max(0, visible.length - 1));
+      setHidden(!primary);
     } catch {
       setHidden(false);
     }
