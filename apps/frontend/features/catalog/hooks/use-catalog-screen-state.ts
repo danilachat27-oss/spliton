@@ -7,6 +7,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { useCatalogPriceLabel } from "@/hooks/use-catalog-i18n";
 import { catalogItems } from "@/lib/catalog-mock";
 import { formatApiError } from "@/lib/i18n/format-api-error";
+import { localizeCatalogItem } from "@/lib/catalog/catalog-adapter";
 import {
   buildCatalogUrlSearchParams,
   parseCatalogSearchParams,
@@ -178,7 +179,12 @@ export function useCatalogScreenState() {
     return () => window.clearTimeout(timer);
   }, [liveMode, loadLive]);
 
-  const sourceItems = liveMode ? (liveItems ?? []) : catalogItems;
+  const localizedMockItems = useMemo(
+    () => catalogItems.map((item) => localizeCatalogItem(item, locale)),
+    [locale],
+  );
+
+  const sourceItems = liveMode ? (liveItems ?? []) : localizedMockItems;
   const catalogOrder = useMemo(
     () => new Map(sourceItems.map((it, i) => [it.id, i])),
     [sourceItems],
@@ -232,7 +238,7 @@ export function useCatalogScreenState() {
   ]);
 
   const matchingCount = liveMode ? (pagination?.total ?? filtered.length) : filtered.length;
-  const catalogTotal = liveMode ? (stats?.publicReleases ?? matchingCount) : catalogItems.length;
+  const catalogTotal = liveMode ? (stats?.publicReleases ?? matchingCount) : localizedMockItems.length;
   const resultCount = filtered.length;
 
   const resetFilters = () => {

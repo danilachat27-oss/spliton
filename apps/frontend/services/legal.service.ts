@@ -17,6 +17,7 @@ export type LegalPolicyPublic = {
   title: string;
   content: string;
   contentFormat: string;
+  contentHash?: string | null;
   effectiveAt: string;
   publishedAt: string | null;
   requiresUserConsent: boolean;
@@ -33,9 +34,10 @@ export type UserLegalConsentRow = {
 
 export type MissingConsentItem = {
   type: string;
-  activeVersion: string;
-  policyId: string;
+  activeVersion?: string;
+  policyId?: string;
   title: string;
+  reason?: "CONSENT_REQUIRED" | "POLICY_NOT_PUBLISHED";
 };
 
 export type LegalCenterResponse = {
@@ -56,6 +58,7 @@ export type EligibilityResult = {
   adminMessage?: string;
   requiredActions?: string[];
   policyLinks?: string[];
+  missingPolicyTypes?: string[];
 };
 
 export type ConsentSource =

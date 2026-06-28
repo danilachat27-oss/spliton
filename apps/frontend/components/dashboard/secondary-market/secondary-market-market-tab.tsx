@@ -159,7 +159,7 @@ function ListingStatusPill({
   t: (key: string) => string;
 }) {
   const status = listingEffectiveStatus(listing);
-  const label = listing.statusLabel ?? listingStatusLabel(status, t);
+  const label = listingStatusLabel(status, t);
   const purchasable = listingEffectiveCanBuy(listing);
   return (
     <span

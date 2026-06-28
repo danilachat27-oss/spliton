@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import { FileText } from "@/lib/lucide";
 
 import { useI18n } from "@/components/providers/i18n-provider";
 import { catalogCardRiskLabel } from "@/lib/i18n/catalog-card-labels";
+import { tf } from "@/lib/i18n/financial-messages";
 import { ROUTES, catalogMarketOverviewReleaseAnalyticsPath } from "@/constants/routes";
+import {
+  derivePrimaryBuyTermsFromSsr,
+  type PrimaryBuyTerms,
+} from "@/lib/catalog/primary-buy-terms";
+import { computeOwnershipPercent } from "@/lib/market/pricing-calculator";
 import { formatUnitsCompact, formatUsdtFixedRu } from "@/lib/market-overview/format";
-import { getPrimaryUnitPriceUsdt } from "@/lib/market-overview/pricing";
 import type { CatalogPrimaryRoundPublic, CatalogReleaseDetailApi } from "@/services/catalog.service";
 import type { MarketOverviewRow } from "@/types/market-overview";
 
@@ -25,19 +31,23 @@ export function CatalogBuyUnitsScreen({
   purchaseState: CatalogReleaseDetailApi["purchaseState"] | null;
 }) {
   const { t, locale } = useI18n();
-  const unitPrice =
-    primaryRound && Number.parseFloat(primaryRound.pricePerUnit) > 0
-      ? Number.parseFloat(primaryRound.pricePerUnit)
-      : getPrimaryUnitPriceUsdt(row);
-  const maxUnits =
-    primaryRound && Number.parseFloat(primaryRound.availableUnits) >= 0
-      ? Math.max(0, Math.floor(Number.parseFloat(primaryRound.availableUnits)))
-      : Math.max(0, Math.floor(row.availableUnits));
-  const minOrderUsdt = unitPrice;
-  const maxOrderUsdt = unitPrice * maxUnits;
+  const [buyTerms, setBuyTerms] = useState<PrimaryBuyTerms>(() =>
+    derivePrimaryBuyTermsFromSsr(row, primaryRound),
+  );
+  const handleBuyTermsChange = useCallback((next: PrimaryBuyTerms) => {
+    setBuyTerms(next);
+  }, []);
+
+  const { unitPrice, maxUnits, minUnits, priceInvalid } = buyTerms;
   const purchaseBlocked = purchaseState != null && purchaseState !== "available";
-  const displayAvailableUnits = purchaseBlocked ? 0 : maxUnits > 0 ? maxUnits : row.availableUnits;
+  const displayAvailableUnits = purchaseBlocked ? 0 : buyTerms.availableUnits;
   const displayMaxUnits = purchaseBlocked ? 0 : maxUnits;
+  const minOrderUsdt = unitPrice != null ? unitPrice * minUnits : null;
+  const maxOrderUsdt = unitPrice != null && displayMaxUnits > 0 ? unitPrice * displayMaxUnits : null;
+  const ownershipAtMin =
+    unitPrice != null && !priceInvalid
+      ? computeOwnershipPercent(minUnits, buyTerms.totalUnits)
+      : null;
 
   return (
     <div className="min-h-0 bg-white text-zinc-950 antialiased">
@@ -107,7 +117,9 @@ export function CatalogBuyUnitsScreen({
                 <div>
                   <dt className="text-zinc-500">{t("catalog.buy.screen.unitPrice")}</dt>
                   <dd className="mt-0.5 font-mono text-[16px] font-semibold text-zinc-900">
-                    {formatUsdtFixedRu(unitPrice)}
+                    {priceInvalid || unitPrice == null
+                      ? t("catalog.cards.noData")
+                      : formatUsdtFixedRu(unitPrice)}
                   </dd>
                 </div>
                 <div>
@@ -132,17 +144,30 @@ export function CatalogBuyUnitsScreen({
                   <div className="flex items-start justify-between gap-3">
                     <dt className="text-zinc-500">{t("catalog.buy.screen.minimum")}</dt>
                     <dd className="font-mono font-semibold text-zinc-900">
-                      {displayMaxUnits > 0 ? "1 UNT" : t("catalog.cards.noData")}
+                      {displayMaxUnits > 0 && !priceInvalid
+                        ? tf(t("catalog.buy.screen.minimumUnits"), { units: String(minUnits) })
+                        : t("catalog.cards.noData")}
                     </dd>
                   </div>
                   <div className="flex items-start justify-between gap-3">
                     <dt className="text-zinc-500">{t("catalog.buy.screen.purchaseAmount")}</dt>
                     <dd className="text-right font-mono font-semibold text-zinc-900">
-                      {displayMaxUnits > 0
+                      {minOrderUsdt != null && maxOrderUsdt != null && displayMaxUnits > 0
                         ? `${formatUsdtFixedRu(minOrderUsdt)} — ${formatUsdtFixedRu(maxOrderUsdt)}`
                         : t("catalog.cards.noData")}
                     </dd>
                   </div>
+                  {ownershipAtMin != null ? (
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="text-zinc-500">{t("catalog.buy.screen.ownershipShare")}</dt>
+                      <dd className="font-mono font-semibold text-zinc-900">
+                        {tf(t("catalog.buy.screen.ownershipAtMin"), {
+                          pct: String(ownershipAtMin),
+                          units: String(minUnits),
+                        })}
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
               </div>
             </aside>
@@ -152,6 +177,8 @@ export function CatalogBuyUnitsScreen({
                 row={row}
                 publicRound={primaryRound}
                 purchaseState={purchaseState}
+                initialBuyTerms={buyTerms}
+                onBuyTermsChange={handleBuyTermsChange}
               />
             </div>
           </div>

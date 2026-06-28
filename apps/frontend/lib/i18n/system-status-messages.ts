@@ -288,6 +288,8 @@ export function getLegendItems(locale: AppLocale): {
   }));
 }
 
+import { localeMessage } from "./normalize-locale";
+
 export function systemStatusLabel(
   kind: "service" | "incident",
   value: string,
@@ -299,5 +301,5 @@ export function systemStatusLabel(
     kind === "service"
       ? `systemStatus.serviceStatus.${serviceKey}`
       : `systemStatus.incidentState.${value}`;
-  return SYSTEM_STATUS_MESSAGES[locale][key] ?? SYSTEM_STATUS_MESSAGES.ru[key] ?? value;
+  return localeMessage(SYSTEM_STATUS_MESSAGES, locale, key, value);
 }

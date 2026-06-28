@@ -101,4 +101,44 @@ describe('AdminUpdatesService', () => {
     await expect(service.seedLegalCmsUpdateIfMissing()).resolves.toBe('created');
     expect(prisma.adminUpdateAnnouncement.create).toHaveBeenCalled();
   });
+
+  it('public EN localization seed is idempotent', async () => {
+    prisma.adminUpdateAnnouncement.findFirst.mockResolvedValue({ id: 'x' });
+    await expect(service.seedPublicEnLocalizationUpdateIfMissing()).resolves.toBe('skipped');
+    expect(prisma.adminUpdateAnnouncement.create).not.toHaveBeenCalled();
+  });
+
+  it('creates public EN localization seed when missing', async () => {
+    prisma.adminUpdateAnnouncement.findFirst.mockResolvedValue(null);
+    prisma.adminUpdateAnnouncement.create.mockResolvedValue({ id: 'seed-2' });
+    await expect(service.seedPublicEnLocalizationUpdateIfMissing()).resolves.toBe('created');
+    expect(prisma.adminUpdateAnnouncement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: AdminUpdateType.UX,
+          status: AdminUpdateStatus.PUBLISHED,
+        }),
+      }),
+    );
+  });
+
+  it('creates calculator units seed when missing', async () => {
+    prisma.adminUpdateAnnouncement.findFirst.mockResolvedValue(null);
+    prisma.adminUpdateAnnouncement.create.mockResolvedValue({ id: 'seed-calc' });
+    await expect(service.seedCalculatorUnitsUpdateIfMissing()).resolves.toBe('created');
+    expect(prisma.adminUpdateAnnouncement.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: AdminUpdateType.FEATURE,
+          status: AdminUpdateStatus.PUBLISHED,
+        }),
+      }),
+    );
+  });
+
+  it('calculator units seed is idempotent', async () => {
+    prisma.adminUpdateAnnouncement.findFirst.mockResolvedValue({ id: 'x' });
+    await expect(service.seedCalculatorUnitsUpdateIfMissing()).resolves.toBe('skipped');
+    expect(prisma.adminUpdateAnnouncement.create).not.toHaveBeenCalled();
+  });
 });

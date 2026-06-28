@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { LegalPolicyStatus, LegalPolicyType, UserRoleCode } from '@prisma/client';
+import { LegalPolicyContentFormat, LegalPolicyStatus, LegalPolicyType, UserRoleCode } from '@prisma/client';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -22,14 +22,12 @@ import { requestMeta } from '../admin/common/admin-http.util';
 import { LegalPoliciesService } from './legal-policies.service';
 import { CountryRestrictionsService } from '../compliance/country-restrictions.service';
 
-const LEGAL_MUTATE = [
+const LEGAL_MUTATE = [UserRoleCode.SUPER_ADMIN, UserRoleCode.COMPLIANCE] as const;
+
+const LEGAL_VIEW = [
   UserRoleCode.SUPER_ADMIN,
   UserRoleCode.ADMIN,
   UserRoleCode.COMPLIANCE,
-] as const;
-
-const LEGAL_VIEW = [
-  ...LEGAL_MUTATE,
   UserRoleCode.BUSINESS_ANALYST,
   UserRoleCode.CONTENT_MANAGER,
 ] as const;
@@ -44,6 +42,18 @@ export class AdminLegalController {
     private readonly countries: CountryRestrictionsService,
   ) {}
 
+  @Get('policies/grouped')
+  @Roles(...LEGAL_VIEW)
+  listGrouped() {
+    return this.policies.listGroupedAdmin();
+  }
+
+  @Get('policies/by-type/:type/versions')
+  @Roles(...LEGAL_VIEW)
+  versionsByType(@Param('type') type: LegalPolicyType) {
+    return this.policies.listVersionsByType(type);
+  }
+
   @Get('policies')
   @Roles(...LEGAL_VIEW)
   list(
@@ -51,6 +61,12 @@ export class AdminLegalController {
     @Query('type') type?: LegalPolicyType,
   ) {
     return this.policies.listAdmin({ status, type });
+  }
+
+  @Get('policies/:id/consents-count')
+  @Roles(...LEGAL_VIEW)
+  consentCount(@Param('id') id: string) {
+    return this.policies.countConsentsForPolicy(id);
   }
 
   @Get('policies/:id')
@@ -69,11 +85,19 @@ export class AdminLegalController {
       version: string;
       title: string;
       content: string;
+      contentFormat?: string;
       requiresUserConsent?: boolean;
+      effectiveAt?: string | null;
     },
     @Req() req: Request,
   ) {
-    const row = await this.policies.createDraft(body, user.id);
+    const row = await this.policies.createDraft(
+      {
+        ...body,
+        contentFormat: body.contentFormat as LegalPolicyContentFormat | undefined,
+      },
+      user.id,
+    );
     await this.audit.logOperatorAction({
       actorUserId: user.id,
       actorRoles: user.roles ?? [],
@@ -91,17 +115,54 @@ export class AdminLegalController {
   async update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
-    @Body() body: { title?: string; content?: string; version?: string; requiresUserConsent?: boolean },
+    @Body()
+    body: {
+      title?: string;
+      content?: string;
+      version?: string;
+      contentFormat?: string;
+      requiresUserConsent?: boolean;
+      effectiveAt?: string | null;
+    },
     @Req() req: Request,
   ) {
-    const row = await this.policies.updateDraft(id, body, user.id);
+    const before = await this.policies.getAdminById(id);
+    const row = await this.policies.updateDraft(
+      id,
+      {
+        ...body,
+        contentFormat: body.contentFormat as LegalPolicyContentFormat | undefined,
+      },
+      user.id,
+    );
     await this.audit.logOperatorAction({
       actorUserId: user.id,
       actorRoles: user.roles ?? [],
       entityType: 'legal_policy',
       entityId: id,
       action: 'legal.policy.update',
-      after: { version: row.version },
+      before: { version: before.version, status: before.status },
+      after: { version: row.version, status: row.status },
+      ...requestMeta(req),
+    });
+    return row;
+  }
+
+  @Post('policies/:id/submit-review')
+  @Roles(...LEGAL_MUTATE)
+  async submitReview(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    const row = await this.policies.submitForReview(id, user.id);
+    await this.audit.logOperatorAction({
+      actorUserId: user.id,
+      actorRoles: user.roles ?? [],
+      entityType: 'legal_policy',
+      entityId: id,
+      action: 'legal.policy.submit_review',
+      after: { status: row.status },
       ...requestMeta(req),
     });
     return row;
@@ -114,6 +175,7 @@ export class AdminLegalController {
     @Param('id') id: string,
     @Req() req: Request,
   ) {
+    const before = await this.policies.getAdminById(id);
     const row = await this.policies.publish(id, user.id);
     await this.audit.logOperatorAction({
       actorUserId: user.id,
@@ -121,7 +183,8 @@ export class AdminLegalController {
       entityType: 'legal_policy',
       entityId: id,
       action: 'legal.policy.publish',
-      after: { status: row.status, version: row.version },
+      before: { status: before.status, version: before.version },
+      after: { status: row.status, version: row.version, contentHash: row.contentHash },
       ...requestMeta(req),
     });
     return row;
@@ -134,6 +197,7 @@ export class AdminLegalController {
     @Param('id') id: string,
     @Req() req: Request,
   ) {
+    const before = await this.policies.getAdminById(id);
     const row = await this.policies.archive(id, user.id);
     await this.audit.logOperatorAction({
       actorUserId: user.id,
@@ -141,16 +205,11 @@ export class AdminLegalController {
       entityType: 'legal_policy',
       entityId: id,
       action: 'legal.policy.archive',
+      before: { status: before.status },
       after: { status: row.status },
       ...requestMeta(req),
     });
     return row;
-  }
-
-  @Get('policies/:id/consents-count')
-  @Roles(...LEGAL_VIEW)
-  consentCount(@Param('id') id: string) {
-    return this.policies.countConsentsForPolicy(id);
   }
 
   @Get('countries')

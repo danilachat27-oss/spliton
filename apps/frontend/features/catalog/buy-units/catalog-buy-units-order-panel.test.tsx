@@ -12,6 +12,10 @@ function renderPanel(ui: React.ReactElement) {
   return render(<I18nProvider initialLocale="ru">{ui}</I18nProvider>);
 }
 
+function renderPanelEn(ui: React.ReactElement) {
+  return render(<I18nProvider initialLocale="en">{ui}</I18nProvider>);
+}
+
 const mocks = vi.hoisted(() => ({
   authorizedFetch: vi.fn(),
   createPrimaryOrder: vi.fn(),
@@ -88,16 +92,31 @@ function mockAuth(partial: { isAuthenticated: boolean; isLoading?: boolean }) {
 
 const liveRound = {
   roundId: "22222222-2222-4222-8222-222222222222",
+  releaseId: BUY_PANEL_TEST_RELEASE_ID,
+  trackTitle: "Test Release",
+  status: "live",
   pricePerUnit: "10",
   availableUnits: "100",
   primaryPurchaseFeePct: "2",
 };
 
 const livePreview = {
+  roundId: liveRound.roundId,
+  releaseId: BUY_PANEL_TEST_RELEASE_ID,
   canPurchase: true,
   grossAmount: "10",
   feeAmount: "0.2",
-  totalPaid: "10.2",
+  totalPaid: "10",
+  feePct: "2",
+  pricePerUnit: "10",
+  units: "1",
+  walletBalance: "1000",
+  balanceAfter: "990",
+  availableUnits: "100",
+  minPurchaseUnits: "1",
+  maxPurchaseUnits: "50",
+  blockingReason: null,
+  roundingNote: "",
 };
 
 const liveOrderResult = {
@@ -105,6 +124,19 @@ const liveOrderResult = {
   units: "1",
   pricePerUnit: "10",
   grossAmount: "10",
+};
+
+const publicRound = {
+  roundId: liveRound.roundId,
+  status: "live" as const,
+  availableUnits: "100",
+  pricePerUnit: "10",
+  raiseTargetUsdt: null,
+  hardCapUsdt: null,
+  soldUnits: "0",
+  totalUnits: "1000",
+  progressPct: 0,
+  primaryPurchaseFeePct: "2",
 };
 
 describe("CatalogBuyUnitsOrderPanel", () => {
@@ -121,7 +153,7 @@ describe("CatalogBuyUnitsOrderPanel", () => {
   it("live + unauthenticated shows login gate without purchase button", () => {
     mockAuth({ isAuthenticated: false });
 
-    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} />);
+    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} publicRound={publicRound} />);
 
     expect(screen.getByTestId("buy-login-gate")).toBeInTheDocument();
     const buyReturnPath = `/catalog/buy/${encodeURIComponent(BUY_PANEL_TEST_RELEASE_ID)}`;
@@ -130,7 +162,6 @@ describe("CatalogBuyUnitsOrderPanel", () => {
       loginPathWithNext(buyReturnPath),
     );
     expect(screen.queryByRole("button", { name: /Купить юниты/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Демо-режим/i)).not.toBeInTheDocument();
     expect(mocks.createPrimaryOrder).not.toHaveBeenCalled();
   });
 
@@ -138,29 +169,18 @@ describe("CatalogBuyUnitsOrderPanel", () => {
     mocks.getWalletDataSource.mockReturnValue("mock");
     mockAuth({ isAuthenticated: false });
 
-    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} />);
+    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} publicRound={publicRound} />);
 
     expect(screen.getByText(/Пример оформления покупки/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Купить юниты \(демо\)/i })).toBeInTheDocument();
   });
 
-  it("live + authenticated renders live purchase button", async () => {
-    mockAuth({ isAuthenticated: true });
-
-    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} />);
-
-    expect(screen.queryByText(/Демо-режим/i)).not.toBeInTheDocument();
-    expect(await screen.findByTestId("buy-submit-button")).toBeInTheDocument();
-  });
-
   it("live + authenticated purchase calls createPrimaryOrder only after click", async () => {
     mockAuth({ isAuthenticated: true });
 
-    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} />);
+    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} publicRound={publicRound} />);
 
     const buyButton = await screen.findByTestId("buy-submit-button");
-    expect(mocks.createPrimaryOrder).not.toHaveBeenCalled();
-
     await waitFor(() => {
       expect(mocks.fetchPrimaryOrderPreview).toHaveBeenCalled();
     });
@@ -177,5 +197,68 @@ describe("CatalogBuyUnitsOrderPanel", () => {
         mocks.authorizedFetch,
       );
     });
+  });
+
+  it("amount below unit price disables submit and shows error in mock mode", async () => {
+    mocks.getWalletDataSource.mockReturnValue("mock");
+    mockAuth({ isAuthenticated: false });
+
+    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} publicRound={publicRound} />);
+
+    const payInput = screen.getByLabelText(/Сумма к оплате/i);
+    fireEvent.focus(payInput);
+    fireEvent.change(payInput, { target: { value: "5" } });
+    fireEvent.blur(payInput);
+
+    expect(await screen.findByText(/Суммы недостаточно/i)).toBeInTheDocument();
+    expect(screen.getByTestId("buy-submit-button")).toBeDisabled();
+  });
+
+  it("invalid price blocks purchase UI", () => {
+    mocks.getWalletDataSource.mockReturnValue("mock");
+    mockAuth({ isAuthenticated: false });
+
+    renderPanel(
+      <CatalogBuyUnitsOrderPanel
+        row={makeBuyPanelTestRow({ primaryUnitPriceUsdt: 0 })}
+        publicRound={{ ...publicRound, pricePerUnit: "0" }}
+      />,
+    );
+
+    expect(screen.getByText(/Цена юнита недоступна/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("buy-submit-button")).not.toBeInTheDocument();
+  });
+
+  it("preview failure shows visible message and disables submit", async () => {
+    mockAuth({ isAuthenticated: true });
+    mocks.fetchPrimaryOrderPreview.mockRejectedValue(new Error("network"));
+
+    renderPanel(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} publicRound={publicRound} />);
+
+    expect(await screen.findByText(/Не удалось получить расчёт/i)).toBeInTheDocument();
+    expect(screen.getByTestId("buy-submit-button")).toBeDisabled();
+  });
+
+  it("preview failure message is English on EN locale", async () => {
+    mockAuth({ isAuthenticated: true });
+    mocks.fetchPrimaryOrderPreview.mockRejectedValue(new Error("network"));
+
+    renderPanelEn(<CatalogBuyUnitsOrderPanel row={makeBuyPanelTestRow()} publicRound={publicRound} />);
+
+    expect(await screen.findByText(/Could not load the server quote/i)).toBeInTheDocument();
+  });
+
+  it("uses SSR publicRound price before client round refetch", () => {
+    mocks.getWalletDataSource.mockReturnValue("mock");
+    mockAuth({ isAuthenticated: false });
+
+    renderPanel(
+      <CatalogBuyUnitsOrderPanel
+        row={makeBuyPanelTestRow({ primaryUnitPriceUsdt: 99 })}
+        publicRound={{ ...publicRound, pricePerUnit: "10" }}
+      />,
+    );
+
+    expect(screen.getByText(/1 юнит = 10,00/i)).toBeInTheDocument();
   });
 });

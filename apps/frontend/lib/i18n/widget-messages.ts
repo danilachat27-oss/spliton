@@ -335,6 +335,8 @@ const RU: Record<string, string> = {
   "calculator.buy.toPay": "К оплате",
   "calculator.buy.empty": "Введите сумму и цену, чтобы увидеть расчёт.",
   "calculator.buy.feeNote": "Комиссия — доля от суммы платежа. Фактические тарифы и округления могут отличаться.",
+  "calculator.buy.primaryCheckoutNote":
+    "Расчёт покупки совпадает с checkout в каталоге: к оплате gross = units × цена UNT; комиссия удерживается из gross. Это иллюстрация — фактическая сделка только на странице покупки релиза.",
   "calculator.sell.eyebrow": "Калькулятор · Secondary",
   "calculator.sell.title": "Продажа на secondary",
   "calculator.sell.subtitle": "Gross, комиссия вторичного рынка и сумма к получению.",
@@ -366,6 +368,7 @@ const RU: Record<string, string> = {
   "calculator.payout.note": "Фактические начисления зависят от периода, условий релиза и правил платформы.",
 
   "compliance.blocking.consentRequired": "Требуется подтверждение правил",
+  "compliance.blocking.legalPolicyMissing": "Юридические документы обновляются. Операция временно недоступна.",
   "compliance.blocking.kycRequired": "Требуется KYC",
   "compliance.blocking.kycInReview": "Верификация на проверке",
   "compliance.blocking.amlBlocked": "Операция ограничена compliance",
@@ -728,6 +731,8 @@ const EN: Record<string, string> = {
   "calculator.buy.toPay": "To pay",
   "calculator.buy.empty": "Enter positive values to see the calculation.",
   "calculator.buy.feeNote": "Fee is a share of payment. Actual rates and rounding may differ.",
+  "calculator.buy.primaryCheckoutNote":
+    "Primary buy math matches catalog checkout: you pay gross = units × UNT price; the platform fee is withheld from gross. Illustration only — actual trades happen on the release buy page.",
   "calculator.sell.eyebrow": "Calculator · Secondary",
   "calculator.sell.title": "Secondary sale",
   "calculator.sell.subtitle": "Gross, secondary market fee and net proceeds.",
@@ -759,6 +764,7 @@ const EN: Record<string, string> = {
   "calculator.payout.note": "Actual accruals depend on period, release terms and platform rules.",
 
   "compliance.blocking.consentRequired": "Rules confirmation required",
+  "compliance.blocking.legalPolicyMissing": "Legal documents are being updated. This action is temporarily unavailable.",
   "compliance.blocking.kycRequired": "KYC required",
   "compliance.blocking.kycInReview": "Verification under review",
   "compliance.blocking.amlBlocked": "Operation restricted by compliance",
@@ -962,10 +968,13 @@ const ES: Record<string, string> = {
   "calculator.footer.title": "Notas generales",
   "calculator.reset": "Restablecer",
   "calculator.buy.title": "Compra UNT",
+  "calculator.buy.primaryCheckoutNote":
+    "El cálculo de compra coincide con el checkout del catálogo: pagas gross = units × precio UNT; la comisión se retiene del gross. Solo ilustración — la operación real es en la página de compra del release.",
   "calculator.sell.title": "Venta en secondary",
   "calculator.withdraw.title": "Retiro USDT",
   "calculator.payout.title": "Estimación de acumulación",
   "compliance.blocking.consentRequired": "Se requiere confirmación de reglas",
+  "compliance.blocking.legalPolicyMissing": "Los documentos legales se están actualizando. Esta acción no está disponible temporalmente.",
   "compliance.blocking.kycRequired": "Se requiere KYC",
   "compliance.blocking.kycInReview": "Verificación en revisión",
   "compliance.blocking.amlBlocked": "Operación restringida por compliance",
@@ -1167,10 +1176,13 @@ const PT: Record<string, string> = {
   "calculator.footer.title": "Notas gerais",
   "calculator.reset": "Repor",
   "calculator.buy.title": "Compra UNT",
+  "calculator.buy.primaryCheckoutNote":
+    "O cálculo de compra coincide com o checkout do catálogo: paga gross = units × preço UNT; a comissão é retida do gross. Apenas ilustrativo — a operação real é na página de compra do release.",
   "calculator.sell.title": "Venda no secondary",
   "calculator.withdraw.title": "Levantamento USDT",
   "calculator.payout.title": "Estimativa de acumulação",
   "compliance.blocking.consentRequired": "Confirmação de regras necessária",
+  "compliance.blocking.legalPolicyMissing": "Os documentos legais estão a ser atualizados. Esta ação está temporariamente indisponível.",
   "compliance.blocking.kycRequired": "KYC necessário",
   "compliance.blocking.kycInReview": "Verificação em revisão",
   "compliance.blocking.amlBlocked": "Operação restrita por compliance",

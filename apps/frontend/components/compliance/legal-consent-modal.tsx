@@ -5,9 +5,10 @@ import { useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 
 import { useI18n } from "@/components/providers/i18n-provider";
-import { ROUTES } from "@/constants/routes";
 import {
   acceptLegalConsents,
+  policyPublicHref,
+  policyTypeLabel,
   type ConsentSource,
   type MissingConsentItem,
 } from "@/services/legal.service";
@@ -46,11 +47,9 @@ export function LegalConsentModal({
     setSubmitting(true);
     setError(null);
     try {
-      await acceptLegalConsents(
-        items.map((i) => i.policyId),
-        source,
-        authorizedFetch,
-      );
+      const policyIds = items.map((i) => i.policyId).filter((id): id is string => Boolean(id));
+      if (policyIds.length === 0) return;
+      await acceptLegalConsents(policyIds, source, authorizedFetch);
       setChecked(false);
       onAccepted();
     } catch {
@@ -92,7 +91,15 @@ export function LegalConsentModal({
               <li key={item.policyId} className="flex items-start gap-2">
                 <span className="mt-0.5 text-zinc-400">•</span>
                 <span>
-                  {item.title} <span className="text-zinc-500">(v{item.activeVersion})</span>
+                  <Link
+                    href={policyPublicHref(item.type)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-lime-700 underline-offset-2 hover:underline"
+                  >
+                    {item.title || policyTypeLabel(item.type, t)}
+                  </Link>{" "}
+                  <span className="text-zinc-500">(v{item.activeVersion})</span>
                 </span>
               </li>
             ))}
@@ -105,13 +112,7 @@ export function LegalConsentModal({
               disabled={submitting}
               onChange={(e) => setChecked(e.target.checked)}
             />
-            <span>
-              {t("compliance.modal.acceptCheckbox")}{" "}
-              <Link href={ROUTES.terms} className="font-medium text-lime-700 underline-offset-2 hover:underline">
-                {t("compliance.modal.legalCenter")}
-              </Link>
-              .
-            </span>
+            <span>{t("compliance.modal.acceptCheckbox")}</span>
           </label>
           {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
           <div className="mt-6 flex flex-wrap gap-3">

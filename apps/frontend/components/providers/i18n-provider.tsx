@@ -84,8 +84,9 @@ export function I18nProvider({
       const value =
         adminMessages[locale]?.[key] ??
         CLIENT_DICTIONARIES[locale][key] ??
-        adminMessages[DEFAULT_LOCALE]?.[key] ??
-        CLIENT_DICTIONARIES[DEFAULT_LOCALE][key] ??
+        (locale !== "ru"
+          ? (adminMessages.en?.[key] ?? CLIENT_DICTIONARIES.en[key])
+          : undefined) ??
         (fallback !== undefined ? fallback : undefined);
       if (value) return value;
       if (fallback !== undefined) return fallback;
@@ -93,7 +94,7 @@ export function I18nProvider({
         console.warn(`[i18n] missing key: ${key} (${locale})`);
       }
       if (key.startsWith("admin.")) return key;
-      return CLIENT_DICTIONARIES[DEFAULT_LOCALE].UNKNOWN_ERROR ?? CLIENT_DICTIONARIES[DEFAULT_LOCALE]["common.empty"] ?? "No data";
+      return CLIENT_DICTIONARIES.en.UNKNOWN_ERROR ?? CLIENT_DICTIONARIES.en["common.empty"] ?? "No data";
     },
     [adminMessages, locale],
   );

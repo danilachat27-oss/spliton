@@ -75,6 +75,12 @@ const RU: Record<string, string> = {
   "dashboard.heroJourney.book.askEstimateDetail": "Ср. цена: {avg} · исполнит до {units} / {max} u",
   "dashboard.heroJourney.book.amountUnt": "Сумма (UNT)",
   "dashboard.heroJourney.book.turnoverEstimate": "Оценка оборота",
+  "dashboard.miniBook.spreadDemo": "Спред {pct}% · live demo",
+  "dashboard.miniBook.spreadLive": "Спред {pct}% · live",
+  "dashboard.miniBook.spreadMock": "Спред {pct}% · демо",
+  "dashboard.miniBook.noMarkets": "Нет доступных рынков",
+  "dashboard.miniBook.noDepth": "Нет данных стакана",
+  "dashboard.miniBook.loading": "Загрузка стакана…",
 
   "dashboard.onboarding.ariaLabel": "Прогресс первых шагов",
   "dashboard.onboarding.title": "Первые шаги в Spliton",
@@ -182,6 +188,15 @@ const RU: Record<string, string> = {
   "dashboard.valueGrid.quotesSwipe": "Котировки · листайте →",
   "dashboard.valueGrid.error": "Не удалось загрузить котировки. Попробуйте обновить страницу.",
   "dashboard.valueGrid.empty": "Пока нет активных инструментов на вторичном рынке.",
+
+  "dashboard.catalogPreview.heading": "Выберите проект для входа",
+  "dashboard.catalogPreview.body":
+    "Те же карточки, что в каталоге: быстрый вход в релиз, покупка UNT и переход ко всем позициям на площадке.",
+  "dashboard.catalogPreview.openCta": "Открыть каталог",
+  "dashboard.catalogPreview.viewAll": "Смотреть все",
+  "dashboard.catalogPreview.demoBanner": "Демо-карточки каталога",
+  "dashboard.catalogPreview.empty": "Пока нет доступных релизов в каталоге.",
+  "dashboard.catalogPreview.fullCatalog": "Перейти в полный каталог",
 };
 
 const EN: Record<string, string> = {
@@ -259,6 +274,12 @@ const EN: Record<string, string> = {
   "dashboard.heroJourney.book.askEstimateDetail": "Avg price: {avg} · fills up to {units} / {max} u",
   "dashboard.heroJourney.book.amountUnt": "Amount (UNT)",
   "dashboard.heroJourney.book.turnoverEstimate": "Turnover estimate",
+  "dashboard.miniBook.spreadDemo": "Spread {pct}% · live demo",
+  "dashboard.miniBook.spreadLive": "Spread {pct}% · live",
+  "dashboard.miniBook.spreadMock": "Spread {pct}% · demo",
+  "dashboard.miniBook.noMarkets": "No markets available",
+  "dashboard.miniBook.noDepth": "No order book data",
+  "dashboard.miniBook.loading": "Loading order book…",
 
   "dashboard.onboarding.ariaLabel": "First steps progress",
   "dashboard.onboarding.title": "First steps on Spliton",
@@ -366,6 +387,15 @@ const EN: Record<string, string> = {
   "dashboard.valueGrid.quotesSwipe": "Quotes · swipe →",
   "dashboard.valueGrid.error": "Could not load quotes. Try refreshing the page.",
   "dashboard.valueGrid.empty": "No active secondary-market instruments yet.",
+
+  "dashboard.catalogPreview.heading": "Choose a release to enter",
+  "dashboard.catalogPreview.body":
+    "The same cards as in the catalog: quick entry, UNT purchase and access to all listings on the platform.",
+  "dashboard.catalogPreview.openCta": "Open catalog",
+  "dashboard.catalogPreview.viewAll": "View all",
+  "dashboard.catalogPreview.demoBanner": "Demo catalog cards",
+  "dashboard.catalogPreview.empty": "No releases available in the catalog yet.",
+  "dashboard.catalogPreview.fullCatalog": "Go to full catalog",
 };
 
 const ES: Record<string, string> = {
@@ -443,6 +473,12 @@ const ES: Record<string, string> = {
   "dashboard.heroJourney.book.askEstimateDetail": "Precio medio: {avg} · ejecuta hasta {units} / {max} u",
   "dashboard.heroJourney.book.amountUnt": "Importe (UNT)",
   "dashboard.heroJourney.book.turnoverEstimate": "Estimación de volumen",
+  "dashboard.miniBook.spreadDemo": "Spread {pct}% · live demo",
+  "dashboard.miniBook.spreadLive": "Spread {pct}% · live",
+  "dashboard.miniBook.spreadMock": "Spread {pct}% · demo",
+  "dashboard.miniBook.noMarkets": "No hay mercados disponibles",
+  "dashboard.miniBook.noDepth": "Sin datos del libro de órdenes",
+  "dashboard.miniBook.loading": "Cargando libro de órdenes…",
 
   "dashboard.onboarding.ariaLabel": "Progreso de primeros pasos",
   "dashboard.onboarding.title": "Primeros pasos en Spliton",
@@ -550,6 +586,15 @@ const ES: Record<string, string> = {
   "dashboard.valueGrid.quotesSwipe": "Cotizaciones · desliza →",
   "dashboard.valueGrid.error": "No se pudieron cargar las cotizaciones. Actualice la página.",
   "dashboard.valueGrid.empty": "Aún no hay instrumentos activos en el mercado secundario.",
+
+  "dashboard.catalogPreview.heading": "Elija un proyecto para entrar",
+  "dashboard.catalogPreview.body":
+    "Las mismas tarjetas que en el catálogo: entrada rápida, compra de UNT y acceso a todas las posiciones.",
+  "dashboard.catalogPreview.openCta": "Abrir catálogo",
+  "dashboard.catalogPreview.viewAll": "Ver todo",
+  "dashboard.catalogPreview.demoBanner": "Tarjetas de catálogo demo",
+  "dashboard.catalogPreview.empty": "Aún no hay lanzamientos disponibles en el catálogo.",
+  "dashboard.catalogPreview.fullCatalog": "Ir al catálogo completo",
 };
 
 const PT: Record<string, string> = {
@@ -627,6 +672,12 @@ const PT: Record<string, string> = {
   "dashboard.heroJourney.book.askEstimateDetail": "Preço médio: {avg} · executa até {units} / {max} u",
   "dashboard.heroJourney.book.amountUnt": "Montante (UNT)",
   "dashboard.heroJourney.book.turnoverEstimate": "Estimativa de volume",
+  "dashboard.miniBook.spreadDemo": "Spread {pct}% · live demo",
+  "dashboard.miniBook.spreadLive": "Spread {pct}% · live",
+  "dashboard.miniBook.spreadMock": "Spread {pct}% · demo",
+  "dashboard.miniBook.noMarkets": "Nenhum mercado disponível",
+  "dashboard.miniBook.noDepth": "Sem dados do livro de ordens",
+  "dashboard.miniBook.loading": "Carregando livro de ordens…",
 
   "dashboard.onboarding.ariaLabel": "Progresso dos primeiros passos",
   "dashboard.onboarding.title": "Primeiros passos no Spliton",
@@ -734,6 +785,15 @@ const PT: Record<string, string> = {
   "dashboard.valueGrid.quotesSwipe": "Cotações · deslize →",
   "dashboard.valueGrid.error": "Não foi possível carregar cotações. Atualize a página.",
   "dashboard.valueGrid.empty": "Ainda não há instrumentos ativos no mercado secundário.",
+
+  "dashboard.catalogPreview.heading": "Escolha um projeto para entrar",
+  "dashboard.catalogPreview.body":
+    "Os mesmos cartões do catálogo: entrada rápida, compra de UNT e acesso a todas as posições na plataforma.",
+  "dashboard.catalogPreview.openCta": "Abrir catálogo",
+  "dashboard.catalogPreview.viewAll": "Ver tudo",
+  "dashboard.catalogPreview.demoBanner": "Cartões de catálogo demo",
+  "dashboard.catalogPreview.empty": "Ainda não há lançamentos disponíveis no catálogo.",
+  "dashboard.catalogPreview.fullCatalog": "Ir ao catálogo completo",
 };
 
 export const DASHBOARD_MESSAGES: Record<AppLocale, Record<string, string>> = {

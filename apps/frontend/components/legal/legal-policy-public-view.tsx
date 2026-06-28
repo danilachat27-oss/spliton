@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LegalPolicyContentDisplay } from "@/components/legal/legal-policy-content-display";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { tf } from "@/lib/i18n/financial-messages";
 import type { AppLocale } from "@/lib/i18n/types";
@@ -78,9 +79,11 @@ export function LegalPolicyPublicView({ typeParam }: { typeParam: string }) {
       <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
         {t("legal.notice.lawyerReview")}
       </p>
-      <div className="prose prose-neutral mt-8 max-w-none whitespace-pre-wrap text-[15px] leading-relaxed text-neutral-700">
-        {policy.content}
-      </div>
+      <LegalPolicyContentDisplay
+        content={policy.content}
+        contentFormat={policy.contentFormat}
+        className="prose prose-neutral mt-8 max-w-none text-[15px] leading-relaxed text-neutral-700"
+      />
     </article>
   );
 }

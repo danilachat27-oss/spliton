@@ -1,10 +1,10 @@
-import type { AppLocale } from "@/lib/i18n/types";
+import { localeMessage } from "@/lib/i18n/normalize-locale";
 import { PROFILE_MESSAGES } from "@/lib/i18n/profile-messages";
+import type { AppLocale } from "@/lib/i18n/types";
 import { securityEventLabel } from "@/lib/profile/overview-labels";
 
 function t(locale: AppLocale, key: string): string {
-  const m = PROFILE_MESSAGES[locale];
-  return m[key] ?? PROFILE_MESSAGES.ru[key] ?? key;
+  return localeMessage(PROFILE_MESSAGES, locale, key, key);
 }
 
 export function securityLevelBadgeLabel(level: string, locale: AppLocale): string {

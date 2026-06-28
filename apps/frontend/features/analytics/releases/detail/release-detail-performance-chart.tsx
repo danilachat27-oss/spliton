@@ -8,18 +8,35 @@ import { catalogBuyUnitsPathForRelease } from "@/constants/routes";
 import { RELEASE_DETAIL_ANALYTICS_ICONS } from "@/constants/analytics/release-detail-analytics-icons";
 import { filterMetricRows } from "@/lib/analytics/display-value";
 import { detailPageText } from "@/lib/i18n/analytics-detail-page-messages";
+import type { AppLocale } from "@/lib/i18n/types";
 import { cn } from "@/lib/utils";
 import type { ReleaseDetailChartPeriod, ReleaseDetailPageData } from "@/types/analytics/release-detail";
 
 import { DetailEmptyState } from "./detail-empty-state";
 
-const PERIODS: { id: ReleaseDetailChartPeriod; label: string }[] = [
-  { id: "7d", label: "7D" },
-  { id: "30d", label: "30D" },
-  { id: "90d", label: "90D" },
-  { id: "ytd", label: "YTD" },
-  { id: "all", label: "Всё" },
-];
+const PERIOD_IDS: ReleaseDetailChartPeriod[] = ["7d", "30d", "90d", "ytd", "all"];
+
+function chartPeriodButtonLabel(period: ReleaseDetailChartPeriod, t: (key: string) => string): string {
+  if (period === "ytd") return "YTD";
+  if (period === "all") return t("charts.period.all");
+  return period.toUpperCase();
+}
+
+function chartXAxisLabels(period: ReleaseDetailChartPeriod, locale: AppLocale): string[] {
+  const day = (n: number) => (locale === "ru" ? `${n}д` : `${n}d`);
+  const months =
+    locale === "ru"
+      ? (["янв", "мар", "май", "июл", "сен", "дек"] as const)
+      : (["Jan", "Mar", "May", "Jul", "Sep", "Dec"] as const);
+  const byPeriod: Record<ReleaseDetailChartPeriod, string[]> = {
+    "7d": [day(1), day(2), day(3), day(4), day(5), day(7)],
+    "30d": [day(1), day(6), day(12), day(18), day(24), day(30)],
+    "90d": [day(15), day(30), day(45), day(60), day(75), day(90)],
+    ytd: [...months],
+    all: ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"],
+  };
+  return byPeriod[period];
+}
 
 type DomainWindow = { start: number; end: number };
 
@@ -229,12 +246,12 @@ export function ReleaseDetailPerformanceChart({
           />
         </div>
         <div className="mt-4 flex flex-wrap justify-center gap-1">
-          {PERIODS.map((p) => (
+          {PERIOD_IDS.map((periodId) => (
             <span
-              key={p.id}
+              key={periodId}
               className="cursor-not-allowed rounded-full px-3 py-1 text-[11px] font-medium text-zinc-600 ring-1 ring-white/8 opacity-60"
             >
-              {p.label}
+              {chartPeriodButtonLabel(periodId, t)}
             </span>
           ))}
         </div>
@@ -255,13 +272,14 @@ export function ReleaseDetailPerformanceChart({
 
   const yTicks = [vmax, vmin + (vmax - vmin) * 0.5, vmin];
   const xTickIndices = uniqueSeriesIndices(n);
-  const xLabelsByPeriod: Record<ReleaseDetailChartPeriod, string[]> = {
-    "7d": ["1д", "2д", "3д", "4д", "5д", "7д"],
-    "30d": ["1д", "6д", "12д", "18д", "24д", "30д"],
-    "90d": ["15д", "30д", "45д", "60д", "75д", "90д"],
-    ytd: ["янв", "мар", "май", "июл", "сен", "дек"],
-    all: ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"],
-  };
+  const xLabelsByPeriod = React.useMemo(
+    () =>
+      Object.fromEntries(PERIOD_IDS.map((id) => [id, chartXAxisLabels(id, locale)])) as Record<
+        ReleaseDetailChartPeriod,
+        string[]
+      >,
+    [locale],
+  );
   const windowLabel = (idx: number) => {
     if (isSparseChart) return chartText("analytics.detail.chart.sparseWindow");
     const clamped = Math.max(0, Math.min(idx, activeSeries.length - 1));
@@ -480,19 +498,19 @@ export function ReleaseDetailPerformanceChart({
       </div>
 
       <div className="mt-5 flex shrink-0 flex-wrap gap-1.5 lg:justify-center">
-        {PERIODS.map((p) => (
+        {PERIOD_IDS.map((periodId) => (
           <button
-            key={p.id}
+            key={periodId}
             type="button"
-            onClick={() => setPeriod(p.id)}
+            onClick={() => setPeriod(periodId)}
             className={cn(
               "rounded-md px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors",
-              period === p.id
+              period === periodId
                 ? "bg-white/15 text-zinc-100"
                 : "bg-[#161616] text-zinc-500 hover:bg-[#1a1a1a] hover:text-zinc-300",
             )}
           >
-            {p.label}
+            {chartPeriodButtonLabel(periodId, t)}
           </button>
         ))}
       </div>

@@ -16,6 +16,10 @@ import { useCalculatorConfig } from "@/hooks/use-calculator-config";
 import { usePublicPlatformFees } from "@/hooks/use-public-platform-fees";
 import { formatDate, formatNumber, formatUsdtAmount } from "@/lib/i18n/formatters";
 import { tf } from "@/lib/i18n/widget-messages";
+import {
+  computeEducationalPrimaryBuy,
+  computeSecondaryTrade,
+} from "@/lib/market/pricing-calculator";
 import { isLiveServicesEnabled } from "@/lib/public-env";
 import { pctToRate } from "@/services/platform-fees.service";
 import type { CalculatorConfig } from "@/services/calculator.service";
@@ -99,29 +103,40 @@ export function CalculatorPageContent() {
 
   const buyCalc = useMemo(() => {
     if (buyPriceN == null || buyPriceN <= 0) return null;
+    const feePct = platformFeeRate * 100;
     if (buyMode === "usdt") {
-      const total = parsePositiveNumber(buyUsdt);
-      if (total === null || total === 0) return null;
-      const platformFee = total * platformFeeRate;
-      const effective = total - platformFee;
-      const units = effective / buyPriceN;
-      return { total, platformFee, effective, units, pricePerUnit: buyPriceN };
+      const budget = parsePositiveNumber(buyUsdt);
+      if (budget === null || budget === 0) return null;
+      return computeEducationalPrimaryBuy({
+        mode: "usdt",
+        budgetUsdt: budget,
+        unitPrice: buyPriceN,
+        feePct,
+      });
     }
     const units = parsePositiveNumber(buyUnits);
     if (units === null || units === 0) return null;
-    const effective = units * buyPriceN;
-    const total = effective / (1 - platformFeeRate);
-    const platformFee = total - effective;
-    return { total, platformFee, effective, units, pricePerUnit: buyPriceN };
+    return computeEducationalPrimaryBuy({
+      mode: "units",
+      unitsInput: units,
+      unitPrice: buyPriceN,
+      feePct,
+    });
   }, [buyMode, buyUsdt, buyUnits, buyPriceN, platformFeeRate]);
 
   const sellCalc = useMemo(() => {
     const units = parsePositiveNumber(sellUnits);
     if (units === null || units === 0 || sellPriceN == null || sellPriceN <= 0) return null;
-    const gross = units * sellPriceN;
-    const fee = gross * secondaryFeeRate;
-    const net = gross - fee;
-    return { units, gross, fee, net, pricePerUnit: sellPriceN };
+    const feePct = secondaryFeeRate * 100;
+    const quote = computeSecondaryTrade({ unitPrice: sellPriceN, units, feePct });
+    if (!quote) return null;
+    return {
+      units,
+      gross: quote.grossAmount,
+      fee: quote.feeAmount,
+      net: quote.sellerNet,
+      pricePerUnit: sellPriceN,
+    };
   }, [sellUnits, sellPriceN, secondaryFeeRate]);
 
   const withdrawCalc = useMemo(() => {
@@ -235,12 +250,13 @@ export function CalculatorPageContent() {
             {buyCalc ? (
               <ResultPanel
                 headline={`≈ ${fmtNum(buyCalc.units)} UNT`}
-                subline={tf(t("calculator.summary.toPay"), { amount: fmtUsdt(buyCalc.total) })}
+                subline={tf(t("calculator.summary.toPay"), { amount: fmtUsdt(buyCalc.totalPaid) })}
                 rows={[
-                  { label: t("calculator.buy.feePlatform"), value: `${fmtUsdt(buyCalc.platformFee)} USDT` },
-                  { label: t("calculator.buy.feeTotal"), value: `${fmtUsdt(buyCalc.total)} USDT`, strong: true },
-                  { label: t("calculator.buy.feeEffective"), value: `${fmtUsdt(buyCalc.effective)} USDT` },
+                  { label: t("calculator.buy.statPrice"), value: `${fmtUsdt(buyCalc.pricePerUnit)} USDT` },
+                  { label: t("calculator.buy.feePlatform"), value: `${fmtUsdt(buyCalc.feeAmount)} USDT` },
+                  { label: t("calculator.buy.feeTotal"), value: `${fmtUsdt(buyCalc.totalPaid)} USDT`, strong: true },
                 ]}
+                footnote={t("calculator.buy.primaryCheckoutNote")}
               />
             ) : (
               <EmptyState message={t("calculator.buy.empty")} />
@@ -401,10 +417,12 @@ function ResultPanel({
   headline,
   subline,
   rows,
+  footnote,
 }: {
   headline: string;
   subline: string;
   rows: { label: string; value: string; strong?: boolean }[];
+  footnote?: string;
 }) {
   return (
     <div className="mt-6 space-y-3">
@@ -429,6 +447,7 @@ function ResultPanel({
           </div>
         ))}
       </div>
+      {footnote ? <p className="text-xs leading-relaxed text-neutral-500">{footnote}</p> : null}
     </div>
   );
 }

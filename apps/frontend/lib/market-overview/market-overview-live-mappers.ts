@@ -2,6 +2,8 @@ import type { MarketTopCardMetrics } from "@/constants/market-overview/page";
 import { MARKET_SUMMARY_PANELS } from "@/constants/market-overview/page";
 import { resolveChartSeries } from "@/lib/market-overview/chart-series";
 import { formatUsdtCompact } from "@/lib/market-overview/format";
+import { DICTIONARIES, lookupDictionaryMessage } from "@/lib/i18n/dictionaries";
+import type { AppLocale } from "@/lib/i18n/types";
 import type {
   MarketOverviewChartsApi,
   MarketOverviewStatsApi,
@@ -9,6 +11,22 @@ import type {
 import type { MarketOverviewPeriod } from "@/types/market-overview";
 
 type ChartPoint = { ts: string; value: string | number };
+
+function mo(locale: AppLocale, key: string, vars?: Record<string, string | number>): string {
+  const raw = lookupDictionaryMessage(DICTIONARIES[locale], key, locale, {
+    enMessages: DICTIONARIES.en,
+  });
+  if (!vars) return raw;
+  return Object.entries(vars).reduce(
+    (acc, [name, value]) => acc.replaceAll(`{${name}}`, String(value)),
+    raw,
+  );
+}
+
+function isHighLiquidityLabel(label: string): boolean {
+  const normalized = label.trim().toLowerCase();
+  return normalized === "высокая" || normalized === "high" || normalized === "deep";
+}
 
 function chartSeriesValues(points: ChartPoint[] | undefined): number[] {
   if (!points?.length) return [];
@@ -33,7 +51,7 @@ function formatVolumeMetric(raw: string | number | undefined): string {
 
 function deepCatalogShare(stats: MarketOverviewStatsApi): string {
   const liq = stats.distributions?.liquidity ?? [];
-  const high = liq.find((l) => l.label === "Высокая")?.count ?? 0;
+  const high = liq.find((l) => isHighLiquidityLabel(l.label))?.count ?? 0;
   const total = liq.reduce((s, l) => s + l.count, 0);
   if (total === 0) return "0%";
   return `${Math.round((high / total) * 100)}%`;
@@ -41,7 +59,7 @@ function deepCatalogShare(stats: MarketOverviewStatsApi): string {
 
 function deepCatalogSharePercent(stats: MarketOverviewStatsApi): number {
   const liq = stats.distributions?.liquidity ?? [];
-  const high = liq.find((l) => l.label === "Высокая")?.count ?? 0;
+  const high = liq.find((l) => isHighLiquidityLabel(l.label))?.count ?? 0;
   const total = liq.reduce((s, l) => s + l.count, 0);
   if (total === 0) return 0;
   return Math.round((high / total) * 100);
@@ -220,17 +238,16 @@ export type MarketSecondaryLiveSnapshot = {
 
 export function mapSecondaryLiveSnapshot(
   stats: MarketOverviewStatsApi,
+  locale: AppLocale = "en",
 ): MarketSecondaryLiveSnapshot {
   const top = stats.topReleases?.byVolume?.[0];
-  const topDemand = top
-    ? `${top.symbol} · ${top.title}`
-    : "—";
+  const topDemand = top ? `${top.symbol} · ${top.title}` : "—";
+  const tradesCount = stats.secondaryMarket?.tradesCount ?? 0;
   return {
     resaleVolume: formatVolumeMetric(stats.secondaryMarket?.volumeUsdt),
     activeLots: String(stats.secondaryMarket?.activeListings ?? 0),
-    medianExitHours: stats.secondaryMarket?.tradesCount
-      ? `${stats.secondaryMarket.tradesCount} сделок`
-      : "—",
+    medianExitHours:
+      tradesCount > 0 ? mo(locale, "marketOverview.secondary.tradesCount", { count: tradesCount }) : "—",
     topDemand,
   };
 }
@@ -247,25 +264,31 @@ export type MarketInsightLiveItem = {
 export function mapTopReleasesToInsights(
   stats: MarketOverviewStatsApi,
   period: string,
+  locale: AppLocale = "en",
 ): MarketInsightLiveItem[] {
   const periodLabel = period.toUpperCase();
-  const blocks: { key: keyof MarketOverviewStatsApi["topReleases"]; tag: string; caption: string }[] = [
-    { key: "byVolume", tag: `Объём · ${periodLabel}`, caption: "оборот 7D" },
-    { key: "byYield", tag: `Доходность · ${periodLabel}`, caption: "ожидаемая yield" },
-    { key: "byLiquidity", tag: "Ликвидность", caption: "индекс ликвидности" },
-    { key: "byProgress", tag: "Первичка", caption: "прогресс раунда" },
+  const blocks: {
+    key: keyof MarketOverviewStatsApi["topReleases"];
+    tagKey: string;
+    captionKey: string;
+  }[] = [
+    { key: "byVolume", tagKey: "marketOverview.insights.live.tag.byVolume", captionKey: "marketOverview.insights.live.caption.turnover7d" },
+    { key: "byYield", tagKey: "marketOverview.insights.live.tag.byYield", captionKey: "marketOverview.insights.live.caption.expectedYield" },
+    { key: "byLiquidity", tagKey: "marketOverview.insights.live.tag.byLiquidity", captionKey: "marketOverview.insights.live.caption.liquidityIndex" },
+    { key: "byProgress", tagKey: "marketOverview.insights.live.tag.byProgress", captionKey: "marketOverview.insights.live.caption.roundProgress" },
   ];
 
   return blocks.map((block) => {
+    const tag = mo(locale, block.tagKey, { period: periodLabel });
     const row = stats.topReleases?.[block.key]?.[0];
     if (!row) {
       return {
         id: `empty-${block.key}`,
-        tag: block.tag,
+        tag,
         metric: "—",
-        metricCaption: "Недостаточно данных",
-        body: "Метрика появится после первых сделок",
-        detail: "Нет релизов в топе для выбранного окна.",
+        metricCaption: mo(locale, "marketOverview.insights.live.empty.metricCaption"),
+        body: mo(locale, "marketOverview.insights.live.empty.body"),
+        detail: mo(locale, "marketOverview.insights.live.empty.detail"),
       };
     }
     const metric =
@@ -274,11 +297,11 @@ export function mapTopReleasesToInsights(
         : formatVolumeMetric(row.value).replace(" USDT", "");
     return {
       id: `live-${block.key}`,
-      tag: block.tag,
+      tag,
       metric,
-      metricCaption: `${row.symbol} · ${block.caption}`,
+      metricCaption: `${row.symbol} · ${mo(locale, block.captionKey)}`,
       body: `${row.title} — ${row.artist}`,
-      detail: `Релиз в топе каталога Spliton по метрике «${block.tag}».`,
+      detail: mo(locale, "marketOverview.insights.live.top.detail", { tag }),
     };
   });
 }

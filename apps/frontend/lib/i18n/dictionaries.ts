@@ -2,6 +2,13 @@ import { mergeAppLocale } from "./locale-dictionary-merge";
 import type { AppLocale } from "./types";
 import { ADMIN_MESSAGES } from "./admin-messages";
 
+export {
+  containsCyrillic,
+  localeMessage,
+  lookupDictionaryMessage,
+  type LocaleMessageTable,
+} from "./normalize-locale";
+
 export { CLIENT_DICTIONARIES } from "./client-dictionaries";
 
 export const DICTIONARIES: Record<AppLocale, Record<string, string>> = {
@@ -31,10 +38,10 @@ export function messageForApiError(
   fallback?: string,
 ): string {
   const dict = DICTIONARIES[locale];
-  const ru = DICTIONARIES.ru;
+  const en = DICTIONARIES.en;
   if (code && dict[code]) return dict[code];
-  if (code && locale !== "ru" && ru[code]) return ru[code];
-  if (code) return dict.UNKNOWN_ERROR ?? ru.UNKNOWN_ERROR;
-  if (fallback && fallback.trim() && !looksTechnical(fallback)) return fallback;
-  return dict.UNKNOWN_ERROR ?? ru.UNKNOWN_ERROR;
+  if (code && locale !== "ru" && en[code]) return en[code];
+  if (code) return dict.UNKNOWN_ERROR ?? en.UNKNOWN_ERROR ?? "Operation failed. Please try again.";
+  if (fallback && fallback.trim() && !looksTechnical(fallback) && locale === "ru") return fallback;
+  return dict.UNKNOWN_ERROR ?? en.UNKNOWN_ERROR ?? "Operation failed. Please try again.";
 }

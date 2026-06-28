@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/lib/i18n/types";
+import { localeMessage } from "@/lib/i18n/normalize-locale";
 import { PROFILE_MESSAGES } from "@/lib/i18n/profile-messages";
 import { intlLocaleFor } from "@/lib/i18n/formatters";
 
@@ -75,13 +76,8 @@ const ACTION_LABEL_FALLBACK: Partial<Record<AppLocale, Record<string, string>>> 
   },
 };
 
-function dict(locale: AppLocale) {
-  return PROFILE_MESSAGES[locale] ?? PROFILE_MESSAGES.ru;
-}
-
-function translate(locale: AppLocale, key: string): string | undefined {
-  const m = dict(locale);
-  return m[key] ?? PROFILE_MESSAGES.ru[key];
+function translate(locale: AppLocale, key: string, fallback?: string): string {
+  return localeMessage(PROFILE_MESSAGES, locale, key, fallback);
 }
 
 /** User-facing title for an auth / security audit action. */
@@ -91,17 +87,21 @@ export function securityEventLabel(action: string, locale: AppLocale): string {
   const fromFallback = ACTION_LABEL_FALLBACK[locale]?.[normalized];
   if (fromFallback) return fromFallback;
 
-  const fromSecurity = translate(locale, `profile.security.events.action.${normalized}`);
-  if (fromSecurity) return fromSecurity;
-  const fromOverview = translate(locale, `profile.overview.activity.event.${normalized}`);
-  if (fromOverview) return fromOverview;
-  return translate(locale, "profile.security.events.action.UNKNOWN") ?? normalized;
+  const securityKey = `profile.security.events.action.${normalized}`;
+  const fromSecurity = translate(locale, securityKey);
+  if (fromSecurity !== securityKey) return fromSecurity;
+  const overviewKey = `profile.overview.activity.event.${normalized}`;
+  const fromOverview = translate(locale, overviewKey);
+  if (fromOverview !== overviewKey) return fromOverview;
+  return translate(locale, "profile.security.events.action.UNKNOWN", normalized);
 }
 
 /** Optional one-line explanation shown under high-signal events. */
 export function securityEventHint(action: string, locale: AppLocale): string | null {
   const normalized = action.trim().toUpperCase();
-  return translate(locale, `profile.security.events.hint.${normalized}`) ?? null;
+  const key = `profile.security.events.hint.${normalized}`;
+  const msg = translate(locale, key);
+  return msg !== key ? msg : null;
 }
 
 export function securityEventTone(action: string): SecurityEventTone {
@@ -112,7 +112,7 @@ export function formatSecurityEventIp(ip: string | null | undefined, locale: App
   if (!ip?.trim()) return null;
   const value = ip.trim();
   if (value === "::1" || value === "127.0.0.1" || value.toLowerCase() === "localhost") {
-    return translate(locale, "profile.security.events.ipLocal") ?? (locale === "ru" ? "Это устройство" : "This device");
+    return translate(locale, "profile.security.events.ipLocal", "This device");
   }
   if (value.startsWith("::ffff:")) return value.slice("::ffff:".length);
   return value;

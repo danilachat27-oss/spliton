@@ -7,6 +7,7 @@ import { useI18n } from "@/components/providers/i18n-provider";
 import { SortHeader } from "@/components/shared/exchange/sort-header";
 import { analyticsReleaseDetailPath } from "@/constants/routes";
 import { directionFromChangePct } from "@/lib/analytics/change-pct";
+import { analyticsReleaseStatusLabel } from "@/lib/i18n/analytics-messages";
 import { cn } from "@/lib/utils";
 import type { ReleaseAnalyticsRow, ReleaseAnalyticsSortKey } from "@/types/analytics/releases";
 
@@ -29,7 +30,7 @@ export function ReleaseAnalyticsReleasesTable({
   onToggleWatch: (id: string) => void;
 }) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   return (
     <div className="mt-5 overflow-hidden rounded-xl bg-[#111111]">
@@ -39,7 +40,7 @@ export function ReleaseAnalyticsReleasesTable({
             <tr className="text-zinc-500">
               <th className="w-9 py-3 pr-1 pl-3" aria-label={t("analytics.releases.table.localMarkAria")} />
               <th className="py-3 pr-4 font-normal">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Название</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">{t("analytics.releases.table.name")}</span>
               </th>
               <th className="py-3 pr-3">
                 <SortHeader
@@ -54,10 +55,10 @@ export function ReleaseAnalyticsReleasesTable({
                 <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Δ</span>
               </th>
               <th className="py-3 pr-4">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Динамика</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">{t("analytics.releases.table.dynamics")}</span>
               </th>
               <th className="py-3 pr-4">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Коридор</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">{t("analytics.releases.table.corridor")}</span>
               </th>
               <th className="py-3 pr-3">
                 <SortHeader
@@ -88,7 +89,7 @@ export function ReleaseAnalyticsReleasesTable({
                 <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Holders</span>
               </th>
               <th className="py-3 pr-4 pl-0 font-normal">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Статус</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">{t("analytics.releases.table.status")}</span>
               </th>
             </tr>
           </thead>
@@ -177,7 +178,7 @@ export function ReleaseAnalyticsReleasesTable({
                     {r.holdersCount != null ? r.holdersCount : "—"}
                   </td>
                   <td className="py-2.5 pr-4 align-middle font-sans text-[12px] text-zinc-500">
-                    {r.status === "Active" ? "Активен" : r.status === "Paused" ? "Пауза" : "Закрыт"}
+                    {analyticsReleaseStatusLabel(r.status, locale)}
                   </td>
                 </tr>
               );
@@ -186,7 +187,7 @@ export function ReleaseAnalyticsReleasesTable({
         </table>
       </div>
       {rows.length === 0 ? (
-        <div className="py-12 text-center font-sans text-[13px] text-zinc-500">Нет релизов в выборке</div>
+        <div className="py-12 text-center font-sans text-[13px] text-zinc-500">{t("analytics.releases.table.empty")}</div>
       ) : null}
     </div>
   );

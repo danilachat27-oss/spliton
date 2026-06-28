@@ -4,6 +4,8 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useAuth } from "@/components/providers/auth-provider";
+import { useI18n } from "@/components/providers/i18n-provider";
+import { localizedApiError } from "@/lib/api/localized-error";
 import { adaptAnalyticsListItem } from "@/lib/analytics/release-analytics-adapter";
 import {
   buildReleaseAnalyticsUrlSearchParams,
@@ -37,6 +39,9 @@ import type {
   ReleaseRowGenre,
   ReleaseRowStatus,
 } from "@/types/analytics/releases";
+import type { AppLocale } from "@/lib/i18n/types";
+import { localeMessage } from "@/lib/i18n/normalize-locale";
+import { ANALYTICS_MESSAGES } from "@/lib/i18n/analytics-messages";
 
 const LIVE_DEBOUNCE_MS = 320;
 const DEFAULT_PAGE_SIZE = 24;
@@ -68,47 +73,54 @@ function formatPayoutsTotal(value: string | null | undefined): string {
   return value.includes("USDT") ? value : `${value} USDT`;
 }
 
-function formatPayoutLag(min: number | null | undefined, max: number | null | undefined): string {
+function formatPayoutLag(min: number | null | undefined, max: number | null | undefined, locale: AppLocale): string {
+  const dayLabel = (count: number) =>
+    localeMessage(ANALYTICS_MESSAGES, locale, "analytics.releases.payoutLag.days").replace("{count}", String(count));
   if (min != null && max != null) {
-    if (min === max) return `${min} дн.`;
-    return `${min}–${max} дн.`;
+    if (min === max) return dayLabel(min);
+    return localeMessage(ANALYTICS_MESSAGES, locale, "analytics.releases.payoutLag.range")
+      .replace("{min}", String(min))
+      .replace("{max}", String(max));
   }
-  if (min != null) return `${min} дн.`;
-  if (max != null) return `${max} дн.`;
+  if (min != null) return dayLabel(min);
+  if (max != null) return dayLabel(max);
   return "—";
 }
 
-const NO_DATA = "Недостаточно данных";
+function noDataLabel(locale: AppLocale): string {
+  return localeMessage(ANALYTICS_MESSAGES, locale, "analytics.releases.charts.insufficientData", "No data");
+}
 
-function overviewStatsFromApi(overview: ReleaseAnalyticsOverviewApi) {
+function overviewStatsFromApi(overview: ReleaseAnalyticsOverviewApi, locale: AppLocale) {
   const { kpis } = overview;
+  const empty = noDataLabel(locale);
   return {
-    totalReleases: kpis.totalReleases != null ? String(kpis.totalReleases) : NO_DATA,
+    totalReleases: kpis.totalReleases != null ? String(kpis.totalReleases) : empty,
     avgYield: formatOverviewYield(kpis.averageYieldPct),
-    active: kpis.activeReleases != null ? String(kpis.activeReleases) : NO_DATA,
-    payoutsReleases: kpis.payoutsReleases != null ? String(kpis.payoutsReleases) : NO_DATA,
+    active: kpis.activeReleases != null ? String(kpis.activeReleases) : empty,
+    payoutsReleases: kpis.payoutsReleases != null ? String(kpis.payoutsReleases) : empty,
     primaryVolume: formatPayoutsTotal(kpis.primaryVolumeUsdt),
     payouts: formatPayoutsTotal(kpis.totalPayoutsUsdt),
     secondaryVolume: formatPayoutsTotal(kpis.secondaryVolumeUsdt),
-    holders: kpis.totalHolders != null ? String(kpis.totalHolders) : NO_DATA,
-    listings: kpis.activeSecondaryListings != null ? String(kpis.activeSecondaryListings) : NO_DATA,
+    holders: kpis.totalHolders != null ? String(kpis.totalHolders) : empty,
+    listings: kpis.activeSecondaryListings != null ? String(kpis.activeSecondaryListings) : empty,
     avgProgress:
       kpis.avgProgressPct != null
         ? `${Number(kpis.avgProgressPct).toFixed(1).replace(".", ",")}%`
-        : NO_DATA,
+        : empty,
     avgLiquidity:
       kpis.avgLiquidityScore != null
         ? `${Number(kpis.avgLiquidityScore).toFixed(0)}%`
-        : NO_DATA,
-    topVolume: kpis.topReleaseByVolume?.title ?? NO_DATA,
+        : empty,
+    topVolume: kpis.topReleaseByVolume?.title ?? empty,
     topVolumeHref: kpis.topReleaseByVolume?.id
       ? analyticsReleaseDetailPath(kpis.topReleaseByVolume.id)
       : undefined,
-    topPayouts: kpis.topReleaseByPayouts?.title ?? NO_DATA,
+    topPayouts: kpis.topReleaseByPayouts?.title ?? empty,
     topPayoutsHref: kpis.topReleaseByPayouts?.id
       ? analyticsReleaseDetailPath(kpis.topReleaseByPayouts.id)
       : undefined,
-    payoutLag: formatPayoutLag(kpis.payoutLagDaysMin, kpis.payoutLagDaysMax),
+    payoutLag: formatPayoutLag(kpis.payoutLagDaysMin, kpis.payoutLagDaysMax, locale),
   };
 }
 
@@ -117,6 +129,7 @@ export function useReleaseAnalyticsState() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { authorizedFetch } = useAuth();
+  const { locale } = useI18n();
   const liveMode = isLiveReleaseAnalyticsEnabled();
 
   const urlState = React.useMemo(
@@ -233,13 +246,13 @@ export function useReleaseAnalyticsState() {
       setLiveRows(res.items.map(adaptAnalyticsListItem));
       setPagination(res.pagination);
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : "Не удалось загрузить аналитику");
+      setLoadError(localizedApiError(e, locale));
       setLiveRows([]);
       setPagination(null);
     } finally {
       setListLoading(false);
     }
-  }, [authorizedFetch, listQuery, liveMode]);
+  }, [authorizedFetch, listQuery, liveMode, locale]);
 
   React.useEffect(() => {
     if (!liveMode) {
@@ -335,32 +348,41 @@ export function useReleaseAnalyticsState() {
       topPayouts: "Neon Drift",
       topPayoutsHref: analyticsReleaseDetailPath("1"),
       payoutLag:
-        period === "7d" ? "11 дн." : period === "30d" ? "14 дн." : period === "90d" ? "16 дн." : "15 дн.",
+        period === "7d"
+          ? formatPayoutLag(11, 11, locale)
+          : period === "30d"
+            ? formatPayoutLag(14, 14, locale)
+            : period === "90d"
+              ? formatPayoutLag(16, 16, locale)
+              : formatPayoutLag(15, 15, locale),
     };
-  }, [period]);
+  }, [locale, period]);
 
-  const emptyLiveStats = {
-    totalReleases: NO_DATA,
-    avgYield: NO_DATA,
-    active: NO_DATA,
-    payoutsReleases: NO_DATA,
-    primaryVolume: NO_DATA,
-    payouts: NO_DATA,
-    secondaryVolume: NO_DATA,
-    holders: NO_DATA,
-    listings: NO_DATA,
-    avgProgress: NO_DATA,
-    avgLiquidity: NO_DATA,
-    topVolume: NO_DATA,
-    topPayouts: NO_DATA,
-    payoutLag: NO_DATA,
-  } as const;
+  const emptyLiveStats = React.useMemo(() => {
+    const empty = noDataLabel(locale);
+    return {
+      totalReleases: empty,
+      avgYield: empty,
+      active: empty,
+      payoutsReleases: empty,
+      primaryVolume: empty,
+      payouts: empty,
+      secondaryVolume: empty,
+      holders: empty,
+      listings: empty,
+      avgProgress: empty,
+      avgLiquidity: empty,
+      topVolume: empty,
+      topPayouts: empty,
+      payoutLag: empty,
+    } as const;
+  }, [locale]);
 
   const stats = React.useMemo(() => {
-    if (liveMode && overview) return overviewStatsFromApi(overview);
+    if (liveMode && overview) return overviewStatsFromApi(overview, locale);
     if (liveMode) return emptyLiveStats;
     return mockStats;
-  }, [liveMode, mockStats, overview]);
+  }, [emptyLiveStats, liveMode, locale, mockStats, overview]);
 
   const filteredRows = React.useMemo(() => {
     if (liveMode) return liveRows ?? [];

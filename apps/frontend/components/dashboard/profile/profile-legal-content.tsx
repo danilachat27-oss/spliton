@@ -77,7 +77,13 @@ export function ProfileLegalContent() {
   }, [load]);
 
   const allMissing = useMemo(
-    () => (data && !offline ? getAllMissingConsents(data).filter((item) => !isFallbackPolicyId(item.policyId)) : []),
+    () =>
+      data && !offline
+        ? getAllMissingConsents(data).filter(
+            (item): item is MissingConsentItem & { policyId: string } =>
+              Boolean(item.policyId && !isFallbackPolicyId(item.policyId)),
+          )
+        : [],
     [data, offline],
   );
 
@@ -104,15 +110,16 @@ export function ProfileLegalContent() {
 
   const acceptOne = useCallback(
     async (item: MissingConsentItem) => {
-      if (!confirmIds[item.policyId] || isFallbackPolicyId(item.policyId)) return;
-      setAcceptingId(item.policyId);
+      const policyId = item.policyId;
+      if (!policyId || !confirmIds[policyId] || isFallbackPolicyId(policyId)) return;
+      setAcceptingId(policyId);
       setAcceptError(null);
       try {
-        await acceptLegalConsents([item.policyId], "PROFILE", authorizedFetch);
+        await acceptLegalConsents([policyId], "PROFILE", authorizedFetch);
         await load();
         setConfirmIds((prev) => {
           const next = { ...prev };
-          delete next[item.policyId];
+          delete next[policyId];
           return next;
         });
       } catch {

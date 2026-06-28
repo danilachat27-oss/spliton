@@ -1,10 +1,10 @@
-import type { AppLocale } from "@/lib/i18n/types";
+import { localeMessage } from "@/lib/i18n/normalize-locale";
 import { PROFILE_MESSAGES } from "@/lib/i18n/profile-messages";
+import type { AppLocale } from "@/lib/i18n/types";
 
 export function completenessItemLabel(itemId: string, locale: AppLocale): string {
   const key = `profile.overview.readiness.item.${itemId}`;
-  const m = PROFILE_MESSAGES[locale];
-  return m[key] ?? PROFILE_MESSAGES.ru[key] ?? itemId;
+  return localeMessage(PROFILE_MESSAGES, locale, key, itemId);
 }
 
 export function kycStatusLabel(status: string, locale: AppLocale): string {
@@ -19,26 +19,22 @@ export function kycStatusLabel(status: string, locale: AppLocale): string {
     expired: "profile.overview.badge.kyc.rejected",
   };
   const key = map[normalized] ?? "profile.overview.badge.kyc.unknown";
-  const m = PROFILE_MESSAGES[locale];
-  return m[key] ?? PROFILE_MESSAGES.ru[key] ?? status;
+  return localeMessage(PROFILE_MESSAGES, locale, key, status);
 }
 
 export function securityLevelLabel(level: string, locale: AppLocale): string {
   const key = `profile.overview.badge.security.${level.toLowerCase()}`;
-  const m = PROFILE_MESSAGES[locale];
-  return m[key] ?? PROFILE_MESSAGES.ru[key] ?? level;
+  return localeMessage(PROFILE_MESSAGES, locale, key, level);
 }
 
 export function securityEventLabel(action: string, locale: AppLocale): string {
   const key = `profile.overview.activity.event.${action}`;
-  const m = PROFILE_MESSAGES[locale];
-  return m[key] ?? PROFILE_MESSAGES.ru[key] ?? action;
+  return localeMessage(PROFILE_MESSAGES, locale, key, action);
 }
 
 export function accessLabel(allowed: boolean | undefined, locale: AppLocale): string {
   const key = allowed
     ? "profile.overview.access.allowed"
     : "profile.overview.access.restricted";
-  const m = PROFILE_MESSAGES[locale];
-  return m[key] ?? PROFILE_MESSAGES.ru[key] ?? (allowed ? "OK" : "—");
+  return localeMessage(PROFILE_MESSAGES, locale, key, allowed ? "OK" : "—");
 }

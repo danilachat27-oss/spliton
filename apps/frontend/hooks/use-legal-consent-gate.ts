@@ -102,14 +102,18 @@ export function useLegalConsentGate(source: ConsentSource, enabled: boolean) {
     void refresh();
   }, [refresh]);
 
+  const hasUnpublishedPolicies = missingItems.some(
+    (item) => item.reason === "POLICY_NOT_PUBLISHED",
+  );
   const hasBlockingEligibility = Boolean(eligibility && !eligibility.allowed);
 
   const canProceed = useMemo(() => {
     if (!enabled) return true;
     if (isChecking || checkError) return false;
     if (hasBlockingEligibility) return false;
+    if (hasUnpublishedPolicies) return false;
     return true;
-  }, [checkError, enabled, hasBlockingEligibility, isChecking]);
+  }, [checkError, enabled, hasBlockingEligibility, hasUnpublishedPolicies, isChecking]);
 
   const onConsentAccepted = useCallback(() => {
     setConsentOpen(false);

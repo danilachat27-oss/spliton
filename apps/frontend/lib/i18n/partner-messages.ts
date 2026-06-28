@@ -906,12 +906,14 @@ export const PARTNER_MESSAGES: Record<AppLocale, Record<string, string>> = {
   pt: PT,
 };
 
+import { localeMessage } from "./normalize-locale";
+
 export function partnerStatusLabel(status: string, locale: AppLocale): string {
   const key = `partner.status.${status}`;
-  return PARTNER_MESSAGES[locale][key] ?? PARTNER_MESSAGES.ru[key] ?? status;
+  return localeMessage(PARTNER_MESSAGES, locale, key, status);
 }
 
 export function partnerTypeLabel(type: string, locale: AppLocale): string {
   const key = `partner.type.${type}`;
-  return PARTNER_MESSAGES[locale][key] ?? PARTNER_MESSAGES.ru[key] ?? type;
+  return localeMessage(PARTNER_MESSAGES, locale, key, type);
 }

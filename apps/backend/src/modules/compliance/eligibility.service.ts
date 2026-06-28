@@ -10,6 +10,7 @@ import { FeatureFlagsService } from '../../common/platform/feature-flags/feature
 import { throwAppError } from '../../common/platform/errors/throw-app-error';
 import { ErrorCodes } from '../../common/platform/errors/error-codes';
 import { LegalConsentsService } from '../legal/legal-consents.service';
+import { isFinancialConsentSource } from '../legal/legal-consent.types';
 import { ComplianceEnforcementService } from './compliance-enforcement.service';
 import { CountryRestrictionsService } from './country-restrictions.service';
 import {
@@ -83,10 +84,24 @@ export class EligibilityService {
     }
 
     const missing = await this.consents.getMissingConsents(userId, action);
-    if (missing.length > 0) {
-      return this.denied('CONSENT_REQUIRED', ELIGIBILITY_MESSAGES.CONSENT_REQUIRED, missing.map(
-        (m) => `/terms`,
-      ));
+    const unpublished = this.consents.getUnpublishedPolicyTypes(missing);
+    if (unpublished.length > 0 && isFinancialConsentSource(action)) {
+      return this.denied(
+        'LEGAL_POLICY_MISSING',
+        ELIGIBILITY_MESSAGES.LEGAL_POLICY_MISSING,
+        undefined,
+        undefined,
+        unpublished,
+      );
+    }
+
+    const consentMissing = missing.filter((m) => m.reason === 'CONSENT_REQUIRED');
+    if (consentMissing.length > 0) {
+      return this.denied(
+        'CONSENT_REQUIRED',
+        ELIGIBILITY_MESSAGES.CONSENT_REQUIRED,
+        consentMissing.map(() => `/terms`),
+      );
     }
 
     const kyc = await this.prisma.kycVerification.findFirst({
@@ -133,6 +148,7 @@ export class EligibilityService {
         blockingCode: result.blockingCode,
         requiredActions: result.requiredActions,
         policyLinks: result.policyLinks,
+        missingPolicyTypes: result.missingPolicyTypes,
       },
     );
   }
@@ -214,6 +230,7 @@ export class EligibilityService {
     userMessage: string,
     requiredActions?: string[],
     adminMessage?: string,
+    missingPolicyTypes?: string[],
   ): EligibilityResult {
     return {
       allowed: false,
@@ -221,6 +238,7 @@ export class EligibilityService {
       userMessage,
       adminMessage,
       requiredActions,
+      missingPolicyTypes,
     };
   }
 }

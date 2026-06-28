@@ -1,9 +1,15 @@
 /**
- * Справочные коэффициенты для UI-калькулятора (non-live).
+ * Illustrative coefficients for the standalone calculator (non-live).
+ * Primary/secondary rates align with backend defaults — see platform-fee-fallbacks.
  */
+import {
+  PRIMARY_FEE_FALLBACK_RATE,
+  SECONDARY_FEE_FALLBACK_RATE,
+} from "@/lib/market/platform-fee-fallbacks";
+
 export const CALCULATOR_MOCK = {
-  buyPlatformFeeRate: 0.025,
-  secondaryMarketFeeRate: 0.015,
+  buyPlatformFeeRate: PRIMARY_FEE_FALLBACK_RATE,
+  secondaryMarketFeeRate: SECONDARY_FEE_FALLBACK_RATE,
   withdrawFeeMinUsdt: 1,
   withdrawFeeRate: 0.005,
   defaultPricePerUnitUsdt: 12.5,

@@ -16,6 +16,7 @@ import {
   extractApiErrorCode,
 } from "@/lib/secondary-market/classify-sell-listing-error";
 import { formatUsdtRu } from "@/lib/wallet/format-money";
+import { SECONDARY_FEE_FALLBACK_PCT, SECONDARY_FEE_FALLBACK_RATE } from "@/lib/market/platform-fee-fallbacks";
 import { getPrimaryUnitPriceUsdt, roundUsdt2 } from "@/lib/market-overview/pricing";
 import { cn } from "@/lib/utils";
 import {
@@ -95,14 +96,14 @@ export function AssetsSellUnitsOrderPanel({ row, heldUnits, secondaryTradeHref }
   const effectiveHeld = isLive ? liveHeldUnits : heldUnits;
   const clampedQty = Math.min(Math.max(1, qty), effectiveHeld);
   const totalUsdt = roundUsdt2(unitPrice * clampedQty);
-  const feeRateMock = 0.002;
+  const feeRateMock = SECONDARY_FEE_FALLBACK_RATE;
   const feeUsdt = feePreview
     ? roundUsdt2(Number(feePreview.feeAmount))
     : roundUsdt2(totalUsdt * feeRateMock);
   const netReceiveUsdt = feePreview
     ? roundUsdt2(Number(feePreview.sellerNet))
     : roundUsdt2(Math.max(0, totalUsdt - feeUsdt));
-  const feePctLabel = feePreview?.feePct ?? "1";
+  const feePctLabel = feePreview?.feePct ?? String(SECONDARY_FEE_FALLBACK_PCT);
 
   const previewBlocking =
     isLive &&

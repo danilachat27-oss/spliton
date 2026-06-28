@@ -1,3 +1,4 @@
+import { localeMessage } from "./normalize-locale";
 import type { AppLocale } from "./types";
 
 const RU: Record<string, string> = {
@@ -119,6 +120,11 @@ const RU: Record<string, string> = {
 
   "analytics.detail.secondary.timeline.emptyTitle": "История пуста",
   "analytics.detail.secondary.timeline.emptyDetail": "Операций по этому релизу пока нет",
+  "analytics.detail.secondary.timeline.demo.buy": "Покупка UNT",
+  "analytics.detail.secondary.timeline.demo.order": "Выставление заявки",
+  "analytics.detail.secondary.timeline.demo.payout": "Получение выплат",
+  "analytics.detail.secondary.timeline.demo.orderDetail": "80 UNT · лимит",
+  "analytics.detail.secondary.context.activityDemoValue": "126 / 412 сделок",
 
   "analytics.detail.secondary.context.activity7d": "Активность 7D",
   "analytics.detail.secondary.context.turnover24h": "Оборот 24ч",
@@ -157,6 +163,10 @@ const RU: Record<string, string> = {
   "analytics.releases.table.dynamics": "Динамика",
   "analytics.releases.table.corridor": "Коридор",
   "analytics.releases.table.status": "Статус",
+  "analytics.releases.table.empty": "Нет релизов в выборке",
+  "analytics.releases.loadError": "Не удалось загрузить аналитику",
+  "analytics.releases.payoutLag.days": "{count} дн.",
+  "analytics.releases.payoutLag.range": "{min}–{max} дн.",
   "analytics.releases.charts.hintPrimary": "Появится после первых primary-покупок",
   "analytics.releases.charts.hintSecondary": "Появится после первых сделок на вторичке",
   "analytics.releases.charts.hintPayouts": "Появится после первого периода выплат",
@@ -309,6 +319,11 @@ const EN: Record<string, string> = {
 
   "analytics.detail.secondary.timeline.emptyTitle": "History is empty",
   "analytics.detail.secondary.timeline.emptyDetail": "No operations for this release yet",
+  "analytics.detail.secondary.timeline.demo.buy": "UNT purchase",
+  "analytics.detail.secondary.timeline.demo.order": "Order placed",
+  "analytics.detail.secondary.timeline.demo.payout": "Payout received",
+  "analytics.detail.secondary.timeline.demo.orderDetail": "80 UNT · limit",
+  "analytics.detail.secondary.context.activityDemoValue": "126 / 412 trades",
 
   "analytics.detail.secondary.context.activity7d": "7D activity",
   "analytics.detail.secondary.context.turnover24h": "24h turnover",
@@ -347,6 +362,10 @@ const EN: Record<string, string> = {
   "analytics.releases.table.dynamics": "Trend",
   "analytics.releases.table.corridor": "Range",
   "analytics.releases.table.status": "Status",
+  "analytics.releases.table.empty": "No releases in this selection",
+  "analytics.releases.loadError": "Failed to load analytics",
+  "analytics.releases.payoutLag.days": "{count} d",
+  "analytics.releases.payoutLag.range": "{min}–{max} d",
   "analytics.releases.charts.hintPrimary": "Appears after first primary purchases",
   "analytics.releases.charts.hintSecondary": "Appears after first secondary trades",
   "analytics.releases.charts.hintPayouts": "Appears after the first payout period",
@@ -499,6 +518,11 @@ const ES: Record<string, string> = {
 
   "analytics.detail.secondary.timeline.emptyTitle": "Historial vacío",
   "analytics.detail.secondary.timeline.emptyDetail": "Aún no hay operaciones para este lanzamiento",
+  "analytics.detail.secondary.timeline.demo.buy": "Compra de UNT",
+  "analytics.detail.secondary.timeline.demo.order": "Orden publicada",
+  "analytics.detail.secondary.timeline.demo.payout": "Pago recibido",
+  "analytics.detail.secondary.timeline.demo.orderDetail": "80 UNT · límite",
+  "analytics.detail.secondary.context.activityDemoValue": "126 / 412 operaciones",
 
   "analytics.detail.secondary.context.activity7d": "Actividad 7D",
   "analytics.detail.secondary.context.turnover24h": "Volumen 24h",
@@ -537,6 +561,10 @@ const ES: Record<string, string> = {
   "analytics.releases.table.dynamics": "Dinámica",
   "analytics.releases.table.corridor": "Corredor",
   "analytics.releases.table.status": "Estado",
+  "analytics.releases.table.empty": "No hay lanzamientos en la selección",
+  "analytics.releases.loadError": "No se pudo cargar la analítica",
+  "analytics.releases.payoutLag.days": "{count} d",
+  "analytics.releases.payoutLag.range": "{min}–{max} d",
   "analytics.releases.charts.hintPrimary": "Aparecerá tras las primeras compras primarias",
   "analytics.releases.charts.hintSecondary": "Aparecerá tras las primeras operaciones secundarias",
   "analytics.releases.charts.hintPayouts": "Aparecerá tras el primer periodo de pagos",
@@ -689,6 +717,11 @@ const PT: Record<string, string> = {
 
   "analytics.detail.secondary.timeline.emptyTitle": "Historial vazio",
   "analytics.detail.secondary.timeline.emptyDetail": "Ainda não há operações para este lançamento",
+  "analytics.detail.secondary.timeline.demo.buy": "Compra de UNT",
+  "analytics.detail.secondary.timeline.demo.order": "Ordem publicada",
+  "analytics.detail.secondary.timeline.demo.payout": "Pagamento recebido",
+  "analytics.detail.secondary.timeline.demo.orderDetail": "80 UNT · limite",
+  "analytics.detail.secondary.context.activityDemoValue": "126 / 412 operações",
 
   "analytics.detail.secondary.context.activity7d": "Atividade 7D",
   "analytics.detail.secondary.context.turnover24h": "Volume 24h",
@@ -727,6 +760,10 @@ const PT: Record<string, string> = {
   "analytics.releases.table.dynamics": "Dinâmica",
   "analytics.releases.table.corridor": "Corredor",
   "analytics.releases.table.status": "Estado",
+  "analytics.releases.table.empty": "Nenhum lançamento na seleção",
+  "analytics.releases.loadError": "Falha ao carregar analítica",
+  "analytics.releases.payoutLag.days": "{count} d",
+  "analytics.releases.payoutLag.range": "{min}–{max} d",
   "analytics.releases.charts.hintPrimary": "Aparecerá após as primeiras compras primárias",
   "analytics.releases.charts.hintSecondary": "Aparecerá após as primeiras operações secundárias",
   "analytics.releases.charts.hintPayouts": "Aparecerá após o primeiro período de pagamentos",
@@ -772,35 +809,26 @@ export function analyticsReleaseStatusLabel(
   locale: AppLocale,
   variant: "hero" | "round" = "hero",
 ): string {
-  const m = ANALYTICS_MESSAGES[locale];
-  const ru = ANALYTICS_MESSAGES.ru;
-  const map: Record<string, string> =
+  const suffix =
     variant === "round"
-      ? {
-          Active: m["analytics.detail.status.roundActive"] ?? ru["analytics.detail.status.roundActive"],
-          Paused: m["analytics.detail.status.roundPaused"] ?? ru["analytics.detail.status.roundPaused"],
-          Closed: m["analytics.detail.status.roundClosed"] ?? ru["analytics.detail.status.roundClosed"],
-        }
-      : {
-          Active: m["analytics.detail.status.active"] ?? ru["analytics.detail.status.active"],
-          Paused: m["analytics.detail.status.paused"] ?? ru["analytics.detail.status.paused"],
-          Closed: m["analytics.detail.status.closed"] ?? ru["analytics.detail.status.closed"],
-        };
-  return map[status] ?? status;
+      ? { Active: "roundActive", Paused: "roundPaused", Closed: "roundClosed" }
+      : { Active: "active", Paused: "paused", Closed: "closed" };
+  const mapped = suffix[status as keyof typeof suffix];
+  if (!mapped) return status;
+  return localeMessage(ANALYTICS_MESSAGES, locale, `analytics.detail.status.${mapped}`, status);
 }
 
 export function analyticsTermLabel(rawKey: string, locale: AppLocale): string {
-  const m = ANALYTICS_MESSAGES[locale];
-  const ru = ANALYTICS_MESSAGES.ru;
   const k = rawKey.toLowerCase();
-  if (k.includes("investor")) return m["analytics.detail.term.investorShare"] ?? ru["analytics.detail.term.investorShare"];
-  if (k.includes("artist_share")) return m["analytics.detail.term.artistShare"] ?? ru["analytics.detail.term.artistShare"];
-  if (k.includes("distribution")) return m["analytics.detail.term.distribution"] ?? ru["analytics.detail.term.distribution"];
-  if (k.includes("platform_fee")) return m["analytics.detail.term.platformFee"] ?? ru["analytics.detail.term.platformFee"];
-  if (k.includes("raise_target")) return m["analytics.detail.term.raiseTarget"] ?? ru["analytics.detail.term.raiseTarget"];
-  if (k.includes("hard_cap")) return m["analytics.detail.term.hardCap"] ?? ru["analytics.detail.term.hardCap"];
-  if (k.includes("total_units")) return m["analytics.detail.term.totalUnits"] ?? ru["analytics.detail.term.totalUnits"];
-  if (k.includes("текущий статус")) return m["analytics.detail.secondary.terms.roundStatus"] ?? ru["analytics.detail.secondary.terms.roundStatus"];
+  const pick = (key: string) => localeMessage(ANALYTICS_MESSAGES, locale, key, rawKey.replace(/\s*\(.*?\)\s*/g, "").trim());
+  if (k.includes("investor")) return pick("analytics.detail.term.investorShare");
+  if (k.includes("artist_share")) return pick("analytics.detail.term.artistShare");
+  if (k.includes("distribution")) return pick("analytics.detail.term.distribution");
+  if (k.includes("platform_fee")) return pick("analytics.detail.term.platformFee");
+  if (k.includes("raise_target")) return pick("analytics.detail.term.raiseTarget");
+  if (k.includes("hard_cap")) return pick("analytics.detail.term.hardCap");
+  if (k.includes("total_units")) return pick("analytics.detail.term.totalUnits");
+  if (k.includes("текущий статус")) return pick("analytics.detail.secondary.terms.roundStatus");
   return rawKey.replace(/\s*\(.*?\)\s*/g, "").trim();
 }
 
@@ -810,9 +838,7 @@ export function analyticsHeroBackLabel(
   override?: string,
 ): string {
   if (override) return override;
-  const m = ANALYTICS_MESSAGES[locale];
-  const ru = ANALYTICS_MESSAGES.ru;
-  if (source === "catalog") return m["analytics.detail.hero.back.catalog"] ?? ru["analytics.detail.hero.back.catalog"];
-  if (source === "secondary") return m["analytics.detail.hero.back.secondary"] ?? ru["analytics.detail.hero.back.secondary"];
-  return m["analytics.detail.hero.back.analytics"] ?? ru["analytics.detail.hero.back.analytics"];
+  if (source === "catalog") return localeMessage(ANALYTICS_MESSAGES, locale, "analytics.detail.hero.back.catalog");
+  if (source === "secondary") return localeMessage(ANALYTICS_MESSAGES, locale, "analytics.detail.hero.back.secondary");
+  return localeMessage(ANALYTICS_MESSAGES, locale, "analytics.detail.hero.back.analytics");
 }

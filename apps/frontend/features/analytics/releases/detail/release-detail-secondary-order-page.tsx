@@ -176,9 +176,24 @@ export function ReleaseDetailSecondaryOrderPage({
         : ledgerEvents?.length
           ? ledgerEvents
           : [
-              { title: "Покупка UNT", date: "12.03.2026", detail: "320 UNT", tone: "buy" as const },
-              { title: "Выставление заявки", date: "21.04.2026", detail: "80 UNT · лимит", tone: "order" as const },
-              { title: "Получение выплат", date: "14.04.2026", detail: "+24,80 USDT", tone: "payout" as const },
+              {
+                title: t("analytics.detail.secondary.timeline.demo.buy"),
+                date: "12.03.2026",
+                detail: "320 UNT",
+                tone: "buy" as const,
+              },
+              {
+                title: t("analytics.detail.secondary.timeline.demo.order"),
+                date: "21.04.2026",
+                detail: t("analytics.detail.secondary.timeline.demo.orderDetail"),
+                tone: "order" as const,
+              },
+              {
+                title: t("analytics.detail.secondary.timeline.demo.payout"),
+                date: "14.04.2026",
+                detail: "+24.80 USDT",
+                tone: "payout" as const,
+              },
             ];
 
   return (
@@ -387,7 +402,7 @@ export function ReleaseDetailSecondaryOrderPage({
           <>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
-              { label: t("analytics.detail.secondary.context.activity7d30d"), value: "126 / 412 сделок" },
+              { label: t("analytics.detail.secondary.context.activity7d30d"), value: t("analytics.detail.secondary.context.activityDemoValue") },
               { label: t("analytics.detail.secondary.context.trend"), value: t("analytics.detail.secondary.context.trendModerateUp") },
               { label: t("analytics.detail.secondary.context.supplyDemand"), value: t("analytics.detail.secondary.context.demandUp") },
             ].map((c) => (

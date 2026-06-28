@@ -79,4 +79,27 @@ describe("CatalogTrackCard purchase gating", () => {
     const marketLink = screen.getByRole("link", { name: "Смотреть рынок" });
     expect(marketLink).toHaveAttribute("href", expect.stringContaining("/analytics/releases/sold-out-1"));
   });
+
+  it("renders EN catalog card labels and formatting", () => {
+    render(
+      <I18nProvider initialLocale="en">
+        <CatalogTrackCard
+          item={{
+            ...soldOutItem,
+            purchaseState: "available",
+            availableUnits: 120,
+            statusLabel: "Available",
+            forecastYield: "No data",
+            unitPriceUsdt: "10.00",
+            availablePct: "High",
+          }}
+        />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByText("Available")).toBeInTheDocument();
+    expect(screen.getByText("No data")).toBeInTheDocument();
+    expect(screen.getByText("10.00")).toBeInTheDocument();
+    expect(screen.queryByText(/[А-Яа-яЁё]/)).not.toBeInTheDocument();
+  });
 });

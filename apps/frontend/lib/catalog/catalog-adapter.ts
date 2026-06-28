@@ -1,10 +1,10 @@
 import type { CatalogItem } from "@/lib/catalog-mock";
 import { DICTIONARIES } from "@/lib/i18n/dictionaries";
+import { lookupDictionaryMessage } from "@/lib/i18n/dictionaries";
 import { catalogCardRiskLabel, catalogCardStatusLabel } from "@/lib/i18n/catalog-card-labels";
-import { formatNumber } from "@/lib/i18n/formatters";
+import { formatNumber, formatPercent, intlLocaleFor } from "@/lib/i18n/formatters";
 import { statusLabel } from "@/lib/i18n/status-labels";
 import type { AppLocale } from "@/lib/i18n/types";
-
 import type {
   CatalogReleaseCardApi,
   CatalogReleaseDetailApi,
@@ -16,15 +16,11 @@ import {
 } from "@/lib/catalog/catalog-purchase.util";
 import type { MarketOverviewRow } from "@/types/market-overview";
 
-function dict(locale: AppLocale) {
-  return DICTIONARIES[locale];
-}
-
 function catalogText(locale: AppLocale, key: string): string {
-  const d = dict(locale);
-  return d[key] ?? DICTIONARIES.ru[key] ?? key;
+  return lookupDictionaryMessage(DICTIONARIES[locale], key, locale, {
+    enMessages: DICTIONARIES.en,
+  });
 }
-
 function formatUsdtShort(n: number, locale: AppLocale): string {
   return formatNumber(n, locale);
 }
@@ -54,9 +50,82 @@ function resolveGoalUsdt(
 
 function formatForecastYield(raw: string | null | undefined, locale: AppLocale): string {
   const value = raw?.trim();
-  return value ? value : catalogText(locale, "catalog.cards.noData");
+  if (!value) return catalogText(locale, "catalog.cards.noData");
+  const numeric = Number.parseFloat(value.replace("%", "").replace(/\s/g, "").replace(",", "."));
+  if (!Number.isFinite(numeric)) return catalogText(locale, "catalog.cards.noData");
+  return formatPercent(numeric, locale);
 }
 
+function formatUsdtFixed(value: number, locale: AppLocale, fractionDigits = 2): string {
+  return new Intl.NumberFormat(intlLocaleFor(locale), {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
+function parseDisplayNumber(raw: string): number | null {
+  const normalized = raw.replace(/[^\d,.-]/g, "").replace(/\s/g, "").replace(",", ".");
+  const n = Number.parseFloat(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
+function remapLiquidityLabel(value: string, locale: AppLocale): string {
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower === "высокая" || lower === "high") return statusLabel("liquidity", "high", locale);
+  if (lower === "средняя" || lower === "medium" || lower === "mid") {
+    return statusLabel("liquidity", "medium", locale);
+  }
+  if (lower === "низкая" || lower === "low" || lower === "thin") return statusLabel("liquidity", "low", locale);
+  if (trimmed.endsWith("%")) return trimmed;
+  const n = parseDisplayNumber(trimmed);
+  if (n != null) return `${Math.round(n)}%`;
+  return trimmed;
+}
+
+/** Re-localize mock/demo catalog cards for the active UI locale. */
+export function localizeCatalogItem(item: CatalogItem, locale: AppLocale): CatalogItem {
+  if (item.kind === "market") {
+    const price = parseDisplayNumber(item.sharePrice);
+    const payout = parseDisplayNumber(item.lastMonthPayout);
+    return {
+      ...item,
+      sharePrice: price != null && price > 0 ? formatUsdtFixed(price, locale) : item.sharePrice,
+      sharePriceChange: item.sharePriceChange.includes("%")
+        ? formatForecastYield(item.sharePriceChange, locale)
+        : item.sharePriceChange,
+      lastMonthPayout:
+        payout != null ? formatUsdtFixed(payout, locale) : catalogText(locale, "catalog.cards.noData"),
+      liquidityLabel: item.liquidityLabel
+        ? remapLiquidityLabel(item.liquidityLabel, locale)
+        : item.liquidityLabel,
+    };
+  }
+
+  const unitPrice = parseDisplayNumber(item.unitPriceUsdt);
+  const raised = parseDisplayNumber(item.raised);
+  const goal = item.goal ? parseDisplayNumber(item.goal) : null;
+
+  return {
+    ...item,
+    raised: raised != null ? formatNumber(raised, locale) : item.raised,
+    goal: goal != null ? formatNumber(goal, locale) : item.goal,
+    availablePct: remapLiquidityLabel(item.availablePct, locale),
+    forecastYield: formatForecastYield(item.forecastYield, locale),
+    unitPriceUsdt: unitPrice != null && unitPrice > 0 ? formatUsdtFixed(unitPrice, locale) : "—",
+    statusLabel: catalogCardStatusLabel({
+      purchaseState: item.purchaseState,
+      releaseStatus: item.roundStatus === "completed" ? "sold_out" : undefined,
+      roundStatus: item.roundStatus,
+      locale,
+    }),
+    riskLabel: catalogCardRiskLabel({
+      purchaseState: item.purchaseState,
+      hasLiveRound: item.purchaseState === "available",
+      locale,
+    }),
+  };
+}
 function resolveSecondaryPrice(card: CatalogReleaseCardApi): number {
   return (
     parseAmount(card.bestSecondaryAskPrice) ??
@@ -93,19 +162,10 @@ function formatLiquidityScore(score: number | null | undefined, locale: AppLocal
   return statusLabel("liquidity", "low", locale);
 }
 
-function formatUsdtFixed(value: number, locale: AppLocale, fractionDigits = 2): string {
-  return new Intl.NumberFormat(
-    locale === "ru" ? "ru-RU" : locale === "en" ? "en-US" : locale === "es" ? "es-ES" : "pt-PT",
-    { minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits },
-  ).format(value);
-}
-
 export function adaptCatalogCardToItem(
   card: CatalogReleaseCardApi,
   locale: AppLocale = "ru",
-): CatalogItem {
-  const kind = resolveCardKind(card);
-  const noData = catalogText(locale, "catalog.cards.noData");
+): CatalogItem {  const kind = resolveCardKind(card);
   const lastTrade = catalogText(locale, "catalog.cards.lastTrade");
 
   if (kind === "market") {
@@ -119,8 +179,7 @@ export function adaptCatalogCardToItem(
       genre: card.genre,
       sharePrice: price > 0 ? formatUsdtFixed(price, locale) : "—",
       sharePriceChange: card.lastTradePrice ? lastTrade : "—",
-      lastMonthPayout: card.expectedYieldPct ?? noData,
-      coverUrl: card.coverUrl,
+      lastMonthPayout: formatForecastYield(card.expectedYieldPct, locale),      coverUrl: card.coverUrl,
       shortDescription: card.shortDescription,
       statusLabel: catalogCardStatusLabel({
         purchaseState: card.purchaseState,
@@ -200,8 +259,7 @@ export function adaptCatalogCardToItem(
 
 export function catalogDetailToMarketRow(
   detail: CatalogReleaseDetailApi,
-): MarketOverviewRow {
-  const available = Number.parseFloat(detail.availableUnits) || 0;
+): MarketOverviewRow {  const available = Number.parseFloat(detail.availableUnits) || 0;
   const price = Number.parseFloat(detail.primaryUnitPriceUsdt) || 0;
   const secondaryPrice =
     parseAmount(detail.bestSecondaryAskPrice) ??
@@ -234,12 +292,11 @@ export function catalogDetailToMarketRow(
     primaryUnitPriceUsdt: price,
     secondaryLabel:
       detail.activeSecondaryListingsCount > 0
-        ? "Высокий"
+        ? "High"
         : detail.secondaryMarketEnabled
-          ? "Средний"
+          ? "Medium"
           : "—",
-    liquidityLabel,
-    trend: "flat",
+    liquidityLabel,    trend: "flat",
     sparkline: secondaryPrice > 0 ? [secondaryPrice] : [price].filter((v) => v > 0),
     status: mappedStatus,
     payoutFreq: detail.payoutFreq,

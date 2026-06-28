@@ -4,7 +4,10 @@ import type { AppLocale } from "../i18n/types";
 const PLACEHOLDER_MARKERS = new Set(["\u2014", "\u2013", "-", ""]);
 
 function msg(locale: AppLocale, key: string): string {
-  return CRITICAL_MESSAGES[locale][key] ?? CRITICAL_MESSAGES.ru[key] ?? key;
+  const direct = CRITICAL_MESSAGES[locale][key];
+  if (direct) return direct;
+  if (locale !== "ru" && CRITICAL_MESSAGES.en[key]) return CRITICAL_MESSAGES.en[key];
+  return key;
 }
 
 /** Универсальная подпись вместо «—» / «-» для пустых значений. */

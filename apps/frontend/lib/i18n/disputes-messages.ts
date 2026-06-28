@@ -1,3 +1,4 @@
+import { localeMessage } from "./normalize-locale";
 import type { AppLocale } from "./types";
 
 const RU: Record<string, string> = {
@@ -500,16 +501,21 @@ export const DISPUTES_MESSAGES: Record<AppLocale, Record<string, string>> = {
 
 export function disputeTypeLabel(type: string, locale: AppLocale): string {
   const key = `disputes.type.${type}`;
-  return DISPUTES_MESSAGES[locale][key] ?? DISPUTES_MESSAGES.ru[key] ?? DISPUTES_MESSAGES[locale]["disputes.type.default"];
+  return localeMessage(
+    DISPUTES_MESSAGES,
+    locale,
+    key,
+    localeMessage(DISPUTES_MESSAGES, locale, "disputes.type.default"),
+  );
 }
 
 export function disputeStatusLabel(status: string, locale: AppLocale): string {
   const key = `disputes.status.${status}`;
-  return DISPUTES_MESSAGES[locale][key] ?? DISPUTES_MESSAGES.ru[key] ?? status.replace(/_/g, " ");
+  return localeMessage(DISPUTES_MESSAGES, locale, key, status.replace(/_/g, " "));
 }
 
 export function disputeStampLabel(status: string | undefined, draft: boolean | undefined, locale: AppLocale): string {
-  if (draft || !status) return DISPUTES_MESSAGES[locale]["disputes.doc.stamp.draft"];
+  if (draft || !status) return localeMessage(DISPUTES_MESSAGES, locale, "disputes.doc.stamp.draft");
   const key = `disputes.doc.stamp.${status}`;
-  return DISPUTES_MESSAGES[locale][key] ?? DISPUTES_MESSAGES.ru[key] ?? disputeStatusLabel(status, locale);
+  return localeMessage(DISPUTES_MESSAGES, locale, key) || disputeStatusLabel(status, locale);
 }

@@ -52,12 +52,12 @@ export function MarketOverviewInsights({
   stats?: MarketOverviewStatsApi | null;
   period?: string;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   const items = !live
     ? MARKET_INSIGHT_ITEMS.map((item) => translateInsightItem(t, item))
     : stats
-      ? mapTopReleasesToInsights(stats, period)
+      ? mapTopReleasesToInsights(stats, period, locale)
       : [
           {
             id: "empty-1",

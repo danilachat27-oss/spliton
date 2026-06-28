@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { useAuth } from "@/components/providers/auth-provider";
@@ -30,11 +30,20 @@ import { AuthActionPanel } from "@/components/shared/auth-action-panel";
 
 import { formatUsdtFixedRu, formatUnitsCompact } from "@/lib/market-overview/format";
 import {
-  getPrimaryUnitPriceUsdt,
+  amountFromUnits,
+  clampUnits,
+  computeOwnershipPercent,
+  computePrimaryPurchase,
   parseRuMoneyInput,
-  primaryOrderTotalUsdt,
   unitsFromUsdtBudget,
 } from "@/lib/market-overview/pricing";
+import {
+  derivePrimaryBuyTermsFromSsr,
+  mergePrimaryBuyTermsFromClientRound,
+  mergePrimaryBuyTermsFromPreview,
+  quoteFromPreview,
+  type PrimaryBuyTerms,
+} from "@/lib/catalog/primary-buy-terms";
 import { cn } from "@/lib/utils";
 import { resolveBuyCheckoutMode } from "@/lib/catalog/buy-checkout-policy";
 import { isCatalogBuyBlocked, resolveBlockedCatalogPurchaseState } from "@/lib/catalog/buy-unavailable";
@@ -49,7 +58,6 @@ import {
 } from "./buy-units-payment-result-modal";
 import { CatalogBuyUnavailablePanel } from "./catalog-buy-unavailable-panel";
 
-/** Поля суммы / UNT — без рамки, только лёгкий фон и мягкий «край» при фокусе (как в референсе). */
 const FIELD_BOX = cn(
   "rounded-2xl bg-[#f5f5f6] px-4 py-3.5 transition-[background-color,box-shadow]",
   "focus-within:bg-white focus-within:shadow-[0_6px_28px_-12px_rgba(0,0,0,0.08)]",
@@ -58,7 +66,6 @@ const FIELD_BOX = cn(
 const PAY_INPUT_CLASS =
   "min-w-0 w-full max-w-[220px] border-0 bg-transparent p-0 text-[28px] font-semibold tabular-nums tracking-tight text-zinc-950 outline-none ring-0 md:max-w-[260px] md:text-[32px]";
 
-/** Мягкое inline-уведомление без рамки — как на бирже (secondary market). */
 function BuyPanelNotice({
   tone,
   className,
@@ -94,14 +101,33 @@ function AssetSelectorPill({ icon, symbol }: { icon: ReactNode; symbol: string }
   );
 }
 
+function resolveBlockingMessage(
+  code: string | null | undefined,
+  locale: Parameters<typeof messageForApiError>[1],
+  t: (key: string) => string,
+): string | null {
+  if (!code) return null;
+  if (code === "INSUFFICIENT_BALANCE") return t("catalog.buy.insufficientUsdt");
+  if (code === "SOLD_OUT") return messageForApiError("SOLD_OUT", locale);
+  if (code === "ROUND_NOT_ACTIVE") return messageForApiError("ROUND_NOT_ACTIVE", locale);
+  if (code === "MIN_PURCHASE_UNITS") return messageForApiError("MIN_PURCHASE_UNITS", locale);
+  if (code === "MAX_PURCHASE_UNITS") return messageForApiError("MAX_PURCHASE_UNITS", locale);
+  if (code === "INSUFFICIENT_PRIMARY_UNITS") return messageForApiError("INSUFFICIENT_PRIMARY_UNITS", locale);
+  return messageForApiError(code, locale);
+}
+
 export function CatalogBuyUnitsOrderPanel({
   row,
   publicRound,
   purchaseState,
+  initialBuyTerms,
+  onBuyTermsChange,
 }: {
   row: MarketOverviewRow;
   publicRound?: CatalogPrimaryRoundPublic | null;
   purchaseState?: "available" | "sold_out" | "paused" | "unavailable" | null;
+  initialBuyTerms?: PrimaryBuyTerms;
+  onBuyTermsChange?: (terms: PrimaryBuyTerms) => void;
 }) {
   const { authorizedFetch, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t, locale } = useI18n();
@@ -111,12 +137,48 @@ export function CatalogBuyUnitsOrderPanel({
   const mockCheckout = checkoutMode === "mock";
   const live = checkoutMode === "live";
   const buyReturnPath = `/catalog/buy/${encodeURIComponent(row.id)}`;
-  const [round, setRound] = useState<PrimaryRoundInfo | null>(null);
+
+  const ssrTerms = useMemo(
+    () => initialBuyTerms ?? derivePrimaryBuyTermsFromSsr(row, publicRound),
+    [initialBuyTerms, publicRound, row],
+  );
+
+  const [buyTerms, setBuyTerms] = useState<PrimaryBuyTerms>(ssrTerms);
+  const [round, setRound] = useState<PrimaryRoundInfo | null>(() =>
+    publicRound?.roundId
+      ? {
+          roundId: publicRound.roundId,
+          releaseId: row.id,
+          trackTitle: row.title,
+          status: publicRound.status,
+          availableUnits: publicRound.availableUnits,
+          pricePerUnit: publicRound.pricePerUnit,
+          primaryPurchaseFeePct: publicRound.primaryPurchaseFeePct,
+        }
+      : null,
+  );
   const [preview, setPreview] = useState<PrimaryOrderPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [roundError, setRoundError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [payAmountError, setPayAmountError] = useState<string | null>(null);
+
+  const applyTerms = useCallback(
+    (updater: (prev: PrimaryBuyTerms) => PrimaryBuyTerms) => {
+      setBuyTerms((prev) => {
+        const next = updater(prev);
+        onBuyTermsChange?.(next);
+        return next;
+      });
+    },
+    [onBuyTermsChange],
+  );
+
+  useEffect(() => {
+    applyTerms(() => ssrTerms);
+  }, [ssrTerms, applyTerms]);
 
   const loadRound = useCallback(async () => {
     if (!live) return;
@@ -124,57 +186,55 @@ export function CatalogBuyUnitsOrderPanel({
     try {
       const r = await fetchPrimaryRound(row.id, authorizedFetch);
       setRound(r);
+      applyTerms((prev) => mergePrimaryBuyTermsFromClientRound(prev, r));
     } catch (e) {
-      setRound(null);
-      setRoundError(walletErrorMessage(e));
+      if (publicRound?.roundId) {
+        setRoundError(walletErrorMessage(e));
+      } else {
+        setRound(null);
+        setRoundError(walletErrorMessage(e));
+      }
     }
-  }, [authorizedFetch, live, row.id]);
+  }, [authorizedFetch, applyTerms, live, publicRound?.roundId, row.id]);
 
   useEffect(() => {
     void loadRound();
   }, [loadRound]);
 
-  const unitPrice =
-    live && round
-      ? Number(round.pricePerUnit)
-      : publicRound
-        ? Number(publicRound.pricePerUnit)
-        : getPrimaryUnitPriceUsdt(row);
-  const maxUnits =
-    live && round
-      ? Math.floor(Number(round.availableUnits))
-      : publicRound
-        ? Math.floor(Number(publicRound.availableUnits))
-        : Math.floor(row.availableUnits);
-  const feePct =
-    live && round
-      ? Number(round.primaryPurchaseFeePct)
-      : publicRound
-        ? Number(publicRound.primaryPurchaseFeePct)
-        : 2;
-
-  const [qty, setQty] = useState(1);
-  /** Пока не null — редактируется сумма оплаты; иначе показываем расчёт от qty. */
+  const { unitPrice, minUnits, maxUnits, feePct, priceInvalid, totalUnits } = buyTerms;
+  const [qty, setQty] = useState(() => Math.max(1, ssrTerms.minUnits));
   const [payBuf, setPayBuf] = useState<string | null>(null);
   const [isResultOpen, setIsResultOpen] = useState(false);
   const [receipt, setReceipt] = useState<BuyUnitsPaymentReceipt | null>(null);
   const consentGate = useLegalConsentGate("PRIMARY_PURCHASE", live);
 
-  const clampedQty = Math.min(Math.max(1, qty), maxUnits);
+  useEffect(() => {
+    setQty((prev) => clampUnits(prev, minUnits, maxUnits));
+  }, [minUnits, maxUnits]);
+
+  const clampedQty = clampUnits(qty, minUnits, maxUnits);
+  const ownershipPct = computeOwnershipPercent(clampedQty, totalUnits);
 
   useEffect(() => {
-    if (!live || !round?.roundId || clampedQty < 1) {
+    if (!live || !round?.roundId || clampedQty < minUnits || priceInvalid || maxUnits < minUnits) {
       setPreview(null);
+      setPreviewFailed(false);
       return;
     }
     let cancelled = false;
     setPreviewLoading(true);
+    setPreviewFailed(false);
     void fetchPrimaryOrderPreview(round.roundId, clampedQty, authorizedFetch)
       .then((p) => {
-        if (!cancelled) setPreview(p);
+        if (cancelled) return;
+        setPreview(p);
+        applyTerms((prev) => mergePrimaryBuyTermsFromPreview(prev, p));
       })
       .catch(() => {
-        if (!cancelled) setPreview(null);
+        if (!cancelled) {
+          setPreview(null);
+          setPreviewFailed(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setPreviewLoading(false);
@@ -182,7 +242,57 @@ export function CatalogBuyUnitsOrderPanel({
     return () => {
       cancelled = true;
     };
-  }, [authorizedFetch, clampedQty, live, round?.roundId]);
+  }, [authorizedFetch, applyTerms, clampedQty, live, maxUnits, minUnits, priceInvalid, round?.roundId]);
+
+  const previewQuote = preview ? quoteFromPreview(preview) : null;
+  const localQuote =
+    unitPrice != null && !priceInvalid && clampedQty > 0
+      ? computePrimaryPurchase({ unitPrice, units: clampedQty, feePct })
+      : null;
+  const grossUsdt = previewQuote?.grossAmount ?? localQuote?.grossAmount ?? 0;
+  const feeUsdt = previewQuote?.feeAmount ?? localQuote?.feeAmount ?? 0;
+  const totalUsdt = previewQuote?.totalPaid ?? localQuote?.totalPaid ?? 0;
+  const payShown = payBuf !== null ? payBuf : formatUsdtFixedRu(totalUsdt);
+
+  const unitsBelowMin = clampedQty < minUnits;
+  const unitsAboveMax = clampedQty > maxUnits;
+  const limitsViolation = unitsBelowMin || unitsAboveMax;
+
+  const blockingLabel = resolveBlockingMessage(preview?.blockingReason, locale, t);
+  const insufficientUsdtMsg = t("catalog.buy.insufficientUsdt");
+  const isInsufficientUsdt =
+    preview?.blockingReason === "INSUFFICIENT_BALANCE" ||
+    blockingLabel === insufficientUsdtMsg ||
+    Boolean(submitError?.includes(insufficientUsdtMsg));
+
+  const canPurchaseLive =
+    live &&
+    !priceInvalid &&
+    unitPrice != null &&
+    round != null &&
+    !previewLoading &&
+    !previewFailed &&
+    preview?.canPurchase === true &&
+    !limitsViolation &&
+    clampedQty >= minUnits &&
+    clampedQty <= maxUnits;
+
+  const canPurchaseMock =
+    mockCheckout &&
+    !priceInvalid &&
+    unitPrice != null &&
+    maxUnits >= minUnits &&
+    clampedQty >= minUnits &&
+    clampedQty <= maxUnits &&
+    !payAmountError &&
+    grossUsdt >= amountFromUnits(unitPrice, minUnits);
+
+  const canPurchase = live ? canPurchaseLive : canPurchaseMock;
+
+  const otherBlockingLabel =
+    blockingLabel && blockingLabel !== insufficientUsdtMsg ? blockingLabel : null;
+  const otherSubmitError =
+    submitError && !submitError.includes(insufficientUsdtMsg) ? submitError : null;
 
   if (isCatalogBuyBlocked(purchaseState, catalogLive, row)) {
     return (
@@ -223,13 +333,21 @@ export function CatalogBuyUnitsOrderPanel({
     );
   }
 
-  if (maxUnits < 1) {
+  if (priceInvalid || unitPrice == null) {
+    return (
+      <div className="rounded-3xl bg-white p-6 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] md:p-8">
+        <BuyPanelNotice tone="error">{t("catalog.buy.panel.invalidPrice")}</BuyPanelNotice>
+      </div>
+    );
+  }
+
+  if (maxUnits < minUnits) {
     return (
       <div className="rounded-3xl bg-white p-6 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] md:p-8">
         <p className="text-[15px] leading-relaxed text-zinc-600">
           {tf(t("catalog.buy.panel.noUnits"), {
             title: row.title,
-            availableUnits: "available_units = 0",
+            availableUnits: formatUnitsCompact(0),
             unitPrice: `${formatUsdtFixedRu(unitPrice)} ${t("catalog.buy.panel.perUnit")}`,
           })}
         </p>
@@ -237,36 +355,10 @@ export function CatalogBuyUnitsOrderPanel({
     );
   }
 
-  const grossUsdt = preview?.grossAmount
-    ? Number(preview.grossAmount)
-    : unitPrice * clampedQty;
-  const feeUsdt = preview?.feeAmount ? Number(preview.feeAmount) : (grossUsdt * feePct) / 100;
-  const totalUsdt = preview?.totalPaid ? Number(preview.totalPaid) : live ? grossUsdt : primaryOrderTotalUsdt(row, clampedQty);
-  const payShown = payBuf !== null ? payBuf : formatUsdtFixedRu(totalUsdt);
-  const canPurchaseLive = !live || (previewLoading ? false : preview?.canPurchase === true);
-  const blockingLabel =
-    preview?.blockingReason === "INSUFFICIENT_BALANCE"
-      ? t("catalog.buy.insufficientUsdt")
-      : preview?.blockingReason === "SOLD_OUT"
-        ? t("SOLD_OUT")
-        : preview?.blockingReason === "ROUND_NOT_ACTIVE"
-          ? t("ROUND_NOT_ACTIVE")
-          : preview?.blockingReason
-            ? messageForApiError(preview.blockingReason, locale)
-            : null;
-
-  const insufficientUsdtMsg = t("catalog.buy.insufficientUsdt");
-  const isInsufficientUsdt =
-    preview?.blockingReason === "INSUFFICIENT_BALANCE" ||
-    blockingLabel === insufficientUsdtMsg ||
-    Boolean(submitError?.includes(insufficientUsdtMsg));
-  const otherBlockingLabel =
-    blockingLabel && blockingLabel !== insufficientUsdtMsg ? blockingLabel : null;
-  const otherSubmitError =
-    submitError && !submitError.includes(insufficientUsdtMsg) ? submitError : null;
-
   const executePurchase = async () => {
     setSubmitError(null);
+    if (!canPurchase) return;
+
     if (live) {
       if (!round) {
         setSubmitError(roundError ?? t("catalog.buy.panel.roundUnavailable"));
@@ -304,9 +396,7 @@ export function CatalogBuyUnitsOrderPanel({
       return;
     }
 
-    if (!mockCheckout) {
-      return;
-    }
+    if (!mockCheckout) return;
 
     setReceipt({
       releaseTitle: row.title,
@@ -327,8 +417,14 @@ export function CatalogBuyUnitsOrderPanel({
     consentGate.requestProceed(() => void executePurchase());
   };
 
-  const minPay = formatUsdtFixedRu(unitPrice);
-  const maxPay = formatUsdtFixedRu(unitPrice * maxUnits);
+  const minPay = formatUsdtFixedRu(amountFromUnits(unitPrice, minUnits));
+  const maxPay = formatUsdtFixedRu(amountFromUnits(unitPrice, maxUnits));
+
+  const localLimitError = limitsViolation
+    ? unitsBelowMin
+      ? tf(t("catalog.buy.panel.minUnitsRequired"), { min: String(minUnits) })
+      : tf(t("catalog.buy.panel.maxUnitsExceeded"), { max: String(maxUnits) })
+    : null;
 
   return (
     <div className="rounded-3xl bg-white p-5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.08)] md:p-7">
@@ -346,11 +442,20 @@ export function CatalogBuyUnitsOrderPanel({
               className={cn(PAY_INPUT_CLASS, "mt-1 block w-full max-w-none")}
               value={payShown}
               onFocus={() => setPayBuf(formatUsdtFixedRu(totalUsdt))}
-              onChange={(e) => setPayBuf(e.target.value)}
+              onChange={(e) => {
+                setPayBuf(e.target.value);
+                setPayAmountError(null);
+              }}
               onBlur={() => {
                 const parsed = parseRuMoneyInput(payBuf ?? "");
                 if (parsed !== null) {
-                  setQty(unitsFromUsdtBudget(unitPrice, parsed, maxUnits));
+                  const nextUnits = unitsFromUsdtBudget(unitPrice, parsed, maxUnits, minUnits);
+                  if (nextUnits <= 0) {
+                    setPayAmountError(t("catalog.buy.panel.insufficientAmount"));
+                  } else {
+                    setPayAmountError(null);
+                    setQty(nextUnits);
+                  }
                 }
                 setPayBuf(null);
               }}
@@ -370,6 +475,11 @@ export function CatalogBuyUnitsOrderPanel({
           fee: String(feePct),
         })}
       </p>
+      {ownershipPct != null ? (
+        <p className="mt-1 text-center text-[11px] text-zinc-500">
+          {tf(t("catalog.buy.panel.ownershipHint"), { pct: String(ownershipPct) })}
+        </p>
+      ) : null}
       {live && round ? (
         <p className="mt-1 text-center text-[11px] text-zinc-500">
           {tf(t("catalog.buy.panel.totalDebit"), {
@@ -383,6 +493,26 @@ export function CatalogBuyUnitsOrderPanel({
               : "",
           })}
         </p>
+      ) : null}
+      {previewLoading && live ? (
+        <BuyPanelNotice tone="warning" className="mt-3">
+          {t("catalog.buy.panel.previewLoading")}
+        </BuyPanelNotice>
+      ) : null}
+      {previewFailed && live ? (
+        <BuyPanelNotice tone="error" className="mt-3">
+          {t("catalog.buy.panel.previewFailed")}
+        </BuyPanelNotice>
+      ) : null}
+      {payAmountError ? (
+        <BuyPanelNotice tone="warning" className="mt-3">
+          {payAmountError}
+        </BuyPanelNotice>
+      ) : null}
+      {localLimitError ? (
+        <BuyPanelNotice tone="warning" className="mt-3">
+          {localLimitError}
+        </BuyPanelNotice>
       ) : null}
       {isInsufficientUsdt && live ? (
         <BuyPanelNotice tone="warning" className="mt-3">
@@ -423,17 +553,18 @@ export function CatalogBuyUnitsOrderPanel({
               <input
                 type="number"
                 inputMode="numeric"
-                min={1}
+                min={minUnits}
                 max={maxUnits}
-                value={qty}
+                value={clampedQty > 0 ? clampedQty : ""}
                 onChange={(e) => {
                   setPayBuf(null);
+                  setPayAmountError(null);
                   const n = Number.parseInt(e.target.value, 10);
                   if (Number.isNaN(n)) {
-                    setQty(1);
+                    setQty(minUnits);
                     return;
                   }
-                  setQty(Math.min(Math.max(1, n), maxUnits));
+                  setQty(n);
                 }}
                 className="mt-1 block min-w-0 w-full max-w-none border-0 bg-transparent p-0 text-[28px] font-semibold tabular-nums tracking-tight text-zinc-950 outline-none ring-0 [appearance:textfield] md:text-[32px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 aria-label={t("catalog.buy.panel.unitsAria")}
@@ -446,12 +577,19 @@ export function CatalogBuyUnitsOrderPanel({
               units: formatUnitsCompact(maxUnits),
             })}
           </p>
+          <p className="mt-1 text-[11px] text-zinc-400">
+            {tf(t("catalog.buy.panel.unitsRange"), {
+              min: String(minUnits),
+              max: String(maxUnits),
+            })}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => {
                 setPayBuf(null);
-                setQty(Math.max(1, Math.floor(maxUnits * 0.25)));
+                setPayAmountError(null);
+                setQty(Math.max(minUnits, Math.floor(maxUnits * 0.25)));
               }}
               className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-medium text-zinc-700 transition hover:bg-zinc-100"
             >
@@ -461,7 +599,8 @@ export function CatalogBuyUnitsOrderPanel({
               type="button"
               onClick={() => {
                 setPayBuf(null);
-                setQty(Math.max(1, Math.floor(maxUnits * 0.5)));
+                setPayAmountError(null);
+                setQty(Math.max(minUnits, Math.floor(maxUnits * 0.5)));
               }}
               className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-medium text-zinc-700 transition hover:bg-zinc-100"
             >
@@ -471,6 +610,7 @@ export function CatalogBuyUnitsOrderPanel({
               type="button"
               onClick={() => {
                 setPayBuf(null);
+                setPayAmountError(null);
                 setQty(maxUnits);
               }}
               className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] font-medium text-zinc-700 transition hover:bg-zinc-100"
@@ -490,7 +630,7 @@ export function CatalogBuyUnitsOrderPanel({
         disabled={
           submitting ||
           (live && !round) ||
-          !canPurchaseLive ||
+          !canPurchase ||
           (live && consentGate.hasBlockingEligibility) ||
           (live && (consentGate.isChecking || consentGate.checkError))
         }

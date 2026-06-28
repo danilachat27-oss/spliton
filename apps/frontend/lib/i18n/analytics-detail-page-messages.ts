@@ -1,4 +1,4 @@
-/** Release detail page (`/analytics/releases/[id]`) copy — ru/en/es/pt */
+import { localeMessage } from "./normalize-locale";
 import type { AppLocale } from "./types";
 
 const RU = {
@@ -374,6 +374,5 @@ export const ANALYTICS_DETAIL_PAGE_MESSAGES: Record<AppLocale, Record<string, st
 export type AnalyticsDetailPageMessageKey = keyof typeof RU;
 
 export function detailPageText(locale: AppLocale, key: AnalyticsDetailPageMessageKey): string {
-  const dict = ANALYTICS_DETAIL_PAGE_MESSAGES[locale] ?? ANALYTICS_DETAIL_PAGE_MESSAGES.ru;
-  return dict[key] ?? ANALYTICS_DETAIL_PAGE_MESSAGES.ru[key] ?? key;
+  return localeMessage(ANALYTICS_DETAIL_PAGE_MESSAGES, locale, key, key);
 }

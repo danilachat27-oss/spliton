@@ -38,6 +38,7 @@ export function adaptMarketOverviewRow(item: MarketOverviewListItemApi): MarketO
     yieldPct: item.yieldPct,
     payoutsUsdt: item.payoutsUsdt,
     activityScore: item.activityScore,
+    /** Release-level catalog availability — not authoritative for buy submit (use active primary round on buy page). */
     availableUnits: Number.parseFloat(item.availableUnits) || 0,
     primaryUnitPriceUsdt: Number.parseFloat(item.primaryUnitPriceUsdt) || 0,
     secondaryLabel: (item.secondaryLabel as MarketOverviewRow["secondaryLabel"]) || "—",

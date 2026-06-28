@@ -32,7 +32,7 @@ export type MarketOverviewRow = {
   availableUnits: number;
   /** Цена 1 unit в первичном раунде, USDT TRC20 (мок каталога; одна позиция — одно значение). */
   primaryUnitPriceUsdt: number;
-  secondaryLabel: "Высокий" | "Средний" | "Низкий" | "—";
+  secondaryLabel: "Высокий" | "Средний" | "Низкий" | "High" | "Medium" | "Low" | "—";
   liquidityLabel: "Deep" | "Mid" | "Thin" | "Высокая" | "Средняя" | "Низкая";
   trend: MarketRowTrend;
   sparkline: number[];

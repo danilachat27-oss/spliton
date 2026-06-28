@@ -1,5 +1,5 @@
 import type { AppLocale } from "./types";
-import { DICTIONARIES } from "./dictionaries";
+import { DICTIONARIES, lookupDictionaryMessage } from "./dictionaries";
 import { statusLabel } from "./status-labels";
 
 const TYPE_KEYS: Record<string, string> = {
@@ -25,7 +25,10 @@ const STATUS_KEYS: Record<string, string> = {
 };
 
 function dict(locale: AppLocale, key: string): string | undefined {
-  return DICTIONARIES[locale][key] ?? DICTIONARIES.ru[key];
+  const value = lookupDictionaryMessage(DICTIONARIES[locale], key, locale, {
+    enMessages: DICTIONARIES.en,
+  });
+  return value !== key ? value : undefined;
 }
 
 export function walletActivityTypeLabel(type: string, locale: AppLocale): string {

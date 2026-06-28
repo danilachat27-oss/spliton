@@ -29,3 +29,44 @@ export function isSupportedLocale(value: string | null | undefined): value is Ap
   if (!value) return false;
   return (SUPPORTED_LOCALES as readonly string[]).includes(value.trim().toLowerCase());
 }
+
+export type LocaleMessageTable = Record<AppLocale, Record<string, string>>;
+
+const CYRILLIC = /[\u0400-\u04FF]/;
+
+/** Flat dictionary lookup without leaking RU strings into EN/ES/PT UI. */
+export function lookupDictionaryMessage(
+  messages: Record<string, string> | undefined,
+  key: string,
+  locale: AppLocale,
+  options?: {
+    enMessages?: Record<string, string>;
+    fallback?: string;
+  },
+): string {
+  const direct = messages?.[key];
+  if (direct) return direct;
+  if (locale !== "ru") {
+    const en = options?.enMessages?.[key];
+    if (en) return en;
+  }
+  if (options?.fallback !== undefined) return options.fallback;
+  return key;
+}
+
+export function containsCyrillic(value: string): boolean {
+  return CYRILLIC.test(value);
+}
+
+/** Lookup in a per-locale message table without RU fallback for EN/ES/PT. */
+export function localeMessage(
+  table: LocaleMessageTable,
+  locale: AppLocale,
+  key: string,
+  fallback?: string,
+): string {
+  return lookupDictionaryMessage(table[locale], key, locale, {
+    enMessages: table.en,
+    fallback,
+  });
+}

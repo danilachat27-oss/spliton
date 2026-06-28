@@ -35,9 +35,10 @@ import {
   mapRichUserOrderToTerminalMyOrder,
 } from "@/lib/secondary-market/secondary-market-book-live.util";
 
-const FEE_RATE = 0.002;
-
+import { SECONDARY_FEE_FALLBACK_RATE } from "@/lib/market/platform-fee-fallbacks";
 import type { BookLevel, BookMarket, BookTrade } from "@/lib/secondary-market/secondary-market-book.types";
+
+const FEE_RATE = SECONDARY_FEE_FALLBACK_RATE;
 
 type MyOrderStatus = "active" | "partial" | "filled" | "cancelled" | "expired" | "failed";
 type MyOrder = {
@@ -767,7 +768,7 @@ export function SecondaryMarketOrderBookTab(props?: SecondaryMarketOrderBookTabP
             const newAvg = newTotal > 0 ? (cur.unitsTotal * cur.avgEntryPrice + walk.totalUsdt) / newTotal : cur.avgEntryPrice;
             return {
               ...cur,
-              usdtBalance: cur.usdtBalance - walk.totalUsdt - fee,
+              usdtBalance: cur.usdtBalance - walk.totalUsdt,
               unitsTotal: newTotal,
               unitsAvailable: cur.unitsAvailable + filled,
               avgEntryPrice: newAvg,
@@ -814,7 +815,7 @@ export function SecondaryMarketOrderBookTab(props?: SecondaryMarketOrderBookTabP
                     ? tm(t, "secondaryMarket.orderBook.feedback.buyExecutedBody", {
                         filled,
                         price: formatUsdt(walk.avgPrice),
-                        total: formatUsdt(walk.totalUsdt + fee),
+                        total: formatUsdt(walk.totalUsdt),
                       })
                     : tm(t, "secondaryMarket.orderBook.feedback.sellExecutedBody", {
                         filled,
@@ -846,7 +847,7 @@ export function SecondaryMarketOrderBookTab(props?: SecondaryMarketOrderBookTabP
             const newAvg = newTotal > 0 ? (cur.unitsTotal * cur.avgEntryPrice + w.totalUsdt) / newTotal : cur.avgEntryPrice;
             return {
               ...cur,
-              usdtBalance: cur.usdtBalance - w.totalUsdt - fee,
+              usdtBalance: cur.usdtBalance - w.totalUsdt,
               unitsTotal: newTotal,
               unitsAvailable: cur.unitsAvailable + w.filledUnits,
               avgEntryPrice: newAvg,

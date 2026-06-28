@@ -41,3 +41,43 @@ test.describe('Public smoke', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 });
+
+const CYRILLIC = /[А-Яа-яЁё]/;
+const LOCALE_COOKIE = 'spliton_locale';
+
+const PUBLIC_EN_ROUTES = [
+  ROUTES.home,
+  ROUTES.dashboardCatalog,
+  ROUTES.catalogMarketOverview,
+  ROUTES.support,
+  ROUTES.news,
+  ROUTES.login,
+  ROUTES.myAssetsOverview,
+  ROUTES.dashboardPayouts,
+  ROUTES.dashboardActivity,
+  ROUTES.dashboardSecondaryMarket,
+  ROUTES.dashboardProfile,
+] as const;
+
+test.describe('EN locale Cyrillic smoke', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    const host = new URL(baseURL ?? 'http://127.0.0.1:3000').hostname;
+    await context.addCookies([
+      {
+        name: LOCALE_COOKIE,
+        value: 'en',
+        domain: host,
+        path: '/',
+      },
+    ]);
+  });
+
+  for (const path of PUBLIC_EN_ROUTES) {
+    test(`no Cyrillic on ${path}`, async ({ page }) => {
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined);
+      const text = await page.locator('body').innerText();
+      expect(text, `Cyrillic found on ${path}`).not.toMatch(CYRILLIC);
+    });
+  }
+});

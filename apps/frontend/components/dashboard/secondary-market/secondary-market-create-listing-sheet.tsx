@@ -17,6 +17,7 @@ import {
   classifySellListingError,
   extractApiErrorCode,
 } from "@/lib/secondary-market/classify-sell-listing-error";
+import { SECONDARY_FEE_FALLBACK_PCT, SECONDARY_FEE_FALLBACK_RATE } from "@/lib/market/platform-fee-fallbacks";
 import { cn } from "@/lib/utils";
 import {
   fetchFeePreview,
@@ -161,9 +162,9 @@ export function SecondaryMarketCreateListingSheet({
   }, [authorizedFetch, isLive, priceNum, selectedReleaseId, unitsNum]);
 
   const grossUsdt = roundUsdt2(unitsNum * priceNum);
-  const feeUsdt = feePreview ? roundUsdt2(Number(feePreview.feeAmount)) : roundUsdt2(grossUsdt * 0.01);
+  const feeUsdt = feePreview ? roundUsdt2(Number(feePreview.feeAmount)) : roundUsdt2(grossUsdt * SECONDARY_FEE_FALLBACK_RATE);
   const netUsdt = feePreview ? roundUsdt2(Number(feePreview.sellerNet)) : roundUsdt2(Math.max(0, grossUsdt - feeUsdt));
-  const feePct = feePreview?.feePct ?? "1";
+  const feePct = feePreview?.feePct ?? String(SECONDARY_FEE_FALLBACK_PCT);
 
   const applyUnitsPct = (pct: number) => {
     if (!availableUnits) return;

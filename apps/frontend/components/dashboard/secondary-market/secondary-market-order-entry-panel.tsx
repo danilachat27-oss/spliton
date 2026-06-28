@@ -12,10 +12,13 @@ import { cn } from "@/lib/utils";
 import { smExchange } from "./secondary-market-exchange-styles";
 import { walkBuyAgainstAsks, walkSellAgainstBids } from "./secondary-market-book-math";
 import { fetchOrderPreview } from "@/services/secondary-market.service";
+import { SECONDARY_FEE_FALLBACK_PCT, SECONDARY_FEE_FALLBACK_RATE } from "@/lib/market/platform-fee-fallbacks";
+import { computeSecondaryTrade } from "@/lib/market/pricing-calculator";
+import { intlLocaleFor } from "@/lib/i18n/formatters";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
-const FEE_RATE = 0.002;
+const FEE_RATE = SECONDARY_FEE_FALLBACK_RATE;
 
 export type LimitSeed = { price: number; side: "buy" | "sell" };
 
@@ -24,13 +27,6 @@ export type BookMarketLite = {
   asks: { price: number; units: number }[];
   bids: { price: number; units: number }[];
 };
-
-function formatUsdt(n: number) {
-  return n.toLocaleString("ru-RU", {
-    minimumFractionDigits: n % 1 ? 2 : 0,
-    maximumFractionDigits: 2,
-  });
-}
 
 function roundToTick(price: number, tick: number) {
   const k = Math.round(price / tick);
@@ -81,7 +77,15 @@ export function SecondaryMarketOrderEntryPanel({
   onSubmit,
 }: SecondaryMarketOrderEntryPanelProps) {
   const { t, locale } = useI18n();
-  const feePctLabel = (FEE_RATE * 100).toFixed(1);
+
+  const formatUsdt = React.useCallback(
+    (n: number) =>
+      n.toLocaleString(intlLocaleFor(locale), {
+        minimumFractionDigits: n % 1 ? 2 : 0,
+        maximumFractionDigits: 2,
+      }),
+    [locale],
+  );
 
   const [livePreviewBlocked, setLivePreviewBlocked] = React.useState<string | null>(null);
   const [liveFeeLoading, setLiveFeeLoading] = React.useState(false);
@@ -211,13 +215,26 @@ export function SecondaryMarketOrderEntryPanel({
     liveFeeAmount != null &&
     !liveFeeError;
 
-  const feeUsdt = useLiveFee ? liveFeeAmount! : subtotalUsdt * FEE_RATE;
+  const demoQuote =
+    subtotalUsdt > 0 && unitsNum > 0
+      ? computeSecondaryTrade({
+          unitPrice: subtotalUsdt / unitsNum,
+          units: unitsNum,
+          feePct: FEE_RATE * 100,
+        })
+      : null;
+
+  const feeUsdt = useLiveFee ? liveFeeAmount! : demoQuote?.feeAmount ?? subtotalUsdt * FEE_RATE;
   const buyDebit = useLiveFee
     ? liveBuyerTotal ?? subtotalUsdt
-    : subtotalUsdt + feeUsdt;
+    : demoQuote?.buyerTotal ?? subtotalUsdt;
   const sellNet = useLiveFee
     ? (liveSellerNet ?? Math.max(0, subtotalUsdt - feeUsdt))
-    : Math.max(0, subtotalUsdt - feeUsdt);
+    : demoQuote?.sellerNet ?? Math.max(0, subtotalUsdt - feeUsdt);
+  const feePctLabel =
+    useLiveFee && liveFeeGross != null && liveFeeGross > 0 && liveFeeAmount != null
+      ? ((liveFeeAmount / liveFeeGross) * 100).toFixed(1)
+      : String(SECONDARY_FEE_FALLBACK_PCT);
   const avgExec =
     orderMode === "market"
       ? side === "buy"

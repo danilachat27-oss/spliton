@@ -152,7 +152,7 @@ export function DashboardMobileMenu({
               onClick={onClose}
               className={cn(mobileRowClass, "hover:text-white/90")}
             >
-              <span>{t("nav.balance", "Баланс")}</span>
+              <span>{t("nav.balance")}</span>
               <span className="tabular-nums text-white/90">
                 {balanceError ? "—" : balanceShort ?? "…"} USDT
               </span>

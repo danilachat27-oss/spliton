@@ -53,7 +53,12 @@ export function CatalogPageHero({
           {
             label: t("catalog.hero.stats.volume"),
             value: formatVolume(stats.totalVolume24hUsdt, locale),
-            caption: stats.totalVolume7dUsdt ? `7д ${formatVolume(stats.totalVolume7dUsdt, locale)}` : undefined,
+            caption: stats.totalVolume7dUsdt
+              ? t("catalog.hero.stats.volume7dCaption").replace(
+                  "{volume}",
+                  formatVolume(stats.totalVolume7dUsdt, locale),
+                )
+              : undefined,
             captionPositive: true,
             sparkline: sparklines.volume,
           },

@@ -22,7 +22,7 @@ import {
 } from "@/services/wallet.service";
 import { InlineToastBanner, useInlineToast } from "@/hooks/use-inline-toast";
 
-const SECONDARY_FEE_PCT = 1;
+import { SECONDARY_FEE_FALLBACK_PCT } from "@/lib/market/platform-fee-fallbacks";
 
 export function SecondaryMarketLivePanel({ mode }: { mode: "market" | "orders" | "history" }) {
   const { t } = useI18n();
@@ -120,7 +120,7 @@ export function SecondaryMarketLivePanel({ mode }: { mode: "market" | "orders" |
             {filteredListings.map((l) => {
               const isOwn = l.sellerUserId === user?.id;
               const gross = Number(l.unitsAvailable) * Number(l.pricePerUnit);
-              const fee = (gross * SECONDARY_FEE_PCT) / 100;
+              const fee = (gross * SECONDARY_FEE_FALLBACK_PCT) / 100;
               return (
                 <article
                   key={l.id}
@@ -146,7 +146,7 @@ export function SecondaryMarketLivePanel({ mode }: { mode: "market" | "orders" |
                       <dd className="font-mono text-white">{formatUsdtRu(String(gross))}</dd>
                     </div>
                     <div className="flex justify-between text-zinc-500">
-                      <dt>{tf(t("secondaryMarket.forms.fee"), { pct: String(SECONDARY_FEE_PCT) })}</dt>
+                      <dt>{tf(t("secondaryMarket.forms.fee"), { pct: String(SECONDARY_FEE_FALLBACK_PCT) })}</dt>
                       <dd className="font-mono">{formatUsdtRu(String(fee))}</dd>
                     </div>
                   </dl>

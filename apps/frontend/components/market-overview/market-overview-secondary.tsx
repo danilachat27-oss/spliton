@@ -15,11 +15,11 @@ export function MarketOverviewSecondary({
   live?: boolean;
   stats?: MarketOverviewStatsApi | null;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   const s =
     live && stats
-      ? mapSecondaryLiveSnapshot(stats)
+      ? mapSecondaryLiveSnapshot(stats, locale)
       : live
         ? {
             resaleVolume: t("marketOverview.secondary.insufficientData"),

@@ -8,7 +8,10 @@ describe('EligibilityService', () => {
     kycVerification: { findFirst: jest.fn() },
   };
   const enforcement = { assertUserCanTransact: jest.fn() };
-  const consents = { getMissingConsents: jest.fn() };
+  const consents = {
+    getMissingConsents: jest.fn(),
+    getUnpublishedPolicyTypes: jest.fn(),
+  };
   const countries = { checkCountry: jest.fn() };
   const flags = { assertEnabled: jest.fn() };
 
@@ -35,17 +38,40 @@ describe('EligibilityService', () => {
       status: KycStatus.APPROVED,
     });
     consents.getMissingConsents.mockResolvedValue([]);
+    consents.getUnpublishedPolicyTypes.mockReturnValue([]);
     countries.checkCountry.mockResolvedValue({ allowed: true });
     enforcement.assertUserCanTransact.mockResolvedValue(undefined);
   });
 
   it('blocks primary purchase when terms consent missing', async () => {
     consents.getMissingConsents.mockResolvedValue([
-      { type: 'TERMS_OF_SERVICE', policyId: 'p1', activeVersion: '1', title: 'Terms' },
+      {
+        type: 'TERMS_OF_SERVICE',
+        policyId: 'p1',
+        activeVersion: '1',
+        title: 'Terms',
+        reason: 'CONSENT_REQUIRED',
+      },
     ]);
+    consents.getUnpublishedPolicyTypes.mockReturnValue([]);
     const result = await service.check('user-1', ConsentSource.PRIMARY_PURCHASE);
     expect(result.allowed).toBe(false);
     expect(result.blockingCode).toBe('CONSENT_REQUIRED');
+  });
+
+  it('blocks financial action when required ACTIVE policy missing', async () => {
+    consents.getMissingConsents.mockResolvedValue([
+      {
+        type: 'TERMS_OF_SERVICE',
+        title: 'TERMS OF SERVICE',
+        reason: 'POLICY_NOT_PUBLISHED',
+      },
+    ]);
+    consents.getUnpublishedPolicyTypes.mockReturnValue(['TERMS_OF_SERVICE']);
+    const result = await service.check('user-1', ConsentSource.WITHDRAWAL);
+    expect(result.allowed).toBe(false);
+    expect(result.blockingCode).toBe('LEGAL_POLICY_MISSING');
+    expect(result.missingPolicyTypes).toEqual(['TERMS_OF_SERVICE']);
   });
 
   it('allows user with consents and verified email', async () => {

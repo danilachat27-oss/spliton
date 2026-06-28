@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Eye } from "@/lib/lucide";
 
 import {
   AdminDrawerCancelButton,
@@ -13,15 +14,19 @@ import { localizedAdminError } from "@/features/admin/lib/localized-admin-error"
 import { adminFieldInput, adminFieldTextarea } from "@/features/admin/lib/admin-ui";
 import {
   AdminCheckboxRow,
+  AdminConfirmDialog,
   AdminDetailDrawer,
   AdminFormField,
   AdminFormFooter,
   AdminLocalizedStatusBadge,
+  AdminLoadingState,
 } from "@/features/admin/ui";
 import { AdminStyledSelectField } from "@/features/admin/ui/admin-styled-select";
 import type { AdminApiClient } from "@/features/admin/api/admin-api-client";
 import {
   createAdminLegalPolicyDraft,
+  getAdminLegalPolicy,
+  publishAdminLegalPolicy,
   updateAdminLegalPolicyDraft,
   type AdminLegalPolicyRow,
 } from "@/services/admin/adminLegal.service";
@@ -42,12 +47,16 @@ export const LEGAL_POLICY_TYPE_VALUES = [
   "WITHDRAWAL_POLICY",
 ] as const;
 
+export const LEGAL_CONTENT_FORMAT_VALUES = ["MARKDOWN", "PLAIN", "HTML"] as const;
+
 export type LegalPolicyFormBody = {
   type: string;
   version: string;
   title: string;
   content: string;
+  contentFormat: string;
   requiresUserConsent: boolean;
+  effectiveAt: string;
 };
 
 export function emptyLegalPolicyForm(type = "TERMS_OF_SERVICE"): LegalPolicyFormBody {
@@ -57,7 +66,9 @@ export function emptyLegalPolicyForm(type = "TERMS_OF_SERVICE"): LegalPolicyForm
     version: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.1`,
     title: "",
     content: "",
+    contentFormat: "MARKDOWN",
     requiresUserConsent: true,
+    effectiveAt: "",
   };
 }
 
@@ -67,7 +78,9 @@ export function legalPolicyFormFromRow(row: AdminLegalPolicyRow): LegalPolicyFor
     version: row.version,
     title: row.title,
     content: row.content,
+    contentFormat: row.contentFormat ?? "MARKDOWN",
     requiresUserConsent: row.requiresUserConsent,
+    effectiveAt: row.effectiveAt ? row.effectiveAt.slice(0, 16) : "",
   };
 }
 
@@ -84,7 +97,9 @@ export function legalPolicyFormForNewVersion(source: AdminLegalPolicyRow): Legal
     version: suggestNextVersion(source.version),
     title: source.title,
     content: source.content,
+    contentFormat: source.contentFormat ?? "MARKDOWN",
     requiresUserConsent: source.requiresUserConsent,
+    effectiveAt: "",
   };
 }
 
@@ -92,11 +107,13 @@ type AdminLegalPolicyDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
-  policy: AdminLegalPolicyRow | null;
+  policyId: string | null;
   initialForm?: LegalPolicyFormBody | null;
+  initialType?: string;
   client: AdminApiClient;
   canMutate: boolean;
   onSaved: () => void | Promise<void>;
+  onPreview: (payload: { title: string; version: string; content: string; contentFormat?: string }) => void;
 };
 
 const drawerPanel = "rounded-2xl bg-zinc-900/40 p-4";
@@ -105,26 +122,39 @@ export function AdminLegalPolicyDrawer({
   open,
   onOpenChange,
   mode,
-  policy,
+  policyId,
   initialForm,
+  initialType,
   client,
   canMutate,
   onSaved,
+  onPreview,
 }: AdminLegalPolicyDrawerProps) {
   const a = useAdminI18n();
   const [form, setForm] = React.useState<LegalPolicyFormBody>(emptyLegalPolicyForm());
+  const [policy, setPolicy] = React.useState<AdminLegalPolicyRow | null>(null);
+  const [loadingPolicy, setLoadingPolicy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [confirmPublishOpen, setConfirmPublishOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!open) return;
     setError(null);
-    if (mode === "edit" && policy) {
-      setForm(legalPolicyFormFromRow(policy));
+    if (mode === "edit" && policyId) {
+      setLoadingPolicy(true);
+      void getAdminLegalPolicy(client, policyId)
+        .then((row) => {
+          setPolicy(row);
+          setForm(legalPolicyFormFromRow(row));
+        })
+        .catch((e) => setError(localizedAdminError(e)))
+        .finally(() => setLoadingPolicy(false));
       return;
     }
-    setForm(initialForm ?? emptyLegalPolicyForm());
-  }, [open, mode, policy, initialForm]);
+    setPolicy(null);
+    setForm(initialForm ?? emptyLegalPolicyForm(initialType ?? "TERMS_OF_SERVICE"));
+  }, [open, mode, policyId, initialForm, initialType, client]);
 
   const typeOptions = React.useMemo(
     () =>
@@ -133,6 +163,15 @@ export function AdminLegalPolicyDrawer({
         label: a.adminLegalPolicyTypeLabel(value),
       })),
     [a],
+  );
+
+  const formatOptions = React.useMemo(
+    () =>
+      LEGAL_CONTENT_FORMAT_VALUES.map((value) => ({
+        value,
+        label: value,
+      })),
+    [],
   );
 
   const readOnly = !canMutate || (mode === "edit" && policy?.status === "ACTIVE");
@@ -146,20 +185,20 @@ export function AdminLegalPolicyDrawer({
     setSubmitting(true);
     setError(null);
     try {
+      const body = {
+        title: form.title.trim(),
+        version: form.version.trim(),
+        content: form.content,
+        contentFormat: form.contentFormat,
+        requiresUserConsent: form.requiresUserConsent,
+        effectiveAt: form.effectiveAt ? new Date(form.effectiveAt).toISOString() : null,
+      };
       if (mode === "edit" && policy) {
-        await updateAdminLegalPolicyDraft(client, policy.id, {
-          title: form.title.trim(),
-          version: form.version.trim(),
-          content: form.content,
-          requiresUserConsent: form.requiresUserConsent,
-        });
+        await updateAdminLegalPolicyDraft(client, policy.id, body);
       } else {
         await createAdminLegalPolicyDraft(client, {
           type: form.type,
-          version: form.version.trim(),
-          title: form.title.trim(),
-          content: form.content,
-          requiresUserConsent: form.requiresUserConsent,
+          ...body,
         });
       }
       await onSaved();
@@ -171,119 +210,231 @@ export function AdminLegalPolicyDrawer({
     }
   }
 
+  async function handlePublish() {
+    if (!policy || readOnly) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (policy.status === "DRAFT") {
+        await updateAdminLegalPolicyDraft(client, policy.id, {
+          title: form.title.trim(),
+          version: form.version.trim(),
+          content: form.content,
+          contentFormat: form.contentFormat,
+          requiresUserConsent: form.requiresUserConsent,
+          effectiveAt: form.effectiveAt ? new Date(form.effectiveAt).toISOString() : null,
+        });
+      }
+      await publishAdminLegalPolicy(client, policy.id);
+      await onSaved();
+      onOpenChange(false);
+    } catch (e) {
+      setError(localizedAdminError(e));
+    } finally {
+      setSubmitting(false);
+      setConfirmPublishOpen(false);
+    }
+  }
+
   return (
-    <AdminDetailDrawer
-      open={open}
-      onOpenChange={onOpenChange}
-      title={mode === "edit" ? "Редактирование политики" : "Новая версия политики"}
-      subtitle={
-        mode === "edit" && policy?.status === "ACTIVE"
-          ? "Активная версия не редактируется. Создайте новую версию и опубликуйте её."
-          : "Черновик сохраняется в БД. Публикация заменяет текущую активную версию этого типа."
-      }
-      wide
-      borderless
-      widthClassName="w-[min(720px,100vw)]"
-      footer={
-        <AdminFormFooter
-          right={
-            !readOnly ? (
-              <>
-                <AdminDrawerCancelButton onClick={() => onOpenChange(false)} disabled={submitting} />
-                <AdminDrawerPrimaryButton onClick={() => void handleSave()} disabled={submitting}>
-                  {submitting ? "Сохранение…" : mode === "edit" ? "Сохранить черновик" : "Создать черновик"}
-                </AdminDrawerPrimaryButton>
-              </>
-            ) : (
-              <AdminDrawerSecondaryButton onClick={() => onOpenChange(false)}>Закрыть</AdminDrawerSecondaryButton>
-            )
-          }
-        />
-      }
-    >
-      <div className="space-y-4">
-        {policy ? (
-          <div className={cn(drawerPanel, "flex flex-wrap items-center gap-2 text-sm")}>
-            <AdminLocalizedStatusBadge status={policy.status} />
-            {policy.publishedAt ? (
-              <span className="text-xs text-zinc-500">
-                Опубликовано: {new Date(policy.publishedAt).toLocaleString("ru-RU")}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className={drawerPanel}>
-          <AdminStyledSelectField
-            id="legal-policy-type"
-            label={a.table.type}
-            value={form.type}
-            options={typeOptions}
-            onChange={(value) => setForm((prev) => ({ ...prev, type: value }))}
-            disabled={mode === "edit" || readOnly}
-            info="Тип документа фиксируется при создании версии."
-          />
-        </div>
-
-        <div className={drawerPanel}>
-          <AdminFormField label="Версия" htmlFor="legal-policy-version" info="Формат YYYY.MM.N — уникален в рамках типа.">
-            <Input
-              id="legal-policy-version"
-              value={form.version}
-              onChange={(e) => setForm((prev) => ({ ...prev, version: e.target.value }))}
-              className={adminFieldInput}
-              disabled={readOnly}
-              placeholder="2026.06.1"
-            />
-          </AdminFormField>
-        </div>
-
-        <div className={drawerPanel}>
-          <AdminFormField label={a.table.name} htmlFor="legal-policy-title">
-            <Input
-              id="legal-policy-title"
-              value={form.title}
-              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-              className={adminFieldInput}
-              disabled={readOnly}
-              placeholder="Условия использования Spliton"
-            />
-          </AdminFormField>
-        </div>
-
-        <div className={drawerPanel}>
-          <AdminFormField
-            label="Текст документа"
-            htmlFor="legal-policy-content"
-            info="Markdown. После публикации пользователям может потребоваться повторное согласие."
-          >
-            <textarea
-              id="legal-policy-content"
-              value={form.content}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setForm((prev) => ({ ...prev, content: e.target.value }))
-              }
-              className={cn(adminFieldTextarea, "min-h-[280px] font-mono text-xs leading-relaxed")}
-              disabled={readOnly}
-            />
-          </AdminFormField>
-        </div>
-
-        <div className={drawerPanel}>
-          <AdminCheckboxRow
-            id="legal-policy-consent"
-            checked={form.requiresUserConsent}
-            onCheckedChange={(checked) =>
-              setForm((prev) => ({ ...prev, requiresUserConsent: Boolean(checked) }))
+    <>
+      <AdminDetailDrawer
+        open={open}
+        onOpenChange={onOpenChange}
+        title={mode === "edit" ? "Редактирование политики" : "Новая версия политики"}
+        subtitle={
+          mode === "edit" && policy?.status === "ACTIVE"
+            ? "Активная версия не редактируется. Создайте новую версию и опубликуйте её."
+            : "Черновик сохраняется в БД. Публикация заменяет текущую активную версию этого типа."
+        }
+        wide
+        borderless
+        widthClassName="w-[min(820px,100vw)]"
+        footer={
+          <AdminFormFooter
+            left={
+              <AdminDrawerSecondaryButton
+                type="button"
+                disabled={!form.content.trim()}
+                onClick={() =>
+                  onPreview({
+                    title: form.title || "Preview",
+                    version: form.version,
+                    content: form.content,
+                    contentFormat: form.contentFormat,
+                  })
+                }
+              >
+                <Eye className="mr-1.5 size-3.5" aria-hidden />
+                Preview
+              </AdminDrawerSecondaryButton>
             }
-            disabled={readOnly}
-            label={a.t("admin.legal.requiresConsent")}
-            info="Если включено — пользователь должен принять документ для операций платформы."
+            right={
+              !readOnly ? (
+                <>
+                  <AdminDrawerCancelButton onClick={() => onOpenChange(false)} disabled={submitting} />
+                  {mode === "edit" && policy && policy.status !== "ACTIVE" ? (
+                    <AdminDrawerSecondaryButton
+                      disabled={submitting}
+                      onClick={() => void handleSave()}
+                    >
+                      {submitting ? "Сохранение…" : "Сохранить черновик"}
+                    </AdminDrawerSecondaryButton>
+                  ) : null}
+                  {mode === "edit" && policy && (policy.status === "DRAFT" || policy.status === "REVIEW") ? (
+                    <AdminDrawerPrimaryButton
+                      disabled={submitting}
+                      onClick={() => setConfirmPublishOpen(true)}
+                    >
+                      Опубликовать
+                    </AdminDrawerPrimaryButton>
+                  ) : mode === "create" ? (
+                    <AdminDrawerPrimaryButton disabled={submitting} onClick={() => void handleSave()}>
+                      {submitting ? "Сохранение…" : "Создать черновик"}
+                    </AdminDrawerPrimaryButton>
+                  ) : null}
+                </>
+              ) : (
+                <AdminDrawerSecondaryButton onClick={() => onOpenChange(false)}>Закрыть</AdminDrawerSecondaryButton>
+              )
+            }
           />
-        </div>
+        }
+      >
+        {loadingPolicy ? (
+          <AdminLoadingState label="Загрузка политики…" />
+        ) : (
+          <div className="space-y-4">
+            {policy ? (
+              <div className={cn(drawerPanel, "flex flex-wrap items-center gap-2 text-sm")}>
+                <AdminLocalizedStatusBadge status={policy.status} />
+                {policy.publishedAt ? (
+                  <span className="text-xs text-zinc-500">
+                    Опубликовано: {new Date(policy.publishedAt).toLocaleString("ru-RU")}
+                  </span>
+                ) : null}
+                {policy.status === "ACTIVE" ? (
+                  <span className="rounded-lg bg-amber-500/10 px-2 py-1 text-xs text-amber-200">
+                    ACTIVE нельзя редактировать — создайте новую версию
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
 
-        {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-      </div>
-    </AdminDetailDrawer>
+            <div className={drawerPanel}>
+              <AdminStyledSelectField
+                id="legal-policy-type"
+                label={a.table.type}
+                value={form.type}
+                options={typeOptions}
+                onChange={(value) => setForm((prev) => ({ ...prev, type: value }))}
+                disabled={mode === "edit" || readOnly}
+                info="Тип документа фиксируется при создании версии."
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className={drawerPanel}>
+                <AdminFormField label="Версия" htmlFor="legal-policy-version" info="Формат YYYY.MM.N — уникален в рамках типа.">
+                  <Input
+                    id="legal-policy-version"
+                    value={form.version}
+                    onChange={(e) => setForm((prev) => ({ ...prev, version: e.target.value }))}
+                    className={adminFieldInput}
+                    disabled={readOnly}
+                    placeholder="2026.06.1"
+                  />
+                </AdminFormField>
+              </div>
+              <div className={drawerPanel}>
+                <AdminStyledSelectField
+                  id="legal-policy-format"
+                  label="Формат"
+                  value={form.contentFormat}
+                  options={formatOptions}
+                  onChange={(value) => setForm((prev) => ({ ...prev, contentFormat: value }))}
+                  disabled={readOnly}
+                  info="HTML показывается как escaped preview без unsafe render."
+                />
+              </div>
+            </div>
+
+            <div className={drawerPanel}>
+              <AdminFormField label={a.table.name} htmlFor="legal-policy-title">
+                <Input
+                  id="legal-policy-title"
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className={adminFieldInput}
+                  disabled={readOnly}
+                  placeholder="Условия использования Spliton"
+                />
+              </AdminFormField>
+            </div>
+
+            <div className={drawerPanel}>
+              <AdminFormField
+                label="Дата вступления в силу (опционально)"
+                htmlFor="legal-policy-effective"
+                info="Если не указано — используется момент публикации."
+              >
+                <Input
+                  id="legal-policy-effective"
+                  type="datetime-local"
+                  value={form.effectiveAt}
+                  onChange={(e) => setForm((prev) => ({ ...prev, effectiveAt: e.target.value }))}
+                  className={adminFieldInput}
+                  disabled={readOnly}
+                />
+              </AdminFormField>
+            </div>
+
+            <div className={drawerPanel}>
+              <AdminFormField
+                label="Текст документа"
+                htmlFor="legal-policy-content"
+                info="Markdown рекомендуется. После публикации пользователям может потребоваться повторное согласие."
+              >
+                <textarea
+                  id="legal-policy-content"
+                  value={form.content}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setForm((prev) => ({ ...prev, content: e.target.value }))
+                  }
+                  className={cn(adminFieldTextarea, "min-h-[360px] font-mono text-xs leading-relaxed")}
+                  disabled={readOnly}
+                  placeholder="# Заголовок&#10;&#10;Текст политики…"
+                />
+              </AdminFormField>
+            </div>
+
+            <div className={drawerPanel}>
+              <AdminCheckboxRow
+                id="legal-policy-consent"
+                checked={form.requiresUserConsent}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, requiresUserConsent: Boolean(checked) }))
+                }
+                disabled={readOnly}
+                label={a.t("admin.legal.requiresConsent")}
+                info="Если включено — пользователь должен принять документ для операций платформы."
+              />
+            </div>
+
+            {error ? <p className="text-sm text-rose-400">{error}</p> : null}
+          </div>
+        )}
+      </AdminDetailDrawer>
+
+      <AdminConfirmDialog
+        open={confirmPublishOpen}
+        onOpenChange={setConfirmPublishOpen}
+        title="Опубликовать из редактора?"
+        description="Текущая ACTIVE-версия этого типа будет архивирована. Пользователям может потребоваться повторное согласие."
+        confirmLabel="Опубликовать"
+        confirming={submitting}
+        onConfirm={() => void handlePublish()}
+      />
+    </>
   );
 }

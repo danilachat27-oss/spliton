@@ -362,6 +362,104 @@ export class AdminUpdatesService {
     return 'created';
   }
 
+  async seedPublicEnLocalizationUpdateIfMissing(): Promise<'created' | 'skipped'> {
+    const title = 'Обновлены языки публичной версии Spliton';
+    const existing = await this.prisma.adminUpdateAnnouncement.findFirst({
+      where: { title, type: AdminUpdateType.UX },
+    });
+    if (existing) return 'skipped';
+
+    const content = `Мы завершили основной этап EN-локализации публичной части Spliton.
+
+Что изменилось:
+- публичная EN-версия больше не показывает кириллицу в user-facing runtime;
+- убран fallback EN → RU в i18n lookup и API error mapping;
+- каталог, buy flow, вторичный рынок, wallet/assets, profile и support переведены на i18n-ключи;
+- backend status/risk labels больше не выводятся напрямую в EN UI;
+- mock/demo данные локализуются перед отображением;
+- добавлены unit-тесты и smoke-проверка на отсутствие кириллицы в EN.
+
+Статус: PUBLIC EN READY.
+Отдельно: Admin EN остаётся в backlog (admin-messages, treasury, legal drawer) — не блокирует публичный релиз.
+
+Проверка: переключите locale на EN в публичном кабинете или откройте ключевые маршруты с cookie spliton_locale=en.`;
+
+    const now = new Date();
+    await this.prisma.adminUpdateAnnouncement.create({
+      data: {
+        title,
+        summary:
+          'Публичная английская версия готова к production: без русских протечек в UI, с безопасным EN fallback и покрытием основных пользовательских маршрутов.',
+        content,
+        type: AdminUpdateType.UX,
+        status: AdminUpdateStatus.PUBLISHED,
+        audienceRoles: [
+          UserRoleCode.SUPER_ADMIN,
+          UserRoleCode.ADMIN,
+          UserRoleCode.COMPLIANCE,
+          UserRoleCode.BUSINESS_ANALYST,
+          UserRoleCode.CONTENT_MANAGER,
+          UserRoleCode.SUPPORT_MANAGER,
+          UserRoleCode.NEWS_MANAGER,
+        ],
+        publishedAt: now,
+      },
+    });
+    return 'created';
+  }
+
+  async seedCalculatorUnitsUpdateIfMissing(): Promise<'created' | 'skipped'> {
+    const title = 'Обновлён калькулятор покупки и сделок UNT';
+    const existing = await this.prisma.adminUpdateAnnouncement.findFirst({
+      where: { title, type: AdminUpdateType.FEATURE },
+    });
+    if (existing) return 'skipped';
+
+    const content = `Мы выкатили исправление калькулятора units и money-flow в Spliton.
+
+Что изменилось для пользователей:
+- покупка UNT считается по цене конкретного релиза/листинга, без фиксированного курса 1 UNT = 1 USDT;
+- сумма к оплате = units × pricePerUnit; комиссия показывается информационно и удерживается из gross;
+- при бюджете меньше цены одного UNT покупка блокируется (раньше ошибочно показывался 1 UNT);
+- учитываются minPurchaseUnits / maxPurchaseUnits с backend preview;
+- invalid price / NaN / Infinity блокируют submit и не показывают NaN в UI;
+- standalone калькулятор (/assets/calculator) приведён к той же модели, что checkout в каталоге;
+- secondary buy demo: buyerTotal = gross (fee не добавляется сверху).
+
+Что проверить оператору:
+- /catalog/buy/[id] — sidebar и panel показывают одну цену и availableUnits;
+- /assets/calculator — footnote «иллюстрация» и совпадение units с buy page при тех же вводах;
+- sell / create listing / order book demo — fallback fee 2% primary / 1% secondary, если API недоступен;
+- live preview и submit по-прежнему authoritative на backend.
+
+Статус: CALCULATOR UNITS CLOSEOUT — production ready.
+Backend API / DTO / БД не менялись в рамках этого релиза.`;
+
+    const now = new Date();
+    await this.prisma.adminUpdateAnnouncement.create({
+      data: {
+        title,
+        summary:
+          'Исправлен расчёт UNT при покупке: единая модель gross, лимиты раунда, SSR/client sync и согласованные demo fee 2%/1%.',
+        content,
+        type: AdminUpdateType.FEATURE,
+        status: AdminUpdateStatus.PUBLISHED,
+        audienceRoles: [
+          UserRoleCode.SUPER_ADMIN,
+          UserRoleCode.ADMIN,
+          UserRoleCode.COMPLIANCE,
+          UserRoleCode.BUSINESS_ANALYST,
+          UserRoleCode.CONTENT_MANAGER,
+          UserRoleCode.SUPPORT_MANAGER,
+          UserRoleCode.NEWS_MANAGER,
+          UserRoleCode.ACCOUNTANT,
+        ],
+        publishedAt: now,
+      },
+    });
+    return 'created';
+  }
+
   private async assertVisiblePublished(id: string, roles: UserRoleCode[]) {
     const row = await this.prisma.adminUpdateAnnouncement.findUnique({
       where: { id },

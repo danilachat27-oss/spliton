@@ -1,8 +1,10 @@
 import type { AppLocale } from "./types";
-import { DICTIONARIES } from "./dictionaries";
+import { DICTIONARIES, lookupDictionaryMessage } from "./dictionaries";
 
 function dict(locale: AppLocale, key: string): string {
-  return DICTIONARIES[locale][key] ?? DICTIONARIES.ru[key] ?? key;
+  return lookupDictionaryMessage(DICTIONARIES[locale], key, locale, {
+    enMessages: DICTIONARIES.en,
+  });
 }
 
 /** Holder-aware release risk hint — maps release status enum, not backend RU strings. */

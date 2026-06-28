@@ -12,10 +12,35 @@ import {
 } from "@/constants/routes";
 import { formatUsdtCompact, formatUnitsCompact } from "@/lib/market-overview/format";
 import { statusLabel } from "@/lib/i18n/status-labels";
+import type { AppLocale } from "@/lib/i18n/types";
 import { cn } from "@/lib/utils";
 import type { MarketOverviewRow, MarketTableSortKey } from "@/types/market-overview";
 
 import { MarketMiniSparkline } from "./ui/market-mini-sparkline";
+
+function formatSecondaryDemandLabel(
+  label: MarketOverviewRow["secondaryLabel"],
+  locale: AppLocale,
+): string {
+  if (label === "—") return "—";
+  const map: Record<string, "high" | "medium" | "low"> = {
+    Высокий: "high",
+    Средний: "medium",
+    Низкий: "low",
+    High: "high",
+    Medium: "medium",
+    Low: "low",
+  };
+  const code = map[label];
+  return code ? statusLabel("liquidity", code, locale) : label;
+}
+
+function formatPercentValue(value: number, locale: AppLocale): string {
+  return `${new Intl.NumberFormat(locale === "ru" ? "ru-RU" : locale === "en" ? "en-US" : locale === "es" ? "es-ES" : "pt-PT", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value)}%`;
+}
 
 function CoverThumb({ symbol }: { symbol: string }) {
   const hue = symbol.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 360;
@@ -242,14 +267,14 @@ export function MarketOverviewTable({
                         : "—"
                       : (
                         <span className="rounded-md bg-[#0a0a0a] px-2 py-0.5 text-[11px] text-zinc-300">
-                          {r.secondaryLabel}
+                          {formatSecondaryDemandLabel(r.secondaryLabel, locale)}
                         </span>
                       )}
                   </td>
                   <td className="px-3 py-2 align-middle font-mono tabular-nums text-zinc-400">
                     {live
                       ? r.spreadPercent != null
-                        ? `${r.spreadPercent.toFixed(1).replace(".", ",")}%`
+                        ? formatPercentValue(r.spreadPercent, locale)
                         : r.spreadUsdt != null && r.spreadUsdt > 0
                           ? `${formatUsdtCompact(r.spreadUsdt)} USDT`
                           : "—"

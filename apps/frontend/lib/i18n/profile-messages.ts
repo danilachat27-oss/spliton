@@ -1,4 +1,5 @@
 import type { ProfilePageTabId } from "@/constants/dashboard/profile-page";
+import { localeMessage } from "./normalize-locale";
 import { SHELL_MESSAGES } from "./shell-messages";
 import type { AppLocale } from "./types";
 
@@ -1905,46 +1906,42 @@ export const PROFILE_MESSAGES: Record<AppLocale, Record<string, string>> = {
 export function profileTabLabel(tab: ProfilePageTabId, locale: AppLocale): string {
   if (NAV_TAB_SLUGS.has(tab)) {
     const navKey = `navigation.profile.${tab}.label`;
-    return SHELL_MESSAGES[locale][navKey] ?? SHELL_MESSAGES.ru[navKey] ?? tab;
+    return localeMessage(SHELL_MESSAGES, locale, navKey, tab);
   }
   const key = `profile.tabs.${tab}`;
-  return PROFILE_MESSAGES[locale][key] ?? PROFILE_MESSAGES.ru[key] ?? tab;
+  return localeMessage(PROFILE_MESSAGES, locale, key, tab);
 }
 
 export function profileSecurityScoreLabel(
   score: number,
   locale: AppLocale,
 ): { title: string; sub: string; tone: string } {
-  const m = PROFILE_MESSAGES[locale];
-  const ru = PROFILE_MESSAGES.ru;
   if (score >= 85) {
     return {
-      title: m["profile.security.score.strong.title"] ?? ru["profile.security.score.strong.title"],
-      sub: m["profile.security.score.strong.sub"] ?? ru["profile.security.score.strong.sub"],
+      title: localeMessage(PROFILE_MESSAGES, locale, "profile.security.score.strong.title"),
+      sub: localeMessage(PROFILE_MESSAGES, locale, "profile.security.score.strong.sub"),
       tone: "bg-lime-100/90 text-lime-950 ring-1 ring-lime-200/80",
     };
   }
   if (score >= 60) {
     return {
-      title: m["profile.security.score.good.title"] ?? ru["profile.security.score.good.title"],
-      sub: m["profile.security.score.good.sub"] ?? ru["profile.security.score.good.sub"],
+      title: localeMessage(PROFILE_MESSAGES, locale, "profile.security.score.good.title"),
+      sub: localeMessage(PROFILE_MESSAGES, locale, "profile.security.score.good.sub"),
       tone: "bg-amber-50 text-amber-900 ring-1 ring-amber-200/80",
     };
   }
   return {
-    title: m["profile.security.score.weak.title"] ?? ru["profile.security.score.weak.title"],
-    sub: m["profile.security.score.weak.sub"] ?? ru["profile.security.score.weak.sub"],
+    title: localeMessage(PROFILE_MESSAGES, locale, "profile.security.score.weak.title"),
+    sub: localeMessage(PROFILE_MESSAGES, locale, "profile.security.score.weak.sub"),
     tone: "bg-neutral-100 text-neutral-800 ring-1 ring-neutral-200/80",
   };
 }
 
 export function profileSecurityLastActive(iso: string, locale: AppLocale): string {
-  const m = PROFILE_MESSAGES[locale];
-  const ru = PROFILE_MESSAGES.ru;
   const tf = (key: string, count: number) =>
-    (m[key] ?? ru[key] ?? key).replace("{count}", String(count));
+    localeMessage(PROFILE_MESSAGES, locale, key).replace("{count}", String(count));
   const diffMs = Date.now() - new Date(iso).getTime();
-  if (diffMs < 60_000) return m["profile.security.session.now"] ?? ru["profile.security.session.now"];
+  if (diffMs < 60_000) return localeMessage(PROFILE_MESSAGES, locale, "profile.security.session.now");
   const mins = Math.floor(diffMs / 60_000);
   if (mins < 60) return tf("profile.security.session.minutesAgo", mins);
   const hours = Math.floor(mins / 60);

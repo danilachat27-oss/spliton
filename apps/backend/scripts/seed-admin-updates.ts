@@ -11,8 +11,10 @@ async function main() {
   const prisma = new PrismaClient();
   const service = new AdminUpdatesService(prisma as unknown as PrismaService);
   try {
-    const result = await service.seedLegalCmsUpdateIfMissing();
-    console.log(`Admin updates seed: ${result}`);
+    const legal = await service.seedLegalCmsUpdateIfMissing();
+    const enLocale = await service.seedPublicEnLocalizationUpdateIfMissing();
+    const calculator = await service.seedCalculatorUnitsUpdateIfMissing();
+    console.log(`Admin updates seed: legal=${legal}, enLocale=${enLocale}, calculator=${calculator}`);
   } finally {
     await prisma.$disconnect();
   }

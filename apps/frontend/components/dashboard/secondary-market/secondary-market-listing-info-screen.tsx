@@ -83,7 +83,7 @@ export function SecondaryMarketListingInfoScreen({
   const paramsDescParts = t("secondaryMarket.listingDetail.paramsDesc").split("{link}");
   const liquidityLabel = t(LIQUIDITY_KEY[listing.liquidity]);
   const listingStatus = listingEffectiveStatus(listing);
-  const listingStatusText = listing.statusLabel ?? listingStatusLabel(listingStatus, t);
+  const listingStatusText = listingStatusLabel(listingStatus, t);
   const canPurchase = listingEffectiveCanBuy(listing);
 
   return (

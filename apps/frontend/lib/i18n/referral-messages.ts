@@ -751,12 +751,14 @@ export const REFERRAL_MESSAGES: Record<AppLocale, Record<string, string>> = {
   pt: PT,
 };
 
+import { localeMessage } from "./normalize-locale";
+
 export function referralStatusLabel(status: string, locale: AppLocale): string {
   const key = `referral.status.${status}`;
-  return REFERRAL_MESSAGES[locale][key] ?? REFERRAL_MESSAGES.ru[key] ?? status;
+  return localeMessage(REFERRAL_MESSAGES, locale, key, status);
 }
 
 export function referralEventLabelI18n(eventType: string, locale: AppLocale): string {
   const key = `referral.event.${eventType}`;
-  return REFERRAL_MESSAGES[locale][key] ?? REFERRAL_MESSAGES.ru[key] ?? eventType;
+  return localeMessage(REFERRAL_MESSAGES, locale, key, eventType);
 }

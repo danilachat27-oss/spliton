@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useI18n } from "@/components/providers/i18n-provider";
 import { ReadOnlySectionError } from "@/components/shared/data-states/read-only-section-error";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import { localizedApiError } from "@/lib/api/localized-error";
-import { formatUsdtFixedRu } from "@/lib/market-overview/format";
+import { intlLocaleFor } from "@/lib/i18n/formatters";
+import type { AppLocale } from "@/lib/i18n/types";
 import { cn } from "@/lib/utils";
 import {
   fetchMarketOverviewDetail,
@@ -41,25 +43,29 @@ const DEMO_ASKS: BookLevel[] = ASK_OFFSETS.map((offset, i) => ({
   units: ASK_UNIT_BASES[i],
 }));
 
-function formatPrice(value: number): string {
+const DEMO_SPREAD_FALLBACK = "0.40";
+
+function formatPrice(value: number, locale: AppLocale): string {
   if (!Number.isFinite(value)) return "—";
-  return formatUsdtFixedRu(value, 4);
+  return new Intl.NumberFormat(intlLocaleFor(locale), {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(value);
 }
 
-function formatUnits(value: number): string {
+function formatUnits(value: number, locale: AppLocale): string {
   if (!Number.isFinite(value)) return "—";
-  return value.toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+  return value.toLocaleString(intlLocaleFor(locale), { maximumFractionDigits: 0 });
 }
 
-function formatSpreadPct(bestBid: number, bestAsk: number): string {
+function formatSpreadPct(bestBid: number, bestAsk: number, locale: AppLocale): string {
   if (!Number.isFinite(bestBid) || !Number.isFinite(bestAsk) || bestBid <= 0) {
     return DEMO_SPREAD_FALLBACK;
   }
   const pct = ((bestAsk - bestBid) / bestBid) * 100;
-  return pct.toFixed(2).replace(".", ",");
+  const raw = pct.toFixed(2);
+  return locale === "ru" ? raw.replace(".", ",") : raw;
 }
-
-const DEMO_SPREAD_FALLBACK = "0,40";
 
 function jitterUnits(base: number): number {
   const next = Math.round(base * (0.82 + Math.random() * 0.36));
@@ -89,12 +95,16 @@ function levelsFromApi(
   }));
 }
 
-function useAnimatedDemoBook(enabled: boolean) {
+function useAnimatedDemoBook(
+  enabled: boolean,
+  locale: AppLocale,
+  formatSpreadDemo: (pct: string) => string,
+) {
   const [mid, setMid] = useState(DEMO_MID);
   const [midTrend, setMidTrend] = useState<PriceTrend>(null);
   const [bids, setBids] = useState(DEMO_BIDS);
   const [asks, setAsks] = useState(DEMO_ASKS);
-  const [spreadLabel, setSpreadLabel] = useState(`Спред ${DEMO_SPREAD_FALLBACK}% · live demo`);
+  const [spreadLabel, setSpreadLabel] = useState(() => formatSpreadDemo(DEMO_SPREAD_FALLBACK));
   const momentumRef = useRef(0);
 
   useEffect(() => {
@@ -113,14 +123,14 @@ function useAnimatedDemoBook(enabled: boolean) {
         setAsks(book.asks);
         const bestBid = book.bids[0]?.price ?? next;
         const bestAsk = book.asks[0]?.price ?? next;
-        setSpreadLabel(`Спред ${formatSpreadPct(bestBid, bestAsk)}% · live demo`);
+        setSpreadLabel(formatSpreadDemo(formatSpreadPct(bestBid, bestAsk, locale)));
         return next;
       });
     };
 
     const id = window.setInterval(tick, DEMO_TICK_MS);
     return () => window.clearInterval(id);
-  }, [enabled]);
+  }, [enabled, formatSpreadDemo, locale]);
 
   useEffect(() => {
     if (!enabled || !midTrend) return;
@@ -137,12 +147,14 @@ function MiniBookRow({
   depthMax,
   variant,
   flash,
+  locale,
 }: {
   price: number;
   units: number;
   depthMax: number;
   variant: "bid" | "ask";
   flash?: PriceTrend;
+  locale: AppLocale;
 }) {
   const pct = depthMax > 0 ? Math.min(100, (units / depthMax) * 100) : 0;
   const isAsk = variant === "ask";
@@ -165,9 +177,9 @@ function MiniBookRow({
             !flash && (isAsk ? "text-rose-300/95" : "text-emerald-300/95"),
           )}
         >
-          {formatPrice(price)}
+          {formatPrice(price, locale)}
         </span>
-        <span className="text-right text-zinc-500 transition-all duration-300">{formatUnits(units)}</span>
+        <span className="text-right text-zinc-500 transition-all duration-300">{formatUnits(units, locale)}</span>
       </div>
     </div>
   );
@@ -192,6 +204,7 @@ function MiniBookDemo({
   className?: string;
   animated?: boolean;
 }) {
+  const { t, locale } = useI18n();
   const depthMax = useMemo(
     () => Math.max(...bids.map((b) => b.units), ...asks.map((a) => a.units), 1),
     [asks, bids],
@@ -211,7 +224,7 @@ function MiniBookDemo({
     >
       <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
         <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500 sm:text-[9px]">
-          Стакан
+          {t("dashboard.heroJourney.book.orderBook")}
         </span>
         <span className="flex items-center gap-1.5 tabular-nums text-zinc-400">
           {animated ? (
@@ -225,8 +238,8 @@ function MiniBookDemo({
       </div>
 
       <div className="grid grid-cols-2 gap-px border-b border-white/6 bg-white/6 px-0 py-1.5 text-[8px] uppercase tracking-wide text-zinc-600">
-        <span className="px-2.5">Цена</span>
-        <span className="px-2.5 text-right">Объём</span>
+        <span className="px-2.5">{t("dashboard.heroJourney.book.price")}</span>
+        <span className="px-2.5 text-right">{t("dashboard.heroJourney.book.volume")}</span>
       </div>
 
       <div className="divide-y divide-white/4">
@@ -238,12 +251,13 @@ function MiniBookDemo({
             depthMax={depthMax}
             variant="ask"
             flash={index === sortedAsks.length - 1 ? topAskFlash : null}
+            locale={locale}
           />
         ))}
       </div>
 
       <div className="border-y border-white/10 bg-white/[0.03] px-3 py-2 text-center">
-        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-600">Средняя</p>
+        <p className="text-[9px] uppercase tracking-[0.12em] text-zinc-600">{t("dashboard.heroJourney.book.mid")}</p>
         <p
           className={cn(
             "mt-0.5 text-[13px] font-semibold tabular-nums transition-colors duration-300 sm:text-[12px]",
@@ -252,7 +266,7 @@ function MiniBookDemo({
             !midTrend && "text-white",
           )}
         >
-          {formatPrice(mid)}
+          {formatPrice(mid, locale)}
           <span className="ml-1 text-[10px] font-normal text-zinc-500">USDT</span>
         </p>
       </div>
@@ -266,6 +280,7 @@ function MiniBookDemo({
             depthMax={depthMax}
             variant="bid"
             flash={index === 0 ? topBidFlash : null}
+            locale={locale}
           />
         ))}
       </div>
@@ -277,12 +292,17 @@ function MiniBookDemo({
   );
 }
 
+function spreadLabelFor(t: (key: string, fallback?: string) => string, key: string, pct: string): string {
+  return t(key).replace("{pct}", pct);
+}
+
 function StaticMiniBookDemo({ className }: { className?: string }) {
+  const { t } = useI18n();
   return (
     <MiniBookDemo
       symbol={DEMO_SYMBOL}
       mid={DEMO_MID}
-      spreadLabel={`Спред ${DEMO_SPREAD_FALLBACK}% · live demo`}
+      spreadLabel={spreadLabelFor(t, "dashboard.miniBook.spreadDemo", DEMO_SPREAD_FALLBACK)}
       bids={DEMO_BIDS}
       asks={DEMO_ASKS}
       className={className}
@@ -291,7 +311,12 @@ function StaticMiniBookDemo({ className }: { className?: string }) {
 }
 
 function AnimatedMiniBookDemoInner({ className }: { className?: string }) {
-  const book = useAnimatedDemoBook(true);
+  const { t, locale } = useI18n();
+  const formatSpreadDemo = useCallback(
+    (pct: string) => spreadLabelFor(t, "dashboard.miniBook.spreadDemo", pct),
+    [t],
+  );
+  const book = useAnimatedDemoBook(true, locale, formatSpreadDemo);
   return (
     <MiniBookDemo
       symbol={book.symbol}
@@ -322,11 +347,12 @@ export function DashboardMiniOrderBook({
 }) {
   const live = getWalletDataSource() === "live";
   const { authorizedFetch, isAuthenticated } = useAuth();
+  const { t, locale } = useI18n();
   const [symbol, setSymbol] = useState(DEMO_SYMBOL);
   const [bids, setBids] = useState<BookLevel[]>(DEMO_BIDS);
   const [asks, setAsks] = useState<BookLevel[]>(DEMO_ASKS);
   const [mid, setMid] = useState(DEMO_MID);
-  const [footer, setFooter] = useState(`Спред ${DEMO_SPREAD_FALLBACK}% · демо`);
+  const [footer, setFooter] = useState(() => spreadLabelFor(t, "dashboard.miniBook.spreadMock", DEMO_SPREAD_FALLBACK));
   // В live-режиме нельзя показывать demo/mock стакан как fallback.
   const [loading, setLoading] = useState(live);
   const [error, setError] = useState<string | null>(null);
@@ -355,7 +381,7 @@ export function DashboardMiniOrderBook({
       const top = list.items[0];
       if (!top) {
         setUseDemoFallback(false);
-        setError("Нет доступных рынков");
+        setError(t("dashboard.miniBook.noMarkets"));
         return;
       }
 
@@ -367,13 +393,13 @@ export function DashboardMiniOrderBook({
         const nextAsks = levelsFromApi(depth.asks);
         if (nextBids.length === 0 && nextAsks.length === 0) {
           setUseDemoFallback(false);
-          setError("Нет данных стакана");
+          setError(t("dashboard.miniBook.noDepth"));
           return;
         }
         setBids(nextBids);
         setAsks(nextAsks);
         setUseDemoFallback(false);
-        setFooter(`Спред ${depth.spreadPct}% · live`);
+        setFooter(spreadLabelFor(t, "dashboard.miniBook.spreadLive", depth.spreadPct));
         const bestBid = nextBids[0]?.price;
         const bestAsk = nextAsks[nextAsks.length - 1]?.price;
         if (bestBid != null && bestAsk != null) setMid((bestBid + bestAsk) / 2);
@@ -394,14 +420,14 @@ export function DashboardMiniOrderBook({
 
       if (nextAsks.length === 0 && nextBids.length === 0) {
         setUseDemoFallback(false);
-        setError("Нет данных стакана");
+        setError(t("dashboard.miniBook.noDepth"));
         return;
       }
 
       setAsks(nextAsks);
       setBids(nextBids);
       setUseDemoFallback(false);
-      setFooter(`Спред ${detail.depthSummary.spread}% · live`);
+      setFooter(spreadLabelFor(t, "dashboard.miniBook.spreadLive", detail.depthSummary.spread));
       if (detail.depthSummary.bestBid != null && detail.depthSummary.topAsks[0]) {
         const bestBid = Number.parseFloat(detail.depthSummary.bestBid);
         const bestAsk = Number.parseFloat(detail.depthSummary.topAsks[0].price);
@@ -410,12 +436,12 @@ export function DashboardMiniOrderBook({
         }
       }
     } catch (e) {
-      setError(localizedApiError(e));
+      setError(localizedApiError(e, locale));
       setUseDemoFallback(false);
     } finally {
       setLoading(false);
     }
-  }, [authorizedFetch, demo, isAuthenticated, live]);
+  }, [authorizedFetch, demo, isAuthenticated, live, locale, t]);
 
   useEffect(() => {
     void load();
@@ -433,7 +459,7 @@ export function DashboardMiniOrderBook({
           className,
         )}
       >
-        Загрузка стакана…
+        {t("dashboard.miniBook.loading")}
       </div>
     );
   }
@@ -465,7 +491,7 @@ export function DashboardMiniOrderBook({
     <MiniBookDemo
       symbol={symbol}
       mid={mid}
-      spreadLabel={footer || `Спред ${DEMO_SPREAD_FALLBACK}% · live`}
+      spreadLabel={footer || spreadLabelFor(t, "dashboard.miniBook.spreadLive", DEMO_SPREAD_FALLBACK)}
       bids={bids}
       asks={asks}
       className={className}

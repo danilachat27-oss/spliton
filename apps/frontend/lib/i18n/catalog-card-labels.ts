@@ -1,10 +1,12 @@
 import type { AppLocale } from "./types";
-import { DICTIONARIES } from "./dictionaries";
+import { DICTIONARIES, lookupDictionaryMessage } from "./dictionaries";
 import { statusLabel } from "./status-labels";
 import { isEmptyDisplayValue } from "@/lib/analytics/display-value";
 
 function dict(locale: AppLocale, key: string): string {
-  return DICTIONARIES[locale][key] ?? DICTIONARIES.ru[key] ?? key;
+  return lookupDictionaryMessage(DICTIONARIES[locale], key, locale, {
+    enMessages: DICTIONARIES.en,
+  });
 }
 
 export function catalogPurchaseStateLabel(

@@ -3,7 +3,7 @@
 import "./dashboard-hero-journey-preview.css";
 
 import type { RefObject } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import NextImage from "next/image";
 import { FileText, Search } from "@/lib/lucide";
 
@@ -17,6 +17,7 @@ import {
 } from "@/components/dashboard/hero-journey-data";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { useClientMounted } from "@/hooks/use-client-mounted";
+import { localizeCatalogItem } from "@/lib/catalog/catalog-adapter";
 import { tf } from "@/lib/i18n/financial-messages";
 import { applyCatalogScrollOffset, measureCenterInContainer, setCursorPoint } from "@/lib/hero-journey/cursor-position";
 import { cn } from "@/lib/utils";
@@ -193,7 +194,11 @@ function PreviewAppShell({ path, light }: { path: string; light?: boolean }) {
 }
 
 function CatalogScene() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const catalogItems = useMemo(
+    () => HERO_JOURNEY_CATALOG_ITEMS.map((item) => localizeCatalogItem(item, locale)),
+    [locale],
+  );
 
   return (
     <div className="hero-journey-scene hero-journey-scene--catalog absolute inset-0 flex flex-col bg-black text-white">
@@ -271,7 +276,7 @@ function CatalogScene() {
           data-journey-root="catalog-scroll"
         >
           <div className="grid grid-cols-3 items-start gap-3.5" data-journey-catalog-grid>
-            {HERO_JOURNEY_CATALOG_ITEMS.map((item, index) => (
+            {catalogItems.map((item, index) => (
               <div key={item.id} className="min-h-0">
                 <CatalogTrackCard
                   item={item}
