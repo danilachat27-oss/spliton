@@ -613,7 +613,7 @@ export function ReportsSection() {
               </div>
             ) : (
               <AdminEmptyState
-                title="Отчётов пока нет"
+                title={a.t("admin.reports.emptyTitle")}
                 description="Сформируйте первый отчёт из каталога или нажмите «Новый отчёт»."
                 className="bg-zinc-900/40 shadow-none"
               />

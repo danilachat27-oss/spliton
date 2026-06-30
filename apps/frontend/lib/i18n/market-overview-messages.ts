@@ -482,6 +482,7 @@ const EN: Record<string, string> = {
 };
 
 const ES: Record<string, string> = {
+  ...EN,
   "meta.marketOverview.title": "Resumen del mercado",
   "meta.marketOverview.description": "Instantánea del mercado interno Spliton: liquidez del libro, listados, secundario y segmentos. La comparación de rentabilidad por lanzamiento está en analítica.",
   "marketOverview.header.market": "Market",
@@ -691,6 +692,7 @@ const ES: Record<string, string> = {
 };
 
 const PT: Record<string, string> = {
+  ...EN,
   "meta.marketOverview.title": "Visão geral do mercado",
   "meta.marketOverview.description": "Instantâneo do mercado interno Spliton: liquidez do livro, listagens, secundário e segmentos. A comparação de rentabilidade por lançamento está na analítica.",
   "marketOverview.header.market": "Market",

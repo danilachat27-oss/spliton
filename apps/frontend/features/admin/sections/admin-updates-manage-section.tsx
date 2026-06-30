@@ -218,7 +218,9 @@ export function AdminUpdatesManageSection() {
 
         <AdminSectionDataArea loading={loading} error={error} onRetry={() => void load()}>
           <ul className="space-y-3">
-            {items.map((row) => (
+            {items.map((row) => {
+              const rowStatus = row.status;
+              return (
               <li key={row.id} className={cn(ADMIN_SECTION_TILE, "space-y-2")}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="space-y-1">
@@ -227,7 +229,7 @@ export function AdminUpdatesManageSection() {
                       <span className={adminUpdateTypeBadgeClassName(row.type)}>
                         {a.t(`admin.updates.type.${row.type}`)}
                       </span>
-                      <AdminLocalizedStatusBadge status={row.status} domain="generic" />
+                      <AdminLocalizedStatusBadge status={rowStatus} domain="generic" />
                     </div>
                   </div>
                   {canMutate && row.status === "DRAFT" ? (
@@ -248,7 +250,8 @@ export function AdminUpdatesManageSection() {
                 </div>
                 <p className="text-sm text-zinc-400">{row.summary}</p>
               </li>
-            ))}
+            );
+            })}
           </ul>
         </AdminSectionDataArea>
       </AdminSectionPanel>

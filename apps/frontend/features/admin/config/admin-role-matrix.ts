@@ -26,6 +26,7 @@ export type AdminMatrixSection =
   | "referrals"
   | "legal"
   | "treasury"
+  | "paymentRequisites"
   | "reports"
   | "analytics"
   | "settings"
@@ -171,6 +172,15 @@ export const ADMIN_ROLE_MATRIX: Record<
     ACCOUNTANT: "full",
     COMPLIANCE: "read",
     BUSINESS_ANALYST: "read",
+  }),
+  paymentRequisites: row({
+    SUPER_ADMIN: "full",
+    ADMIN: "read",
+    ACCOUNTANT: "full",
+    COMPLIANCE: "read",
+    BUSINESS_ANALYST: "read",
+    SUPPORT_MANAGER: "read",
+    SUPPORT: "read",
   }),
   wallets: row({
     SUPER_ADMIN: "full",

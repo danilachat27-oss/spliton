@@ -457,17 +457,17 @@ export function AdminRevenueCreateDrawer({
                 <>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <PreviewMetric
-                      label="Держателям"
+                      label={a.t("admin.revenue.preview.holders")}
                       value={formatUsdtAmount(preview.holdersAmount)}
                       tone="success"
                     />
                     <PreviewMetric
-                      label="Артисту"
+                      label={a.t("admin.revenue.preview.artist")}
                       value={formatUsdtAmount(preview.artistAmount)}
                       tone="info"
                     />
                     <PreviewMetric
-                      label="Платформе"
+                      label={a.t("admin.revenue.preview.platform")}
                       value={formatUsdtAmount(preview.platformAmount)}
                       tone="neutral"
                     />

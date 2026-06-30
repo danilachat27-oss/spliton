@@ -99,7 +99,7 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
         Provider: <span className="font-mono">{data.providerMode}</span>
         {data.providerName ? ` · ${data.providerName}` : null}
       </p>
-      <AdminFormField label="Контракт USDT" htmlFor="deposit-token-contract">
+      <AdminFormField label={a.t("admin.treasury.depositNetwork.contractUsdt")} htmlFor="deposit-token-contract">
         <Input
           id="deposit-token-contract"
           className={cn(adminFieldInput, "font-mono text-xs")}
@@ -108,7 +108,7 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
         />
       </AdminFormField>
       <div className="grid gap-3 sm:grid-cols-2">
-        <AdminFormField label="Мин. депозит (USDT)" htmlFor="deposit-min-amount">
+        <AdminFormField label={a.t("admin.treasury.depositNetwork.minDepositUsdt")} htmlFor="deposit-min-amount">
           <Input
             id="deposit-min-amount"
             className={adminFieldInput}
@@ -116,7 +116,7 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
             onChange={(e) => setData({ ...data, minDepositAmount: e.target.value })}
           />
         </AdminFormField>
-        <AdminFormField label="Подтверждения" htmlFor="deposit-min-confirmations">
+        <AdminFormField label={a.t("admin.treasury.depositNetwork.confirmations")} htmlFor="deposit-min-confirmations">
           <Input
             id="deposit-min-confirmations"
             type="number"
@@ -127,7 +127,7 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
             }
           />
         </AdminFormField>
-        <AdminFormField label="Зачисление (мин)" htmlFor="deposit-credit-minutes">
+        <AdminFormField label={a.t("admin.treasury.depositNetwork.creditMinutes")} htmlFor="deposit-credit-minutes">
           <Input
             id="deposit-credit-minutes"
             type="number"
@@ -141,7 +141,7 @@ export function AdminDepositNetworkSettingsPanel({ embedded = false }: { embedde
             }
           />
         </AdminFormField>
-        <AdminFormField label="Вывод доступен через (мин)" htmlFor="deposit-withdraw-minutes">
+        <AdminFormField label={a.t("admin.treasury.depositNetwork.withdrawMinutes")} htmlFor="deposit-withdraw-minutes">
           <Input
             id="deposit-withdraw-minutes"
             type="number"

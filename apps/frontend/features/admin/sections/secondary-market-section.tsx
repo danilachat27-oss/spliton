@@ -303,7 +303,7 @@ export function SecondaryMarketSection() {
       render: (r) => (
         <div className="flex flex-wrap items-center gap-1">
           <AdminStatusBadge tone={listingStatusTone(r.status)} label={listingStatusLabel(r.status)} />
-          {r.isLocked ? <AdminStatusBadge tone="warning" label="Заблокировано" /> : null}
+          {r.isLocked ? <AdminStatusBadge tone="warning" label={a.t("admin.secondaryMarket.locked")} /> : null}
           {r.hasRisk ? <AdminRiskBadge score={75} /> : null}
         </div>
       ),
@@ -664,7 +664,7 @@ export function SecondaryMarketSection() {
                 />
               </AdminChartCard>
               <div className="space-y-4">
-                <SectionTableTitle title="Активные листинги по релизам" total={liquidity.activeListingsByRelease.length} />
+                <SectionTableTitle title={a.t("admin.secondaryMarket.activeListingsByRelease")} total={liquidity.activeListingsByRelease.length} />
                 <AdminDataTable
                   flat
                   borderless
@@ -697,7 +697,7 @@ export function SecondaryMarketSection() {
                 </p>
               </div>
               <div className="space-y-4">
-                <SectionTableTitle title="Комиссии по релизам" total={fees.byRelease.length} />
+                <SectionTableTitle title={a.t("admin.secondaryMarket.feesByRelease")} total={fees.byRelease.length} />
                 <AdminDataTable
                   flat
                   borderless
@@ -718,7 +718,7 @@ export function SecondaryMarketSection() {
                 />
               </div>
               <div className="space-y-4">
-                <SectionTableTitle title="Транзакции комиссий" total={fees.transactions.length} />
+                <SectionTableTitle title={a.t("admin.secondaryMarket.feeTransactions")} total={fees.transactions.length} />
                 <AdminDataTable
                   flat
                   borderless

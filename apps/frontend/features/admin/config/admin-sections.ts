@@ -129,6 +129,8 @@ export type AdminSectionId =
 
   | "treasury"
 
+  | "paymentRequisites"
+
   | "settings"
 
   | "audit"
@@ -480,6 +482,18 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: ArrowDownToLine,
 
         roles: ["SUPER_ADMIN", "ADMIN", "ACCOUNTANT", "SUPPORT_MANAGER", "COMPLIANCE"],
+
+      },
+
+      {
+
+        id: "paymentRequisites",
+
+        href: ROUTES.adminPaymentRequisites,
+
+        icon: Wallet,
+
+        roles: ["SUPER_ADMIN", "ADMIN", "ACCOUNTANT", "COMPLIANCE", "BUSINESS_ANALYST", "SUPPORT_MANAGER", "SUPPORT"],
 
       },
 
@@ -939,6 +953,7 @@ const SECTION_TO_MATRIX: Partial<Record<AdminSectionId, AdminMatrixSection>> = {
   referrals: "referrals",
   legal: "legal",
   treasury: "treasury",
+  paymentRequisites: "paymentRequisites",
   reports: "reports",
   settings: "settings",
   systemStatus: "systemStatus",

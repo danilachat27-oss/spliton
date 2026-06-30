@@ -23,6 +23,7 @@ export function AdminUpdateDetailPanel({
 }: AdminUpdateDetailPanelProps) {
   const a = useAdminI18n();
   if (!item) return null;
+  const itemStatus = item.status;
 
   return (
     <AdminRightWidePanel
@@ -37,7 +38,7 @@ export function AdminUpdateDetailPanel({
           <span className={adminUpdateTypeBadgeClassName(item.type)}>
             {a.t(`admin.updates.type.${item.type}`)}
           </span>
-          <AdminLocalizedStatusBadge status={item.status} domain="generic" />
+          <AdminLocalizedStatusBadge status={itemStatus} domain="generic" />
           {item.publishedAt ? (
             <span className="text-xs text-zinc-500">{formatAdminDate(item.publishedAt)}</span>
           ) : null}

@@ -209,6 +209,7 @@ export type DepositAddressResponse = {
 export type DepositInfoResponse = {
   asset: string;
   network: string;
+  networkDisplayName?: string;
   chain: string;
   address: string;
   qrPayload: string;
@@ -216,6 +217,7 @@ export type DepositInfoResponse = {
   tokenContractAddress: string | null;
   tokenDecimals: number;
   minDepositAmount: string;
+  maxDepositAmount?: string | null;
   minConfirmations: number;
   estimatedCreditTimeMinutes: number;
   estimatedCreditTimeLabel: string;
@@ -226,6 +228,7 @@ export type DepositInfoResponse = {
   explorerAddressUrl: string | null;
   explorerTokenUrl: string | null;
   userWarnings: string[];
+  depositInstructions?: string | null;
   maintenanceMessage: string | null;
   providerStatus: "healthy" | "degraded" | "disabled" | "misconfigured";
   addressStatus: string;

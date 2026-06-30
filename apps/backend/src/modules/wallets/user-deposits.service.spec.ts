@@ -19,6 +19,7 @@ describe('UserDepositsService', () => {
     resolveProviderStatus: jest.fn(),
     pickMaintenanceMessage: jest.fn(),
     pickUserWarning: jest.fn(),
+    pickInstructions: jest.fn(),
     buildExplorerUrl: jest.fn(),
     assertProductionReady: jest.fn(),
   };
@@ -61,6 +62,7 @@ describe('UserDepositsService', () => {
     withdrawAvailableAfterMinutes: 2,
     depositEnabled: true,
     withdrawalEnabled: true,
+    status: 'ACTIVE',
     providerMode: 'mock',
     providerName: null,
     explorerTxUrlTemplate: null,
@@ -84,6 +86,7 @@ describe('UserDepositsService', () => {
     networkSettings.resolveProviderStatus.mockReturnValue('degraded');
     networkSettings.pickMaintenanceMessage.mockReturnValue(null);
     networkSettings.pickUserWarning.mockReturnValue(['Warn']);
+    networkSettings.pickInstructions.mockReturnValue('Send USDT TRC20 only');
     networkSettings.buildExplorerUrl.mockReturnValue('https://tronscan.org/#/address/TAddr');
     depositAddress.resolveForUser.mockResolvedValue({
       kind: 'address',

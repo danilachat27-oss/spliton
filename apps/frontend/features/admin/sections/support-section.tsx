@@ -169,7 +169,10 @@ export function SupportSection() {
     {
       key: "status",
       header: a.table.status,
-      render: (r) => <AdminLocalizedStatusBadge status={r.status} />,
+      render: (r) => {
+        const rowStatus = r.status;
+        return <AdminLocalizedStatusBadge status={rowStatus} />;
+      },
     },
     {
       key: "assigned",
@@ -198,10 +201,10 @@ export function SupportSection() {
       <AdminSectionPanel>
         {summary && !loading ? (
           <div className={ADMIN_SECTION_KPI_GRID}>
-            <StatTile label="Открытые" value={summary.open} tone="info" />
-            <StatTile label="В работе" value={summary.inProgress} tone="warning" />
+            <StatTile label={a.t("admin.support.stats.open")} value={summary.open} tone="info" />
+            <StatTile label={a.t("admin.support.stats.inProgress")} value={summary.inProgress} tone="warning" />
             <StatTile
-              label="Эскалированы"
+              label={a.t("admin.support.stats.escalated")}
               value={summary.escalated}
               tone={summary.escalated > 0 ? "danger" : "neutral"}
             />

@@ -152,6 +152,7 @@ const SECTION_IDS = [
   "holdings",
   "wallets",
   "deposits",
+  "paymentRequisites",
   "withdrawals",
   "revenue",
   "platformRevenue",

@@ -2761,8 +2761,18 @@ enum DepositAddressPoolStatus {
   ROTATED
   DISABLED
   COMPROMISED
+  ARCHIVED
 
   @@map("deposit_address_pool_status")
+}
+
+enum DepositNetworkSettingsStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  DISABLED
+
+  @@map("deposit_network_settings_status")
 }
 
 enum WithdrawalApprovalDecision {
@@ -2901,32 +2911,48 @@ model UserDepositAddress {
 }
 
 model DepositNetworkSettings {
-  id                            String   @id @default("usdt-trc20")
-  asset                         String   @default("USDT")
-  network                       String   @default("TRC20")
-  chain                         String   @default("TRON")
-  tokenContractAddress          String?  @map("token_contract_address")
-  tokenDecimals                 Int      @default(6) @map("token_decimals")
-  minDepositAmount              Decimal  @default(0.01) @map("min_deposit_amount") @db.Decimal(20, 8)
-  minConfirmations              Int      @default(20) @map("min_confirmations")
-  estimatedCreditTimeMinutes    Int      @default(1) @map("estimated_credit_time_minutes")
-  withdrawAvailableAfterMinutes Int      @default(2) @map("withdraw_available_after_minutes")
-  depositEnabled                Boolean  @default(true) @map("deposit_enabled")
-  withdrawalEnabled             Boolean  @default(true) @map("withdrawal_enabled")
-  providerMode                  String   @default("mock") @map("provider_mode")
-  providerName                  String?  @map("provider_name")
-  explorerTxUrlTemplate         String?  @map("explorer_tx_url_template")
-  explorerAddressUrlTemplate    String?  @map("explorer_address_url_template")
-  explorerTokenUrlTemplate      String?  @map("explorer_token_url_template")
-  userWarningRu                 String?  @map("user_warning_ru") @db.Text
-  userWarningEn                 String?  @map("user_warning_en") @db.Text
-  userWarningKa                 String?  @map("user_warning_ka") @db.Text
-  maintenanceMessageRu          String?  @map("maintenance_message_ru") @db.Text
-  maintenanceMessageEn          String?  @map("maintenance_message_en") @db.Text
-  maintenanceMessageKa          String?  @map("maintenance_message_ka") @db.Text
-  updatedByUserId               String?  @map("updated_by_user_id") @db.Uuid
-  createdAt                     DateTime @default(now()) @map("created_at")
-  updatedAt                     DateTime @updatedAt @map("updated_at")
+  id                            String                       @id @default("usdt-trc20")
+  asset                         String                       @default("USDT")
+  network                       String                       @default("TRC20")
+  networkDisplayName            String?                      @map("network_display_name")
+  chain                         String                       @default("TRON")
+  tokenContractAddress          String?                      @map("token_contract_address")
+  tokenDecimals                 Int                          @default(6) @map("token_decimals")
+  minDepositAmount              Decimal                      @default(0.01) @map("min_deposit_amount") @db.Decimal(20, 8)
+  maxDepositAmount              Decimal?                     @map("max_deposit_amount") @db.Decimal(20, 8)
+  minConfirmations              Int                          @default(20) @map("min_confirmations")
+  estimatedCreditTimeMinutes    Int                          @default(1) @map("estimated_credit_time_minutes")
+  withdrawAvailableAfterMinutes Int                          @default(2) @map("withdraw_available_after_minutes")
+  depositEnabled                Boolean                      @default(true) @map("deposit_enabled")
+  withdrawalEnabled             Boolean                      @default(true) @map("withdrawal_enabled")
+  status                        DepositNetworkSettingsStatus @default(ACTIVE)
+  poolLowThreshold              Int                          @default(5) @map("pool_low_threshold")
+  providerMode                  String                       @default("mock") @map("provider_mode")
+  providerName                  String?                      @map("provider_name")
+  explorerTxUrlTemplate         String?                      @map("explorer_tx_url_template")
+  explorerAddressUrlTemplate    String?                      @map("explorer_address_url_template")
+  explorerTokenUrlTemplate      String?                      @map("explorer_token_url_template")
+  userWarningRu                 String?                      @map("user_warning_ru") @db.Text
+  userWarningEn                 String?                      @map("user_warning_en") @db.Text
+  userWarningEs                 String?                      @map("user_warning_es") @db.Text
+  userWarningPt                 String?                      @map("user_warning_pt") @db.Text
+  userWarningKa                 String?                      @map("user_warning_ka") @db.Text
+  maintenanceMessageRu          String?                      @map("maintenance_message_ru") @db.Text
+  maintenanceMessageEn          String?                      @map("maintenance_message_en") @db.Text
+  maintenanceMessageEs          String?                      @map("maintenance_message_es") @db.Text
+  maintenanceMessagePt          String?                      @map("maintenance_message_pt") @db.Text
+  maintenanceMessageKa          String?                      @map("maintenance_message_ka") @db.Text
+  instructionsRu                String?                      @map("instructions_ru") @db.Text
+  instructionsEn                String?                      @map("instructions_en") @db.Text
+  instructionsEs                String?                      @map("instructions_es") @db.Text
+  instructionsPt                String?                      @map("instructions_pt") @db.Text
+  publishedAt                   DateTime?                    @map("published_at")
+  archivedAt                    DateTime?                    @map("archived_at")
+  publishedByUserId             String?                      @map("published_by_user_id") @db.Uuid
+  archivedByUserId              String?                      @map("archived_by_user_id") @db.Uuid
+  updatedByUserId               String?                      @map("updated_by_user_id") @db.Uuid
+  createdAt                     DateTime                     @default(now()) @map("created_at")
+  updatedAt                     DateTime                     @updatedAt @map("updated_at")
 
   @@unique([asset, network], map: "deposit_network_settings_asset_network_uidx")
   @@map("deposit_network_settings")
@@ -2945,12 +2971,34 @@ model DepositAddressPool {
   assignedAt        DateTime?                @map("assigned_at")
   rotatedAt         DateTime?                @map("rotated_at")
   disabledAt        DateTime?                @map("disabled_at")
+  disabledByUserId  String?                  @map("disabled_by_user_id") @db.Uuid
+  disableReason     String?                  @map("disable_reason") @db.Text
+  archivedAt        DateTime?                @map("archived_at")
+  archivedByUserId  String?                  @map("archived_by_user_id") @db.Uuid
+  createdByUserId   String?                  @map("created_by_user_id") @db.Uuid
   createdAt         DateTime                 @default(now()) @map("created_at")
   updatedAt         DateTime                 @updatedAt @map("updated_at")
 
   @@unique([address], map: "deposit_address_pool_address_uidx")
   @@index([status, asset, network], map: "deposit_address_pool_status_asset_network_idx")
   @@map("deposit_address_pool")
+}
+
+model DepositRequisiteChangeHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  action      String
+  beforeJson  Json?    @map("before_json")
+  afterJson   Json?    @map("after_json")
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  actorRole   String?  @map("actor_role")
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId, createdAt(sort: Desc)], map: "deposit_requisite_change_history_entity_idx")
+  @@index([createdAt(sort: Desc)], map: "deposit_requisite_change_history_created_at_idx")
+  @@map("deposit_requisite_change_history")
 }
 
 model ArtistUserLink {

@@ -87,6 +87,7 @@ function UpdateHistoryCard({
   onOpen: () => void;
 }) {
   const unread = !item.isRead;
+  const itemStatus = item.status;
 
   return (
     <article
@@ -126,7 +127,7 @@ function UpdateHistoryCard({
 
         <div className="flex shrink-0 flex-col items-end gap-2">
           <span className={adminUpdateTypeBadgeClassName(item.type)}>{typeLabel}</span>
-          <AdminLocalizedStatusBadge status={item.status} domain="generic" />
+          <AdminLocalizedStatusBadge status={itemStatus} domain="generic" />
         </div>
       </div>
 

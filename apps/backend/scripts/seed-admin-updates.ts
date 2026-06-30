@@ -14,7 +14,10 @@ async function main() {
     const legal = await service.seedLegalCmsUpdateIfMissing();
     const enLocale = await service.seedPublicEnLocalizationUpdateIfMissing();
     const calculator = await service.seedCalculatorUnitsUpdateIfMissing();
-    console.log(`Admin updates seed: legal=${legal}, enLocale=${enLocale}, calculator=${calculator}`);
+    const paymentRequisites = await service.seedPaymentRequisitesUpdateIfMissing();
+    console.log(
+      `Admin updates seed: legal=${legal}, enLocale=${enLocale}, calculator=${calculator}, paymentRequisites=${paymentRequisites}`,
+    );
   } finally {
     await prisma.$disconnect();
   }

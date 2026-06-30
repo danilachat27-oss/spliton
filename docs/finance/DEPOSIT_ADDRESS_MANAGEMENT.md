@@ -2,9 +2,10 @@
 
 ## Модели
 
-- `deposit_network_settings` — контракт, лимиты, тайминги, флаги, тексты RU/EN/KA, explorer URLs.
+- `deposit_network_settings` — контракт, лимиты, тайминги, флаги, тексты RU/EN/ES/PT, explorer URLs, статус lifecycle.
 - `deposit_address_pool` — пул адресов (AVAILABLE → ASSIGNED при первом запросе пользователя).
 - `user_deposit_addresses` — активный адрес, привязанный к кошельку пользователя.
+- `deposit_requisite_change_history` — история изменений реквизитов (audit trail на странице admin).
 
 ## Назначение адреса (Вариант B + dev fallback)
 
@@ -24,13 +25,17 @@
 
 ## Admin
 
-`GET/PATCH /api/admin/v1/treasury/deposit-network-settings`  
-`GET/POST /api/admin/v1/treasury/deposit-address-pool`  
-`POST .../deposit-address-pool/:id/disable`
+`GET/PATCH /api/admin/v1/payment-requisites/network-settings`  
+`GET/POST /api/admin/v1/payment-requisites/address-pool` (+ bulk, disable, enable, archive)  
+`GET .../preview?lang=` · `GET .../history`
 
-UI: **Admin → Treasury** — настройки сети USDT TRC20 и пул адресов.
+Legacy treasury routes сохранены.
 
-Опасные изменения требуют `reason` в body. Audit: `treasury.deposit_network_settings.update`, `treasury.deposit_address_pool.*`.
+UI: **`/admin/payment-requisites`** (основной) или **Admin → Treasury**.
+
+Документация: [PAYMENT_REQUISITES_ADMIN.md](../admin/PAYMENT_REQUISITES_ADMIN.md)
+
+Опасные изменения требуют `reason` в body. Audit: `payment_requisites.*`, `treasury.deposit_*`.
 
 ## Frontend (live)
 

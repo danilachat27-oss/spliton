@@ -287,14 +287,14 @@ export function ReferralsSection() {
       <AdminSectionPanel className="min-w-0">
         {summary && !loading ? (
           <div className={ADMIN_SECTION_KPI_GRID}>
-            <StatTile label="Приглашений" value={summary.totalInvites} tone="info" />
+            <StatTile label={a.t("admin.referrals.stats.invites")} value={summary.totalInvites} tone="info" />
             <StatTile
-              label="Награды в очереди"
+              label={a.t("admin.referrals.stats.pendingRewards")}
               value={summary.pendingRewards}
               tone={summary.pendingRewards > 0 ? "warning" : "neutral"}
             />
             <StatTile
-              label="Заявки партнёров"
+              label={a.t("admin.referrals.stats.partnerApplications")}
               value={summary.pendingPartnerApplications}
               tone={summary.pendingPartnerApplications > 0 ? "warning" : "neutral"}
             />

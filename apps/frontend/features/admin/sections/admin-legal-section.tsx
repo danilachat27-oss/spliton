@@ -361,9 +361,9 @@ export function AdminLegalSection() {
       <AdminSectionPanel className="min-w-0">
         {!loading ? (
           <div className={ADMIN_SECTION_KPI_GRID}>
-            <StatTile label="Типов документов" value={stats.types} tone="info" />
-            <StatTile label="С активной версией" value={stats.active} tone="success" />
-            <StatTile label="Черновики / review" value={stats.drafts} tone={stats.drafts > 0 ? "warning" : "neutral"} />
+            <StatTile label={a.t("admin.legal.stats.types")} value={stats.types} tone="info" />
+            <StatTile label={a.t("admin.legal.stats.withActive")} value={stats.active} tone="success" />
+            <StatTile label={a.t("admin.legal.stats.draftsReview")} value={stats.drafts} tone={stats.drafts > 0 ? "warning" : "neutral"} />
           </div>
         ) : null}
 
@@ -426,7 +426,7 @@ export function AdminLegalSection() {
       <AdminConfirmDialog
         open={Boolean(confirmPublish)}
         onOpenChange={(open) => !open && setConfirmPublish(null)}
-        title="Опубликовать версию?"
+        title={a.t("admin.legal.confirm.publishVersionTitle")}
         description={`Версия v${confirmPublish?.version ?? ""} станет ACTIVE. Текущая активная версия этого типа будет архивирована. Пользователям может потребоваться повторное согласие.`}
         confirmLabel="Опубликовать"
         confirming={actionBusyId === confirmPublish?.id}
@@ -440,7 +440,7 @@ export function AdminLegalSection() {
       <AdminConfirmDialog
         open={Boolean(confirmArchive)}
         onOpenChange={(open) => !open && setConfirmArchive(null)}
-        title="Архивировать версию?"
+        title={a.t("admin.legal.confirm.archiveVersionTitle")}
         description={`Версия v${confirmArchive?.version ?? ""} будет перенесена в архив.`}
         confirmLabel="В архив"
         variant="destructive"

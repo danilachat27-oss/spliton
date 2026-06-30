@@ -136,6 +136,7 @@ export const ADMIN_API_PATHS = {
   legalPolicyVersions: (type: string) =>
     `${ADMIN_API_V1_PREFIX}/legal/policies/by-type/${encodeURIComponent(type)}/versions`,
   treasury: `${ADMIN_API_V1_PREFIX}/treasury`,
+  paymentRequisites: `${ADMIN_API_V1_PREFIX}/payment-requisites`,
   legalPolicy: (id: string) => `${ADMIN_API_V1_PREFIX}/legal/policies/${id}`,
   legalPolicyPublish: (id: string) => `${ADMIN_API_V1_PREFIX}/legal/policies/${id}/publish`,
   legalPolicyArchive: (id: string) => `${ADMIN_API_V1_PREFIX}/legal/policies/${id}/archive`,

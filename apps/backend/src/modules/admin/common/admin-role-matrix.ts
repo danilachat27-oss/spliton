@@ -25,6 +25,7 @@ export type AdminMatrixSection =
   | 'referrals'
   | 'legal'
   | 'treasury'
+  | 'paymentRequisites'
   | 'reports'
   | 'analytics'
   | 'settings'
@@ -259,6 +260,15 @@ export const ADMIN_ROLE_MATRIX: Record<
     COMPLIANCE: 'read',
     BUSINESS_ANALYST: 'read',
   }),
+  paymentRequisites: row({
+    SUPER_ADMIN: 'full',
+    ADMIN: 'read',
+    ACCOUNTANT: 'full',
+    COMPLIANCE: 'read',
+    BUSINESS_ANALYST: 'read',
+    SUPPORT_MANAGER: 'read',
+    SUPPORT: 'read',
+  }),
   reports: row({
     SUPER_ADMIN: 'full',
     ADMIN: 'full',
@@ -339,6 +349,7 @@ export const ADMIN_AREA_TO_SECTION: Record<string, AdminMatrixSection> = {
   referrals: 'referrals',
   legal: 'legal',
   treasury: 'treasury',
+  payment_requisites: 'paymentRequisites',
   notifications: 'notifications',
   updates: 'updates',
   help_center: 'helpCenter',

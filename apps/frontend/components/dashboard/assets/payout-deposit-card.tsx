@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, Copy, ExternalLink } from "@/lib/lucide";
 import Link from "next/link";
+import { Check, Copy, ExternalLink } from "@/lib/lucide";
 import { useCallback, useEffect, useState } from "react";
 
 import { AuthActionPanel } from "@/components/shared/auth-action-panel";
@@ -104,6 +104,14 @@ export function PayoutDepositCard() {
   const metaRows = live && depositInfo
     ? [
         { label: t("deposit.minDepositLabel"), value: formatMinDeposit(depositInfo.minDepositAmount, locale) },
+        ...(depositInfo.maxDepositAmount
+          ? [
+              {
+                label: t("deposit.maxDepositLabel"),
+                value: formatMinDeposit(depositInfo.maxDepositAmount, locale),
+              },
+            ]
+          : []),
         { label: t("deposit.creditTimeLabel"), value: depositInfo.estimatedCreditTimeLabel },
         {
           label: t("deposit.withdrawAvailableLabel"),
@@ -141,7 +149,12 @@ export function PayoutDepositCard() {
     <section className="space-y-12 sm:space-y-14">
       <header className="space-y-2">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-          USDT · TRC20 · Deposit
+          {live && depositInfo
+            ? tf(t("deposit.eyebrow"), {
+                asset: depositInfo.asset,
+                network: depositInfo.network,
+              })
+            : tf(t("deposit.eyebrow"), { asset: "USDT", network: "TRC20" })}
         </p>
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-[1.75rem]">
           {t("deposit.heading")}
@@ -185,19 +198,46 @@ export function PayoutDepositCard() {
               errorCode === "DEPOSIT_PROVIDER_UNAVAILABLE" ? (
                 <p className="mt-2 text-xs text-neutral-500">{t("deposit.addressUnavailableHint")}</p>
               ) : null}
-              <button
-                type="button"
-                className="mt-3 block text-blue-700 underline"
-                onClick={() => void load()}
-              >
-                {t("common.retry")}
-              </button>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="text-blue-700 underline"
+                  onClick={() => void load()}
+                >
+                  {t("common.retry")}
+                </button>
+                <Link href={ROUTES.support} className="text-blue-700 underline">
+                  {t("deposit.contactSupport")}
+                </Link>
+              </div>
             </div>
           ) : displayAddress ? (
             <div className="rounded-3xl bg-blue-50/50 px-5 py-6">
+              {live && depositInfo?.userWarnings?.length ? (
+                <div className="mb-4 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
+                    {t("deposit.networkWarningTitle")}
+                  </p>
+                  <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-amber-950">
+                    {depositInfo.userWarnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {live && depositInfo?.depositInstructions ? (
+                <div className="mb-4 rounded-2xl bg-white/70 px-4 py-3 text-sm text-neutral-800">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                    {t("deposit.instructionsTitle")}
+                  </p>
+                  <p className="mt-1">{depositInfo.depositInstructions}</p>
+                </div>
+              ) : null}
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
-                  {live && depositInfo ? `${depositInfo.asset} · ${depositInfo.network}` : "USDT · TRC20"}
+                  {live && depositInfo
+                    ? depositInfo.networkDisplayName ?? `${depositInfo.asset} · ${depositInfo.network}`
+                    : "USDT · TRC20"}
                 </span>
                 {live && depositInfo?.explorerAddressUrl ? (
                   <a
@@ -270,7 +310,7 @@ export function PayoutDepositCard() {
                           rel="noopener noreferrer"
                           className="text-[11px] text-blue-700 underline"
                         >
-                          Explorer
+                          {t("deposit.openExplorer")}
                         </a>
                       ) : null}
                     </span>

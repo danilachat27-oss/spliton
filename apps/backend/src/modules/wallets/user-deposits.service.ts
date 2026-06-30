@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { throwAdminError } from '../admin/common/admin-http.util';
 import { DepositAddressProvider } from './deposit-address.provider';
 import { DepositNetworkSettingsService } from '../treasury/deposit-network-settings.service';
+import { formatMinutesLabel } from '../treasury/deposit-localized-text.util';
 import { UserWalletService } from './user-wallet.service';
 
 @Injectable()
@@ -39,7 +40,10 @@ export class UserDepositsService {
       opts?.lang,
     );
 
-    if (!settings.depositEnabled) {
+    if (
+      settings.status !== 'ACTIVE' ||
+      !settings.depositEnabled
+    ) {
       throwAdminError(
         'DEPOSIT_DISABLED',
         maintenanceMessage ??
@@ -89,6 +93,7 @@ export class UserDepositsService {
     });
 
     const warnings = this.networkSettings.pickUserWarning(settings, opts?.lang);
+    const instructions = this.networkSettings.pickInstructions(settings, opts?.lang);
     const explorerAddressUrl = this.networkSettings.buildExplorerUrl(
       settings.explorerAddressUrlTemplate,
       { address },
@@ -105,6 +110,8 @@ export class UserDepositsService {
     return {
       asset: settings.asset,
       network: settings.network,
+      networkDisplayName:
+        settings.networkDisplayName ?? `${settings.asset} · ${settings.network}`,
       chain: settings.chain,
       address,
       qrPayload,
@@ -112,16 +119,18 @@ export class UserDepositsService {
       tokenContractAddress: settings.tokenContractAddress,
       tokenDecimals: settings.tokenDecimals,
       minDepositAmount: settings.minDepositAmount,
+      maxDepositAmount: settings.maxDepositAmount,
       minConfirmations: settings.minConfirmations,
       estimatedCreditTimeMinutes: creditMin,
-      estimatedCreditTimeLabel: this.formatMinutesLabel(creditMin),
+      estimatedCreditTimeLabel: formatMinutesLabel(creditMin, opts?.lang),
       withdrawAvailableAfterMinutes: withdrawMin,
-      withdrawAvailableAfterLabel: this.formatMinutesLabel(withdrawMin),
+      withdrawAvailableAfterLabel: formatMinutesLabel(withdrawMin, opts?.lang),
       depositEnabled: settings.depositEnabled,
       withdrawalEnabled: settings.withdrawalEnabled,
       explorerAddressUrl,
       explorerTokenUrl,
       userWarnings: warnings,
+      depositInstructions: instructions,
       maintenanceMessage,
       providerStatus,
       addressStatus: 'ACTIVE',
@@ -142,12 +151,6 @@ export class UserDepositsService {
       warnings: info.userWarnings,
       isDevPlaceholder: info.isDevPlaceholder,
     };
-  }
-
-  private formatMinutesLabel(minutes: number): string {
-    if (minutes <= 1) return '~ 1 минута';
-    if (minutes < 5) return `~ ${minutes} минуты`;
-    return `~ ${minutes} минут`;
   }
 
   private mapDeposit(row: {

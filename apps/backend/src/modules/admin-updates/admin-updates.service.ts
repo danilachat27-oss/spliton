@@ -460,6 +460,91 @@ Backend API / DTO / БД не менялись в рамках этого рел
     return 'created';
   }
 
+  async seedPaymentRequisitesUpdateIfMissing(): Promise<'created' | 'skipped'> {
+    const title = 'Новый модуль управления реквизитами пополнения';
+    const existing = await this.prisma.adminUpdateAnnouncement.findFirst({
+      where: { title, type: AdminUpdateType.FEATURE },
+    });
+    if (existing) return 'skipped';
+
+    const content = `В админке добавлен новый раздел управления реквизитами пополнения: \`/admin/payment-requisites\`.
+
+Что появилось:
+- управление настройками сети USDT TRC20;
+- включение/выключение депозитов;
+- настройка contract address, min/max amount, confirmations;
+- редактирование предупреждений и инструкций на RU/EN/ES/PT;
+- управление пулом deposit-адресов;
+- bulk add адресов;
+- disable/enable/archive адресов;
+- preview пользовательской страницы пополнения;
+- history/audit изменений;
+- read-only доступ для support/compliance/admin ролей;
+- защита от невалидных TRC20-адресов;
+- корректные состояния для пользователя: deposits disabled / address unavailable.
+
+Важно:
+Адрес пополнения в Spliton остаётся персональным для пользователя и назначается из address pool. Это не один общий wallet платформы.
+
+Перед production:
+- применить миграцию на staging/prod;
+- проверить address pool;
+- пройти staging QA checklist;
+- прогнать frontend/backend e2e в CI/dedicated test DB.
+
+---
+
+EN — New Payment Requisites Management Module
+
+A new payment requisites management section has been added to the admin panel: \`/admin/payment-requisites\`.
+
+Included:
+- USDT TRC20 network settings management;
+- deposit enable/disable control;
+- contract address, min/max amount and confirmations settings;
+- RU/EN/ES/PT warnings and instructions;
+- deposit address pool management;
+- bulk address import;
+- disable/enable/archive address actions;
+- user-facing deposit page preview;
+- change history and audit trail;
+- read-only access for support/compliance/admin roles;
+- TRC20 address validation;
+- user-safe states for deposits disabled / address unavailable.
+
+Important:
+Spliton still uses personal deposit addresses assigned from the address pool. This is not a single shared platform wallet.
+
+Before production:
+- apply migration on staging/prod;
+- verify address pool;
+- complete staging QA checklist;
+- run frontend/backend e2e in CI/dedicated test DB.`;
+
+    const now = new Date();
+    await this.prisma.adminUpdateAnnouncement.create({
+      data: {
+        title,
+        summary:
+          'Payment Requisites & Deposit Flow: новый раздел `/admin/payment-requisites`, user deposit через `/api/v1/wallet/deposit-info`, RU/EN/ES/PT, pool, preview, audit.',
+        content,
+        type: AdminUpdateType.FEATURE,
+        status: AdminUpdateStatus.PUBLISHED,
+        audienceRoles: [
+          UserRoleCode.SUPER_ADMIN,
+          UserRoleCode.ADMIN,
+          UserRoleCode.ACCOUNTANT,
+          UserRoleCode.COMPLIANCE,
+          UserRoleCode.BUSINESS_ANALYST,
+          UserRoleCode.SUPPORT_MANAGER,
+          UserRoleCode.SUPPORT,
+        ],
+        publishedAt: now,
+      },
+    });
+    return 'created';
+  }
+
   private async assertVisiblePublished(id: string, roles: UserRoleCode[]) {
     const row = await this.prisma.adminUpdateAnnouncement.findUnique({
       where: { id },

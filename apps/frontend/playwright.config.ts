@@ -1,9 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'node:path';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000';
 
+/** Playwright 1.61.0 sync loader + Node 22.15–22.16: upgrade to 1.61.1+ (fixed). */
+const chromiumUse =
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH != null
+    ? {
+        launchOptions: {
+          executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+        },
+      }
+    : process.env.PLAYWRIGHT_USE_SYSTEM_CHROME === '1'
+      ? { channel: 'chrome' as const }
+      : {};
+
 export default defineConfig({
   testDir: './e2e',
+  tsconfig: path.join(__dirname, 'tsconfig.e2e.json'),
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   // Local retries absorb dev-server cold-start / port contention flakes.
@@ -16,7 +30,12 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], ...chromiumUse },
+    },
+  ],
   webServer: process.env.CI
     ? {
         command: 'npm run start',

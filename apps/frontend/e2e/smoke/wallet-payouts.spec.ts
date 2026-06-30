@@ -51,6 +51,42 @@ test.describe('Wallet / payouts smoke', () => {
       await expect(page.getByText(/undefined|null|NaN/i)).toHaveCount(0);
     });
 
+    test('deposit disabled state hides address', async ({ page }) => {
+      await page.route('**/api/v1/wallet/deposit-info**', async (route) => {
+        await route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: { code: 'DEPOSIT_DISABLED', message: 'Deposits disabled' },
+          }),
+        });
+      });
+      await page.goto('/assets/payouts/deposit');
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
+      await expect(page.getByText(/TPlaywrightE2EDepositAddress01/i)).toHaveCount(0);
+      await expect(page.getByRole('link', { name: /поддержк|support/i })).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+
+    test('deposit address unavailable state hides fake wallet', async ({ page }) => {
+      await page.route('**/api/v1/wallet/deposit-info**', async (route) => {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: { code: 'DEPOSIT_ADDRESS_UNAVAILABLE', message: 'No address' },
+          }),
+        });
+      });
+      await page.goto('/assets/payouts/deposit');
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
+      await expect(page.getByText(/TPlaywrightE2EDepositAddress01/i)).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /повторить|retry/i })).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+
     test('withdraw page renders step 1 wizard shell', async ({ page }) => {
       await page.goto('/assets/payouts/withdraw');
       await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });

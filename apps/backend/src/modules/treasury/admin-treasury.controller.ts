@@ -267,6 +267,7 @@ export class AdminTreasuryController {
       body.address,
       body.asset,
       body.network,
+      user.id,
     );
     await this.audit.logOperatorAction({
       actorUserId: user.id,

@@ -295,14 +295,14 @@ export function AdminLegalPolicyDrawer({
                   ) : null}
                 </>
               ) : (
-                <AdminDrawerSecondaryButton onClick={() => onOpenChange(false)}>Закрыть</AdminDrawerSecondaryButton>
+                <AdminDrawerSecondaryButton onClick={() => onOpenChange(false)}>{a.t("admin.actions.close")}</AdminDrawerSecondaryButton>
               )
             }
           />
         }
       >
         {loadingPolicy ? (
-          <AdminLoadingState label="Загрузка политики…" />
+          <AdminLoadingState label={a.t("admin.legal.drawer.loading")} />
         ) : (
           <div className="space-y-4">
             {policy ? (
@@ -335,7 +335,7 @@ export function AdminLegalPolicyDrawer({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className={drawerPanel}>
-                <AdminFormField label="Версия" htmlFor="legal-policy-version" info="Формат YYYY.MM.N — уникален в рамках типа.">
+                <AdminFormField label={a.t("admin.legal.field.version")} htmlFor="legal-policy-version" info={a.t("admin.legal.field.versionInfo")}>
                   <Input
                     id="legal-policy-version"
                     value={form.version}
@@ -349,12 +349,12 @@ export function AdminLegalPolicyDrawer({
               <div className={drawerPanel}>
                 <AdminStyledSelectField
                   id="legal-policy-format"
-                  label="Формат"
+                  label={a.t("admin.legal.field.format")}
                   value={form.contentFormat}
                   options={formatOptions}
                   onChange={(value) => setForm((prev) => ({ ...prev, contentFormat: value }))}
                   disabled={readOnly}
-                  info="HTML показывается как escaped preview без unsafe render."
+                  info={a.t("admin.legal.field.formatInfo")}
                 />
               </div>
             </div>
@@ -367,16 +367,16 @@ export function AdminLegalPolicyDrawer({
                   onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                   className={adminFieldInput}
                   disabled={readOnly}
-                  placeholder="Условия использования Spliton"
+                  placeholder={a.t("admin.legal.field.titlePlaceholder")}
                 />
               </AdminFormField>
             </div>
 
             <div className={drawerPanel}>
               <AdminFormField
-                label="Дата вступления в силу (опционально)"
+                label={a.t("admin.legal.field.effectiveAt")}
                 htmlFor="legal-policy-effective"
-                info="Если не указано — используется момент публикации."
+                info={a.t("admin.legal.field.effectiveAtInfo")}
               >
                 <Input
                   id="legal-policy-effective"
@@ -391,9 +391,9 @@ export function AdminLegalPolicyDrawer({
 
             <div className={drawerPanel}>
               <AdminFormField
-                label="Текст документа"
+                label={a.t("admin.legal.field.content")}
                 htmlFor="legal-policy-content"
-                info="Markdown рекомендуется. После публикации пользователям может потребоваться повторное согласие."
+                info={a.t("admin.legal.field.contentInfo")}
               >
                 <textarea
                   id="legal-policy-content"
@@ -403,7 +403,7 @@ export function AdminLegalPolicyDrawer({
                   }
                   className={cn(adminFieldTextarea, "min-h-[360px] font-mono text-xs leading-relaxed")}
                   disabled={readOnly}
-                  placeholder="# Заголовок&#10;&#10;Текст политики…"
+                  placeholder={a.t("admin.legal.field.contentPlaceholder")}
                 />
               </AdminFormField>
             </div>
@@ -429,9 +429,9 @@ export function AdminLegalPolicyDrawer({
       <AdminConfirmDialog
         open={confirmPublishOpen}
         onOpenChange={setConfirmPublishOpen}
-        title="Опубликовать из редактора?"
-        description="Текущая ACTIVE-версия этого типа будет архивирована. Пользователям может потребоваться повторное согласие."
-        confirmLabel="Опубликовать"
+        title={a.t("admin.legal.confirm.publishFromEditorTitle")}
+        description={a.t("admin.legal.confirm.publishFromEditorDesc")}
+        confirmLabel={a.t("admin.legal.confirm.publishLabel")}
         confirming={submitting}
         onConfirm={() => void handlePublish()}
       />

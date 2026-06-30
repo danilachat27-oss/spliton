@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DepositNetworkSettingsStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { DepositNetworkSettingsService } from './deposit-network-settings.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -43,100 +44,112 @@ describe('DepositNetworkSettingsService', () => {
     service = module.get(DepositNetworkSettingsService);
   });
 
-  it('marks mock provider as degraded in production', () => {
+  const sampleSettings = {
+    id: 'usdt-trc20',
+    asset: 'USDT',
+    network: 'TRC20',
+    networkDisplayName: 'USDT · TRC20',
+    chain: 'TRON',
+    tokenContractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+    tokenDecimals: 6,
+    minDepositAmount: '0.01',
+    maxDepositAmount: null,
+    minConfirmations: 20,
+    estimatedCreditTimeMinutes: 1,
+    withdrawAvailableAfterMinutes: 2,
+    depositEnabled: true,
+    withdrawalEnabled: true,
+    status: DepositNetworkSettingsStatus.ACTIVE,
+    poolLowThreshold: 5,
+    providerMode: 'mock',
+    providerName: 'Mock',
+    explorerTxUrlTemplate: null,
+    explorerAddressUrlTemplate: null,
+    explorerTokenUrlTemplate: null,
+    userWarningRu: 'Line1\nLine2',
+    userWarningEn: 'EN warn',
+    userWarningEs: null,
+    userWarningPt: null,
+    userWarningKa: null,
+    maintenanceMessageRu: null,
+    maintenanceMessageEn: 'EN maint',
+    maintenanceMessageEs: null,
+    maintenanceMessagePt: null,
+    maintenanceMessageKa: null,
+    instructionsRu: 'RU inst',
+    instructionsEn: 'EN inst',
+    instructionsEs: null,
+    instructionsPt: null,
+    publishedAt: null,
+    archivedAt: null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  it('marks draft settings as disabled provider status', () => {
     const status = service.resolveProviderStatus({
-      id: 'usdt-trc20',
-      asset: 'USDT',
-      network: 'TRC20',
-      chain: 'TRON',
-      tokenContractAddress: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-      tokenDecimals: 6,
-      minDepositAmount: '0.01',
-      minConfirmations: 20,
-      estimatedCreditTimeMinutes: 1,
-      withdrawAvailableAfterMinutes: 2,
-      depositEnabled: true,
-      withdrawalEnabled: true,
-      providerMode: 'mock',
-      providerName: 'Mock',
-      explorerTxUrlTemplate: null,
-      explorerAddressUrlTemplate: null,
-      explorerTokenUrlTemplate: null,
-      userWarningRu: null,
-      userWarningEn: null,
-      userWarningKa: null,
-      maintenanceMessageRu: null,
-      maintenanceMessageEn: null,
-      maintenanceMessageKa: null,
-      updatedAt: new Date().toISOString(),
+      ...sampleSettings,
+      status: DepositNetworkSettingsStatus.DRAFT,
     });
-    expect(status).toBe('degraded');
+    expect(status).toBe('disabled');
   });
 
   it('splits user warnings by newline', () => {
-    const lines = service.pickUserWarning(
-      {
-        id: 'x',
-        asset: 'USDT',
-        network: 'TRC20',
-        chain: 'TRON',
-        tokenContractAddress: null,
-        tokenDecimals: 6,
-        minDepositAmount: '0.01',
-        minConfirmations: 1,
-        estimatedCreditTimeMinutes: 1,
-        withdrawAvailableAfterMinutes: 2,
-        depositEnabled: true,
-        withdrawalEnabled: true,
-        providerMode: 'mock',
-        providerName: null,
-        explorerTxUrlTemplate: null,
-        explorerAddressUrlTemplate: null,
-        explorerTokenUrlTemplate: null,
-        userWarningRu: 'Line1\nLine2',
-        userWarningEn: null,
-        userWarningKa: null,
-        maintenanceMessageRu: null,
-        maintenanceMessageEn: null,
-        maintenanceMessageKa: null,
-        updatedAt: new Date().toISOString(),
-      },
-      'ru',
-    );
+    const lines = service.pickUserWarning(sampleSettings, 'ru');
     expect(lines).toEqual(['Line1', 'Line2']);
   });
 
-  it('uses EN deposit copy for es/pt with RU fallback', () => {
-    const settings = {
-      id: 'x',
+  it('uses EN deposit copy for es/pt with fallback', () => {
+    expect(service.pickMaintenanceMessage(sampleSettings, 'es')).toBe('EN maint');
+    expect(service.pickMaintenanceMessage(sampleSettings, 'pt')).toBe('EN maint');
+    expect(service.pickUserWarning(sampleSettings, 'es')).toEqual(['EN warn']);
+    expect(service.pickInstructions(sampleSettings, 'en')).toBe('EN inst');
+  });
+
+  it('rejects enable without contract address', async () => {
+    prisma.depositNetworkSettings.findFirst.mockResolvedValue({
+      id: 'usdt-trc20',
       asset: 'USDT',
       network: 'TRC20',
+      networkDisplayName: null,
       chain: 'TRON',
       tokenContractAddress: null,
       tokenDecimals: 6,
-      minDepositAmount: '0.01',
-      minConfirmations: 1,
+      minDepositAmount: { toString: () => '0.01' },
+      maxDepositAmount: null,
+      minConfirmations: 20,
       estimatedCreditTimeMinutes: 1,
       withdrawAvailableAfterMinutes: 2,
-      depositEnabled: true,
+      depositEnabled: false,
       withdrawalEnabled: true,
+      status: DepositNetworkSettingsStatus.ACTIVE,
+      poolLowThreshold: 5,
       providerMode: 'mock',
       providerName: null,
       explorerTxUrlTemplate: null,
       explorerAddressUrlTemplate: null,
       explorerTokenUrlTemplate: null,
-      userWarningRu: 'RU warn',
-      userWarningEn: 'EN warn',
+      userWarningRu: null,
+      userWarningEn: null,
+      userWarningEs: null,
+      userWarningPt: null,
       userWarningKa: null,
-      maintenanceMessageRu: 'RU maint',
-      maintenanceMessageEn: 'EN maint',
+      maintenanceMessageRu: null,
+      maintenanceMessageEn: null,
+      maintenanceMessageEs: null,
+      maintenanceMessagePt: null,
       maintenanceMessageKa: null,
-      updatedAt: new Date().toISOString(),
-    };
-
-    expect(service.pickMaintenanceMessage(settings, 'es')).toBe('EN maint');
-    expect(service.pickMaintenanceMessage(settings, 'pt')).toBe('EN maint');
-    expect(service.pickUserWarning(settings, 'es')).toEqual(['EN warn']);
-    expect(service.pickMaintenanceMessage(settings, 'ka')).toBe('RU maint');
+      instructionsRu: null,
+      instructionsEn: null,
+      instructionsEs: null,
+      instructionsPt: null,
+      publishedAt: null,
+      archivedAt: null,
+      updatedAt: new Date(),
+    });
+    await expect(
+      service.updateSettings('u1', { depositEnabled: true, reason: 'test' }),
+    ).rejects.toMatchObject({
+      response: { error: { code: 'DEPOSIT_SETTINGS_INCOMPLETE' } },
+    });
   });
 });

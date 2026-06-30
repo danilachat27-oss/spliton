@@ -24,6 +24,11 @@ export function canPatchPlatformFees(roles: string[] | undefined): boolean {
   return hasSuperAdminRole(roles);
 }
 
+export function canMutatePaymentRequisites(roles: string[] | undefined): boolean {
+  if (!roles?.length) return false;
+  return roles.includes("SUPER_ADMIN") || roles.includes("ACCOUNTANT");
+}
+
 /** Aligns with backend FINANCE roles on /referrals/partners approve|reject. */
 export function canApprovePartnerApplication(roles: string[] | undefined): boolean {
   if (!roles?.length) return false;

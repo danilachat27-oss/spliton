@@ -41,6 +41,7 @@ export const ROUTES = {
   adminReferrals: "/admin/referrals",
   adminLegal: "/admin/legal",
   adminTreasury: "/admin/treasury",
+  adminPaymentRequisites: "/admin/payment-requisites",
   adminSettings: "/admin/settings",
   adminAudit: "/admin/audit-log",
   /** @deprecated use adminAudit */

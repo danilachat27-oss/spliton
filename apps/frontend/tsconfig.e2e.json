@@ -1,7 +1,31 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./*"]
+    },
     "types": ["node", "@playwright/test"]
   },
-  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+  "include": [
+    "playwright.config.ts",
+    "e2e/**/*.ts",
+    "constants/**/*.ts",
+    "features/admin/config/**/*.ts",
+    "features/admin/lib/**/*.ts",
+    "features/admin/types/**/*.ts",
+    "lib/auth/**/*.ts",
+    "lib/lucide.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
 }

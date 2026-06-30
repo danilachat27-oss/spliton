@@ -182,7 +182,10 @@ export function DisputesSection() {
     {
       key: "status",
       header: a.table.status,
-      render: (r) => <AdminLocalizedStatusBadge status={r.status} />,
+      render: (r) => {
+        const rowStatus = r.status;
+        return <AdminLocalizedStatusBadge status={rowStatus} />;
+      },
     },
     {
       key: "priority",

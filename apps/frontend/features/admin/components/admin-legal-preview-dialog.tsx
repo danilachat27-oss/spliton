@@ -5,6 +5,7 @@ import { Dialog } from "@base-ui/react/dialog";
 
 import { LegalPolicyContentDisplay } from "@/components/legal/legal-policy-content-display";
 import { AdminDrawerSecondaryButton } from "@/features/admin/components/admin-drawer-buttons";
+import { useAdminI18n } from "@/features/admin/hooks/use-admin-i18n";
 import { adminDialogPanel } from "@/features/admin/lib/admin-ui";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ export function AdminLegalPreviewDialog({
   content,
   contentFormat = "MARKDOWN",
 }: AdminLegalPreviewDialogProps) {
+  const a = useAdminI18n();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -37,7 +39,9 @@ export function AdminLegalPreviewDialog({
         >
           <Dialog.Title className="text-lg font-semibold text-zinc-100">{title}</Dialog.Title>
           <Dialog.Description className="mt-1 text-xs text-zinc-500">
-            Версия {version} · {contentFormat}
+            {a.t("admin.legal.preview.versionLine")
+              .replace("{version}", version)
+              .replace("{format}", contentFormat)}
           </Dialog.Description>
           <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
             <LegalPolicyContentDisplay
@@ -47,7 +51,7 @@ export function AdminLegalPreviewDialog({
             />
           </div>
           <div className="mt-4 flex justify-end">
-            <AdminDrawerSecondaryButton onClick={() => onOpenChange(false)}>Закрыть</AdminDrawerSecondaryButton>
+            <AdminDrawerSecondaryButton onClick={() => onOpenChange(false)}>{a.t("admin.actions.close")}</AdminDrawerSecondaryButton>
           </div>
         </Dialog.Popup>
       </Dialog.Portal>
