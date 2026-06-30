@@ -292,6 +292,7 @@ export class AdminTreasuryController {
     const row = await this.depositPool.adminDisable(
       id,
       body.reason,
+      user.id,
       body.compromised,
     );
     await this.audit.logOperatorAction({
