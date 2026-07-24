@@ -76,11 +76,18 @@ export class HealthService {
           ),
         );
       }
+      const emailDeliveryOff =
+        process.env.FEATURE_ENABLE_EMAIL_DELIVERY === 'false';
+      const emailProvider = (process.env.EMAIL_PROVIDER ?? 'dev')
+        .trim()
+        .toLowerCase();
       checks.push(
         this.checkEnv(
           'email_provider',
-          process.env.EMAIL_PROVIDER === 'postmark',
-          'postmark required in production',
+          emailDeliveryOff ||
+            emailProvider === 'postmark' ||
+            emailProvider === 'resend',
+          'postmark/resend required in production unless FEATURE_ENABLE_EMAIL_DELIVERY=false',
         ),
       );
       if (process.env.DEPOSIT_INGESTION_ENABLED === 'true') {
