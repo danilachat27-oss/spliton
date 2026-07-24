@@ -154,14 +154,21 @@ export function rootLayoutMeta(locale: AppLocale = DEFAULT_LOCALE): Metadata {
 
     icons: {
       icon: [
+        { url: "/favicon.ico", sizes: "32x32" },
         {
           url: "/images/LOGO/mini-logo.png",
           type: "image/png",
           sizes: "any",
         },
       ],
-      shortcut: "/images/LOGO/mini-logo.png",
-      apple: "/images/LOGO/mini-logo.png",
+      shortcut: "/favicon.ico",
+      apple: [
+        {
+          url: "/apple-icon.png",
+          type: "image/png",
+          sizes: "180x180",
+        },
+      ],
     },
 
     appleWebApp: {
